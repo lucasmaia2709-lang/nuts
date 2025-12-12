@@ -164,7 +164,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     display: flex; 
     justify-content: space-around; 
     align-items: center;
-    padding: 15px 10px calc(15px + env(safe-area-inset-bottom));
+    padding: 15px 10px calc;
     z-index: 300; 
     box-shadow: 0 -5px 20px rgba(43, 76, 126, 0.1);
 }
@@ -216,4 +216,5 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .adm-nested.open { display: block; animation: fadeIn 0.2s; }
 .adm-item-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 .adm-btn-small { padding: 6px 12px; font-size: 11px; border-radius: 8px; border: 1px solid #ddd; background: #FFF; cursor: pointer; font-weight: 600; color: var(--text-main); }
+
 .adm-action-btn { color: var(--text-sec); border:none; background:none; font-size:12px; padding:5px; cursor:pointer; }
