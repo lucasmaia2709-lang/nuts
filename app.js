@@ -1,7 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+// ADICIONADO: 'deleteObject' para apagar arquivos
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- ÁREA DE CONFIGURAÇÃO ---
 const firebaseConfig = { 
@@ -20,7 +21,7 @@ const auth = getAuth(appInit);
 const db = getFirestore(appInit);
 const storage = getStorage(appInit);
 
-// CORREÇÃO: Usamos um ID manual seguro para evitar erros de caminho no banco
+// ID do App
 const appId = 'nuts-app-v1'; 
 
 // CONSTANTES E CONFIGURAÇÕES
@@ -118,7 +119,6 @@ window.app = {
             app.toast("Enviando...");
             const fileName = `${Date.now()}_${compressedFile.name}`;
             
-            // ORGANIZAÇÃO: Tenta salvar dentro da pasta do usuário para organização
             let path = `${folderName}/${fileName}`;
             if (currentUser) {
                 path = `${folderName}/${currentUser.email}/${fileName}`;
@@ -136,6 +136,19 @@ window.app = {
                 app.toast("Erro ao enviar imagem. Verifique o console.");
             }
             return null;
+        }
+    },
+
+    // --- NOVO: FUNÇÃO PARA APAGAR ARQUIVO DO STORAGE ---
+    deleteFile: async (url) => {
+        if (!url) return;
+        try {
+            // O Firebase consegue criar uma referência direta a partir da URL completa
+            const fileRef = ref(storage, url);
+            await deleteObject(fileRef);
+            console.log("Arquivo apagado do Storage com sucesso.");
+        } catch (error) {
+            console.warn("Aviso ao apagar arquivo (pode já não existir):", error.message);
         }
     },
 
@@ -222,15 +235,12 @@ window.app = {
         e.preventDefault();
         const email = document.getElementById('log-email').value.trim().toLowerCase();
         const pass = document.getElementById('log-pass').value;
-        
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
             const user = userCredential.user;
-            
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.email);
                 const snap = await getDoc(docRef);
-                
                 if (!snap.exists()) {
                     const newUser = { name: "Aluno(a)", email: user.email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
                     await setDoc(docRef, newUser);
@@ -239,17 +249,12 @@ window.app = {
                 console.error("Erro Banco de Dados após Login:", dbError);
                 app.toast("Login OK, mas erro ao carregar perfil. Verifique permissões.");
             }
-            
         } catch(err) { 
             console.error("Erro Login:", err.code, err.message);
             let msg = 'Erro ao entrar.';
-            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-                msg = 'Email ou senha incorretos.';
-            } else if (err.code === 'auth/too-many-requests') {
-                msg = 'Muitas tentativas. Tente mais tarde.';
-            } else if (err.code === 'auth/operation-not-allowed') {
-                msg = 'ERRO: Ative "Email/Password" no painel do Firebase.';
-            }
+            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') msg = 'Email ou senha incorretos.';
+            else if (err.code === 'auth/too-many-requests') msg = 'Muitas tentativas. Tente mais tarde.';
+            else if (err.code === 'auth/operation-not-allowed') msg = 'ERRO: Ative "Email/Password" no painel do Firebase.';
             app.toast(msg); 
         }
     },
@@ -265,7 +270,6 @@ window.app = {
 
     loadUser: (email) => {
         if (!appId) { console.error("AppID não definido"); return; }
-        
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), (docSnap) => {
             if(docSnap.exists()) {
                 currentUser = docSnap.data();
@@ -278,13 +282,11 @@ window.app = {
                     app.screen('view-pending'); 
                     return; 
                 }
-                
                 const av = currentUser.avatar;
                 const himg = document.getElementById('header-avatar-img');
                 const htxt = document.getElementById('header-avatar-txt');
                 if(av) { himg.src=av; himg.style.display='block'; htxt.style.display='none'; }
                 else { himg.style.display='none'; htxt.style.display='block'; htxt.innerText=currentUser.name[0]; }
-                
                 app.screen('view-app');
                 app.nav('home');
             }
@@ -314,8 +316,17 @@ window.app = {
     },
     closeProfile: () => app.screen('view-app'),
     
+    // --- ATUALIZADO: APAGA FOTO ANTIGA SE EXISTIR ---
     uploadAvatar: async (input) => {
         if(input.files && input.files[0]) {
+            app.toast("Trocando foto...");
+            
+            // 1. Se tiver avatar antigo, apaga
+            if(currentUser.avatar) {
+                await app.deleteFile(currentUser.avatar);
+            }
+
+            // 2. Sobe o novo
             const imgUrl = await app.uploadImage(input.files[0], 'avatars');
             if(imgUrl) {
                 app.toast("Salvando perfil...");
@@ -340,7 +351,7 @@ window.app = {
         app.openProfile();
     },
 
-    // --- CALENDÁRIO & HOME ---
+    // --- CALENDÁRIO ---
     changeMonth: (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); app.renderCalendar(); },
     renderCalendar: () => {
         if(!currentUser) return;
@@ -376,11 +387,7 @@ window.app = {
                  workoutData = scheduled;
                  if(scheduled.done) cellClass += ' done';
             }
-            else if(doneHere) { 
-                cellClass += ' done'; 
-                dotHtml += `<div class="cal-dot"></div>`; 
-                workoutData = doneHere; 
-            } 
+            else if(doneHere) { cellClass += ' done'; dotHtml += `<div class="cal-dot"></div>`; workoutData = doneHere; } 
             
             if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
             
@@ -392,7 +399,6 @@ window.app = {
             grid.appendChild(el);
         }
     },
-    
     openDayDetail: (dateStr, workoutData) => {
         selectedDayDate = dateStr;
         const modal = document.getElementById('modal-day-detail');
@@ -410,7 +416,6 @@ window.app = {
         document.getElementById('day-det-note').value = notes[dateStr] || '';
         modal.classList.add('active');
     },
-
     saveDayNote: async () => {
         const note = document.getElementById('day-det-note').value;
         const notes = currentUser.notes || {};
@@ -422,19 +427,11 @@ window.app = {
         app.renderCalendar();
     },
 
-    renderHome: () => { 
-        app.renderCalendar(); 
-        app.renderTodayCard(); 
-        app.loadQuote(); 
-        app.loadHomeNews();
-    },
+    renderHome: () => { app.renderCalendar(); app.renderTodayCard(); app.loadQuote(); app.loadHomeNews(); },
     
     loadHomeNews: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
-            const news = []; 
-            snap.forEach(d => news.push(d.data())); 
-            news.sort((a,b) => b.created - a.created);
-            
+            const news = []; snap.forEach(d => news.push(d.data())); news.sort((a,b) => b.created - a.created);
             const container = document.getElementById('home-latest-news');
             if(news.length > 0) {
                 const n = news[0];
@@ -447,11 +444,8 @@ window.app = {
                             <h3 class="news-title" style="font-size:16px;">${n.title}</h3>
                             <div class="news-body" style="font-size:13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${n.body}</div>
                         </div>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = '';
-            }
+                    </div>`;
+            } else { container.innerHTML = ''; }
         });
     },
 
@@ -567,20 +561,17 @@ window.app = {
                 <p style="margin:0; opacity:0.9; font-size:14px; color:#FFF;">Treinos Restantes</p>
             </div>
             <i class="fa-solid fa-list-check" style="font-size:40px; opacity:0.5; color:#FFF;"></i>
-        </div>
-        `;
+        </div>`;
 
         activeRace.workouts.forEach((w, i) => {
             const color = w.done ? 'var(--success)' : '#E0E0E0';
             const icon = w.done ? 'fa-circle-check' : 'fa-circle';
             const safeVideo = w.video ? app.escape(w.video) : '';
-            
             let dateBadge = '';
             if(w.scheduledDate) {
                  const dParts = w.scheduledDate.split('-');
                  dateBadge = `<span style="font-size:10px; color:#FFF; background:var(--primary); padding:2px 6px; border-radius:6px; margin-left:8px; font-weight:600;">${dParts[2]}/${dParts[1]}</span>`;
             }
-
             list.innerHTML += `<div class="card" style="display:flex; align-items:center; gap: 15px; opacity: ${w.done?0.6:1}; padding:20px;">
                 <div style="color:${color}; font-size:24px;"><i class="fa-solid ${icon}"></i></div>
                 <div style="flex:1;">
@@ -592,7 +583,7 @@ window.app = {
         });
     },
 
-    // --- SOCIAL & STORAGE ---
+    // --- SOCIAL COM CURTIDAS, COMENTÁRIOS E APAGAR IMAGEM ---
     loadFeed: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), (snap) => {
             const feed = document.getElementById('social-feed');
@@ -622,11 +613,10 @@ window.app = {
                 const comments = p.comments || [];
                 let commentsHtml = '';
                 comments.forEach((c, idx) => {
-                    // Dono do comentário ou Admin podem apagar
                     const canDelComm = (currentUser && c.email === currentUser.email) || isAdmin;
                     commentsHtml += `
-                    <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between;">
-                        <span><strong style="color:var(--text-main);">${c.userName}</strong> <span style="color:var(--text-main);">${c.text}</span></span>
+                    <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:flex-start;">
+                        <span><strong style="color:var(--text-main);">${c.userName}</strong> <span style="color:#555;">${c.text}</span></span>
                         ${canDelComm ? `<button onclick="app.deleteComment('${p.id}', ${idx})" style="border:none; background:none; color:#ccc; font-size:10px; cursor:pointer;">✕</button>` : ''}
                     </div>`;
                 });
@@ -645,16 +635,16 @@ window.app = {
                     ${imgUrl ? `<img src="${imgUrl}" style="width:100%; max-height:450px; object-fit:cover; display:block;">` : ''}
                     
                     <div style="padding:15px;">
-                        <div style="display:flex; gap:15px; margin-bottom:12px;">
-                            <button onclick="app.toggleLike('${p.id}')" style="border:none; background:none; font-size:24px; cursor:pointer; ${likeColor}">
+                        <div style="display:flex; gap:20px; margin-bottom:10px; align-items: center;">
+                            <button onclick="app.toggleLike('${p.id}')" style="border:none; background:none; font-size:22px; cursor:pointer; ${likeColor} display:flex; align-items:center; gap:8px; padding:0;">
                                 <i class="${likeIcon}"></i>
+                                <span style="font-size:15px; font-weight:600; color:var(--text-main);">${likes.length}</span>
                             </button>
-                            <button onclick="document.getElementById('comment-input-${p.id}').focus()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main);">
+                            <button onclick="document.getElementById('comment-input-${p.id}').focus()" style="border:none; background:none; font-size:22px; cursor:pointer; color:var(--text-main); display:flex; align-items:center; gap:8px; padding:0;">
                                 <i class="fa-regular fa-comment"></i>
+                                <span style="font-size:15px; font-weight:600; color:var(--text-main);">${comments.length}</span>
                             </button>
                         </div>
-                        
-                        <div style="font-weight:600; font-size:14px; margin-bottom:8px; color:var(--text-main);">${likes.length} curtidas</div>
                         
                         <p style="margin:0 0 10px 0; font-size:14px; line-height:1.5; color:var(--text-main);">
                             <strong style="margin-right:5px;">${p.userName}</strong>${p.text}
@@ -714,18 +704,31 @@ window.app = {
         if(postSnap.exists()) {
             const p = postSnap.data();
             const comments = p.comments || [];
-            // Remove pelo index filtrando o array
             const newComments = comments.filter((_, idx) => idx !== commentIndex);
             await updateDoc(postRef, { comments: newComments });
         }
     },
 
+    // --- ATUALIZADO: APAGA POST E IMAGEM DO STORAGE ---
     deletePost: async (postId) => {
         app.showConfirm("Excluir publicação?", async () => {
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId));
+            const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
+            
+            // 1. Busca post para pegar URL da imagem
+            const snap = await getDoc(postRef);
+            if(snap.exists()) {
+                const data = snap.data();
+                if(data.img) {
+                    await app.deleteFile(data.img);
+                }
+            }
+            
+            // 2. Apaga documento
+            await deleteDoc(postRef);
             app.toast("Publicação removida.");
         });
     },
+
     openCreatePost: () => app.screen('view-create-post'),
     closeCreatePost: () => app.screen('view-app'),
     previewPostImg: (input) => { 
@@ -746,7 +749,6 @@ window.app = {
         
         let imgUrl = null;
         if(tempPostFile) {
-            // Uso da nova função de Storage
             imgUrl = await app.uploadImage(tempPostFile, 'posts');
         }
 
@@ -771,8 +773,7 @@ window.app = {
     // --- RECEITAS & NOTICIAS ---
     loadRecipes: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_RECIPES), (snap) => {
-            const l = document.getElementById('recipes-list');
-            l.innerHTML = '';
+            const l = document.getElementById('recipes-list'); l.innerHTML = '';
             allRecipes = [];
             snap.forEach(d => {
                 const r = {id: d.id, ...d.data()};
@@ -820,10 +821,7 @@ window.app = {
     },
 
     // --- ADMIN LOGIC ---
-    loadAdmin: () => { 
-        document.getElementById('view-admin').classList.add('active'); 
-        app.admTab('users'); 
-    },
+    loadAdmin: () => { document.getElementById('view-admin').classList.add('active'); app.admTab('users'); },
     closeAdmin: () => app.screen('view-landing'),
     admTab: (t) => {
         document.querySelectorAll('[id^="adm-content"]').forEach(e=>e.classList.add('hidden'));
@@ -842,101 +840,42 @@ window.app = {
             const list = document.getElementById('adm-users-list'); 
             let html = '';
             snap.forEach(d => {
-                const u = d.data(); 
-                const docId = d.id;
-                const safeId = app.escape(docId);
-                const isUserOpen = expandedUsers.has(docId) ? 'open' : '';
-                const checked = u.active ? 'checked' : '';
+                const u = d.data(); const docId = d.id; const safeId = app.escape(docId);
+                const isUserOpen = expandedUsers.has(docId) ? 'open' : ''; const checked = u.active ? 'checked' : '';
                 
                 let goalsHtml = '';
                 if(u.races && u.races.length > 0) {
                     u.races.forEach((r, rIdx) => {
-                        const raceKey = `${docId}-${rIdx}`;
-                        const isRaceOpen = expandedRaces.has(raceKey) ? 'open' : '';
+                        const raceKey = `${docId}-${rIdx}`; const isRaceOpen = expandedRaces.has(raceKey) ? 'open' : '';
                         let workoutsHtml = '';
                         if(r.workouts && r.workouts.length > 0) {
                             r.workouts.forEach((w, wIdx) => {
                                 let wDate = "";
-                                if(w.scheduledDate) {
-                                    const dp = w.scheduledDate.split('-');
-                                    wDate = `<span style="font-size:10px; color:#666; background:#eee; padding:2px 5px; border-radius:4px;">${dp[2]}/${dp[1]}</span>`;
-                                }
-                                workoutsHtml += `
-                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:5px 0;">
-                                    <span style="font-size:12px;">${wDate} ${w.title}</span>
-                                    <button onclick="app.admDeleteWorkoutInline('${safeId}', ${rIdx}, ${wIdx})" style="color:var(--red); border:none; background:none; cursor:pointer;"><i class="fa-solid fa-times"></i></button>
-                                </div>`;
+                                if(w.scheduledDate) { const dp = w.scheduledDate.split('-'); wDate = `<span style="font-size:10px; color:#666; background:#eee; padding:2px 5px; border-radius:4px;">${dp[2]}/${dp[1]}</span>`; }
+                                workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:5px 0;"><span style="font-size:12px;">${wDate} ${w.title}</span><button onclick="app.admDeleteWorkoutInline('${safeId}', ${rIdx}, ${wIdx})" style="color:var(--red); border:none; background:none; cursor:pointer;"><i class="fa-solid fa-times"></i></button></div>`;
                             });
                         } else { workoutsHtml = '<p style="font-size:11px; color:#999;">Sem treinos.</p>'; }
-
-                        workoutsHtml += `
-                        <div style="display:flex; gap:5px; margin-top:10px; justify-content:flex-end;">
-                            <button onclick="app.admAddWorkoutInline('${safeId}', ${rIdx}')" class="adm-btn-small" style="background:#f0f0f0;">+ Treino</button>
-                            <button onclick="app.admImportTemplateInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ Modelo</button>
-                        </div>`;
-
-                        goalsHtml += `
-                        <div class="adm-item-box">
-                            <div class="adm-row-header" onclick="app.admToggleGoal('${raceKey}')">
-                                <strong>${r.name}</strong>
-                                <i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i>
-                            </div>
-                            <div id="goal-content-${raceKey}" class="adm-nested ${isRaceOpen}">
-                                ${workoutsHtml}
-                                <div style="text-align:right; margin-top:5px;">
-                                    <button onclick="app.admDelRaceInline('${safeId}', ${rIdx})" style="font-size:10px; color:red; border:none; background:none; cursor:pointer;">Excluir Objetivo</button>
-                                </div>
-                            </div>
-                        </div>`;
+                        workoutsHtml += `<div style="display:flex; gap:5px; margin-top:10px; justify-content:flex-end;"><button onclick="app.admAddWorkoutInline('${safeId}', ${rIdx}')" class="adm-btn-small" style="background:#f0f0f0;">+ Treino</button><button onclick="app.admImportTemplateInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ Modelo</button></div>`;
+                        goalsHtml += `<div class="adm-item-box"><div class="adm-row-header" onclick="app.admToggleGoal('${raceKey}')"><strong>${r.name}</strong><i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i></div><div id="goal-content-${raceKey}" class="adm-nested ${isRaceOpen}">${workoutsHtml}<div style="text-align:right; margin-top:5px;"><button onclick="app.admDelRaceInline('${safeId}', ${rIdx})" style="font-size:10px; color:red; border:none; background:none; cursor:pointer;">Excluir Objetivo</button></div></div></div>`;
                     });
                 } else { goalsHtml = '<p style="font-size:12px; color:#999; padding:10px;">Sem objetivos cadastrados.</p>'; }
 
-                html += `
-                <div class="card" style="padding:15px; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:15px; padding-bottom:5px;">
-                        <input type="checkbox" class="check-toggle" ${checked} onchange="app.admToggleStatus('${safeId}', this.checked)">
-                        <div style="flex:1; cursor:pointer;" onclick="app.admToggleUser('${safeId}')">
-                            <span style="font-weight:700; font-size:16px;">${u.name}</span>
-                            <br><span style="font-size:12px; color:#888;">${u.email}</span>
-                        </div>
-                        <button onclick="app.admDeleteUserQuick('${safeId}')" style="border:none; background:none; color:var(--red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                    <div id="user-content-${docId}" class="adm-nested ${isUserOpen}" style="border-left:none; padding-left:0; margin-top:15px;">
-                        ${goalsHtml}
-                        <button onclick="app.admAddRaceInline('${safeId}')" style="width:100%; border:2px dashed #eee; background:none; padding:12px; font-size:13px; margin-top:10px; color:var(--primary); font-weight:600; border-radius:12px; cursor:pointer;">+ Novo Objetivo</button>
-                    </div>
-                </div>`;
+                html += `<div class="card" style="padding:15px; margin-bottom:10px;"><div style="display:flex; align-items:center; gap:15px; padding-bottom:5px;"><input type="checkbox" class="check-toggle" ${checked} onchange="app.admToggleStatus('${safeId}', this.checked)"><div style="flex:1; cursor:pointer;" onclick="app.admToggleUser('${safeId}')"><span style="font-weight:700; font-size:16px;">${u.name}</span><br><span style="font-size:12px; color:#888;">${u.email}</span></div><button onclick="app.admDeleteUserQuick('${safeId}')" style="border:none; background:none; color:var(--red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div><div id="user-content-${docId}" class="adm-nested ${isUserOpen}" style="border-left:none; padding-left:0; margin-top:15px;">${goalsHtml}<button onclick="app.admAddRaceInline('${safeId}')" style="width:100%; border:2px dashed #eee; background:none; padding:12px; font-size:13px; margin-top:10px; color:var(--primary); font-weight:600; border-radius:12px; cursor:pointer;">+ Novo Objetivo</button></div></div>`;
             });
             list.innerHTML = html;
         });
     },
     
-    admToggleUser: (docId) => {
-        if(expandedUsers.has(docId)) expandedUsers.delete(docId); else expandedUsers.add(docId);
-        const el = document.getElementById(`user-content-${docId}`); if(el) el.classList.toggle('open');
-    },
-    admToggleGoal: (key) => {
-        if(expandedRaces.has(key)) expandedRaces.delete(key); else expandedRaces.add(key);
-        const el = document.getElementById(`goal-content-${key}`); if(el) el.classList.toggle('open');
-    },
-    admToggleStatus: async (docId, status) => {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status });
-        app.toast(status ? "Aluno aprovado" : "Aluno bloqueado");
-    },
-    
-    admAddWorkoutInline: (docId, rIdx) => {
-        currentAdmUser = docId; currentAdmRaceIdx = rIdx; isEditingTemplate = false; editingWorkoutIndex = null;
-        document.getElementById('modal-workout-title').innerText = "Novo Treino";
-        document.getElementById('new-w-title').value = ''; document.getElementById('new-w-desc').value = ''; document.getElementById('new-w-video').value = '';
-        document.getElementById('modal-add-single-workout').classList.add('active');
-    },
+    admToggleUser: (docId) => { if(expandedUsers.has(docId)) expandedUsers.delete(docId); else expandedUsers.add(docId); const el = document.getElementById(`user-content-${docId}`); if(el) el.classList.toggle('open'); },
+    admToggleGoal: (key) => { if(expandedRaces.has(key)) expandedRaces.delete(key); else expandedRaces.add(key); const el = document.getElementById(`goal-content-${key}`); if(el) el.classList.toggle('open'); },
+    admToggleStatus: async (docId, status) => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status }); app.toast(status ? "Aluno aprovado" : "Aluno bloqueado"); },
+    admAddWorkoutInline: (docId, rIdx) => { currentAdmUser = docId; currentAdmRaceIdx = rIdx; isEditingTemplate = false; editingWorkoutIndex = null; document.getElementById('modal-workout-title').innerText = "Novo Treino"; document.getElementById('new-w-title').value = ''; document.getElementById('new-w-desc').value = ''; document.getElementById('new-w-video').value = ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
     
     saveSingleWorkout: async () => {
         const title = document.getElementById('new-w-title').value;
         const desc = document.getElementById('new-w-desc').value;
         const video = document.getElementById('new-w-video').value;
         if(!title) return app.toast('Título obrigatório');
-        
         try {
             if (isEditingTemplate) {
                 const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, currentTemplateId));
@@ -963,12 +902,11 @@ window.app = {
             if(s.empty) { list.innerHTML = '<p>Nenhum modelo cadastrado.</p>'; return; }
             s.forEach(d => {
                 const t = d.data();
-                list.innerHTML += `<label style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;"><input type="radio" name="selected_template" value="${d.id}" style="margin-right:15px; width:18px; height:18px;"><div><strong style="font-size:16px;">${t.name}</strong><br><span style="font-size:12px; color:#888;">${t.workouts.length} treinos</span></div></label>`;
+                list.innerHTML += `<label style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;"><input type=\"radio\" name=\"selected_template\" value=\"${d.id}\" style=\"margin-right:15px; width:18px; height:18px;\"><div><strong style=\"font-size:16px;\">${t.name}</strong><br><span style=\"font-size:12px; color:#888;\">${t.workouts.length} treinos</span></div></label>`;
             });
             document.getElementById('modal-select-template').classList.add('active');
         });
     },
-    
     confirmTemplateImport: async () => {
         const selected = document.querySelector('input[name="selected_template"]:checked');
         const startDateInput = document.getElementById('template-start-date').value;
@@ -993,42 +931,10 @@ window.app = {
         app.toast("Modelo importado com datas!");
         document.getElementById('modal-select-template').classList.remove('active');
     },
-
-    admDeleteWorkoutInline: async (docId, rIdx, wIdx) => {
-        app.showConfirm("Remover este treino?", async () => {
-            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
-            const u = snap.data();
-            u.races[rIdx].workouts.splice(wIdx, 1);
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races });
-            app.toast("Treino removido.");
-        });
-    },
-    admAddRaceInline: async (docId) => {
-        app.showPrompt("Nome do Objetivo:", async (name) => {
-            if(!name) return;
-            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
-            const u = snap.data();
-            const races = u.races || [];
-            races.push({ name, date: '', workouts: [], created: new Date().toISOString() });
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races });
-            app.toast("Objetivo criado");
-        });
-    },
-    admDelRaceInline: async (docId, rIdx) => {
-        app.showConfirm("Apagar objetivo e seus treinos?", async () => {
-            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
-            const u = snap.data();
-            u.races.splice(rIdx, 1);
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races });
-            app.toast("Objetivo removido.");
-        });
-    },
-    admDeleteUserQuick: async (docId) => {
-        app.showConfirm(`Apagar permanentemente?`, async () => {
-              await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
-              app.toast("Aluno excluído.");
-        });
-    },
+    admDeleteWorkoutInline: async (docId, rIdx, wIdx) => { app.showConfirm("Remover este treino?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races[rIdx].workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); app.toast("Treino removido."); }); },
+    admAddRaceInline: async (docId) => { app.showPrompt("Nome do Objetivo:", async (name) => { if(!name) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); const races = u.races || []; races.push({ name, date: '', workouts: [], created: new Date().toISOString() }); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races }); app.toast("Objetivo criado"); }); },
+    admDelRaceInline: async (docId, rIdx) => { app.showConfirm("Apagar objetivo e seus treinos?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races.splice(rIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); app.toast("Objetivo removido."); }); },
+    admDeleteUserQuick: async (docId) => { app.showConfirm(`Apagar permanentemente?`, async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); app.toast("Aluno excluído."); }); },
 
     // --- TEMPLATES ---
     admLoadTemplates: () => {
@@ -1041,38 +947,11 @@ window.app = {
                 let workoutsHtml = '';
                 if(t.workouts && t.workouts.length > 0) {
                     t.workouts.forEach((w, wIdx) => {
-                        const upDisabled = wIdx === 0 ? 'opacity:0.3;' : '';
-                        const downDisabled = wIdx === t.workouts.length - 1 ? 'opacity:0.3;' : '';
-                        workoutsHtml += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;">
-                            <div style="flex:1;">
-                                <span style="font-size:13px; font-weight:600; color:var(--text-main);">${w.title}</span><br>
-                                <span style="font-size:11px; color:#666;">${w.desc}</span>
-                            </div>
-                            <div style="display:flex; gap:5px;">
-                                <button onclick="app.admMoveWorkout('${tId}', ${wIdx}, -1)" style="border:1px solid #ddd; background:none; padding:2px 6px; ${upDisabled}"><i class="fa-solid fa-arrow-up"></i></button>
-                                <button onclick="app.admMoveWorkout('${tId}', ${wIdx}, 1)" style="border:1px solid #ddd; background:none; padding:2px 6px; ${downDisabled}"><i class="fa-solid fa-arrow-down"></i></button>
-                                <button onclick="app.admEditWorkoutFromTemplate('${tId}', ${wIdx})" style="border:1px solid #ddd; background:none; padding:2px 6px;"><i class="fa-solid fa-pencil"></i></button>
-                                <button onclick="app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:var(--red); border:none; background:none; font-weight:bold; margin-left:5px;">X</button>
-                            </div>
-                        </div>`;
+                        const upDisabled = wIdx === 0 ? 'opacity:0.3;' : ''; const downDisabled = wIdx === t.workouts.length - 1 ? 'opacity:0.3;' : '';
+                        workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;"><div style="flex:1;"><span style="font-size:13px; font-weight:600; color:var(--text-main);">${w.title}</span><br><span style="font-size:11px; color:#666;">${w.desc}</span></div><div style="display:flex; gap:5px;"><button onclick="app.admMoveWorkout('${tId}', ${wIdx}, -1)" style="border:1px solid #ddd; background:none; padding:2px 6px; ${upDisabled}"><i class="fa-solid fa-arrow-up"></i></button><button onclick="app.admMoveWorkout('${tId}', ${wIdx}, 1)" style="border:1px solid #ddd; background:none; padding:2px 6px; ${downDisabled}"><i class="fa-solid fa-arrow-down"></i></button><button onclick="app.admEditWorkoutFromTemplate('${tId}', ${wIdx})" style="border:1px solid #ddd; background:none; padding:2px 6px;"><i class="fa-solid fa-pencil"></i></button><button onclick="app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:var(--red); border:none; background:none; font-weight:bold; margin-left:5px;">X</button></div></div>`;
                     });
                 } else { workoutsHtml = '<p style="font-size:11px; color:#999;">Sem treinos neste modelo.</p>'; }
-
-                html += `
-                <div class="card" style="padding:10px; margin-bottom:10px;">
-                    <div class="adm-row-header" onclick="app.admToggleTemplate('${tId}')">
-                        <span style="font-weight:600; color:var(--text-main);">${t.name}</span>
-                        <div><span style="font-size:11px; color:#888; margin-right:10px;">${t.workouts.length} treinos</span><i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i></div>
-                    </div>
-                    <div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">
-                        ${workoutsHtml}
-                        <div style="display:flex; gap:5px; margin-top:10px; justify-content:space-between;">
-                            <button onclick="app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small" style="background:#f0f0f0;">+ Treino</button>
-                            <button onclick="app.admDelTemplate('${tId}')" style="color:red; border:none; background:none; font-size:11px;">Excluir Modelo</button>
-                        </div>
-                    </div>
-                </div>`;
+                html += `<div class="card" style="padding:10px; margin-bottom:10px;"><div class="adm-row-header" onclick="app.admToggleTemplate('${tId}')"><span style="font-weight:600; color:var(--text-main);">${t.name}</span><div><span style="font-size:11px; color:#888; margin-right:10px;">${t.workouts.length} treinos</span><i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i></div></div><div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">${workoutsHtml}<div style="display:flex; gap:5px; margin-top:10px; justify-content:space-between;"><button onclick="app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small" style="background:#f0f0f0;">+ Treino</button><button onclick="app.admDelTemplate('${tId}')" style="color:red; border:none; background:none; font-size:11px;">Excluir Modelo</button></div></div></div>`;
             });
             list.innerHTML = html;
         });
@@ -1085,7 +964,7 @@ window.app = {
     admDeleteWorkoutFromTemplate: async (tId, wIdx) => { if(!confirm("Remover treino do modelo?")) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); t.workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts: t.workouts }); },
     admDelTemplate: async (id) => { app.showConfirm("Apagar modelo?", async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, id))); },
 
-    // --- NOTICIAS & RECEITAS (ADMIN) com STORAGE ---
+    // --- NOTICIAS & RECEITAS (ADMIN) com STORAGE DELETE ---
     previewNewsImg: (input) => { 
         if(input.files && input.files[0]) {
             tempNewsFile = input.files[0];
@@ -1102,13 +981,8 @@ window.app = {
         
         document.getElementById('btn-post-news').disabled = true;
         app.toast("Enviando...");
-
         let imgUrl = null;
-        if(tempNewsFile) {
-            // Uso da nova função de Storage
-            imgUrl = await app.uploadImage(tempNewsFile, 'news');
-        }
-
+        if(tempNewsFile) imgUrl = await app.uploadImage(tempNewsFile, 'news');
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS)), { title, body, img: imgUrl, created: Date.now() });
         app.toast('Publicado!'); 
         document.getElementById('news-title').value=''; 
@@ -1124,7 +998,17 @@ window.app = {
             snap.forEach(d => { div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #CCC; display:flex; justify-content:space-between; align-items:center;"><span>${d.data().title}</span><button onclick="app.admDeleteNews('${d.id}')" style="color:red; border:none; background:none; font-weight:bold; cursor:pointer;">X</button></div>`; });
         });
     },
-    admDeleteNews: async (id) => { if(confirm("Apagar esta notícia?")) { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_NEWS, id)); app.toast("Notícia removida."); } },
+    
+    // --- ATUALIZADO: APAGA NOTICIA E IMAGEM ---
+    admDeleteNews: async (id) => { 
+        if(confirm("Apagar esta notícia?")) { 
+            const refDoc = doc(db, 'artifacts', appId, 'public', 'data', C_NEWS, id);
+            const snap = await getDoc(refDoc);
+            if(snap.exists() && snap.data().img) await app.deleteFile(snap.data().img);
+            await deleteDoc(refDoc);
+            app.toast("Notícia removida."); 
+        } 
+    },
 
     previewRecImg: (input) => { 
         if(input.files && input.files[0]) {
@@ -1149,13 +1033,8 @@ window.app = {
         
         document.getElementById('btn-post-recipe').disabled = true;
         app.toast("Enviando...");
-
         let imgUrl = null;
-        if(tempRecFile) {
-            // Uso da nova função de Storage
-            imgUrl = await app.uploadImage(tempRecFile, 'recipes');
-        }
-
+        if(tempRecFile) imgUrl = await app.uploadImage(tempRecFile, 'recipes');
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_RECIPES)), {
             title, kcal, time, p, c, f, ingredients: ing, steps: steps, img: imgUrl, created: Date.now()
         });
@@ -1172,7 +1051,16 @@ window.app = {
             s.forEach(d=>{ l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">${d.data().title} <button onclick="app.admDelRec('${d.id}')" style="color:red;float:right;border:none;">X</button></div>` });
         });
     },
-    admDelRec: async (id) => { app.showConfirm('Apagar receita?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_RECIPES, id))); },
+    
+    // --- ATUALIZADO: APAGA RECEITA E IMAGEM ---
+    admDelRec: async (id) => { 
+        app.showConfirm('Apagar receita?', async () => {
+            const refDoc = doc(db, 'artifacts', appId, 'public', 'data', C_RECIPES, id);
+            const snap = await getDoc(refDoc);
+            if(snap.exists() && snap.data().img) await app.deleteFile(snap.data().img);
+            await deleteDoc(refDoc);
+        });
+    },
 
     postQuote: async () => {
         const text = document.getElementById('adm-quote-text').value; if(!text) return;
@@ -1189,6 +1077,3 @@ window.app = {
 };
 
 window.onload = app.init;
-
-window.onload = app.init;
-
