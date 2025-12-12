@@ -1,17 +1,26 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// NOVO: Import do Storage para imagens
+// Adicionando Storage oficial
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-const firebaseConfig = { apiKey: "AIzaSyAZc5IXA3PRIadz87sysrC_7lLZZG-7Izw", authDomain: "app-corrida-d3568.firebaseapp.com", projectId: "app-corrida-d3568", storageBucket: "app-corrida-d3568.firebasestorage.app", messagingSenderId: "690843260846", appId: "1:690843260846:web:e32be21759c9e813bada3f", measurementId: "G-26RNCCZYED" };
+// --- ÁREA DE CONFIGURAÇÃO (MANTENHA SUAS CHAVES AQUI) ---
+const firebaseConfig = { 
+    apiKey: "AIzaSyDti6glq6Yw_mz_RV8JC167wPyOkbSDs-s", 
+    authDomain: "nuts-aea26.firebaseapp.com", 
+    projectId: "nuts-aea26", 
+    storageBucket: "nuts-aea26.firebasestorage.app", 
+    messagingSenderId: "790944551064", 
+    appId: "1:790944551064:web:eec0a496c599a58cc040ed" 
+};
+// -----------------------------------------------------------
 
 // INICIALIZAÇÃO
 const appInit = initializeApp(firebaseConfig);
 const auth = getAuth(appInit);
 const db = getFirestore(appInit);
-const storage = getStorage(appInit); // Init Storage
-const appId = "1:690843260846:web:e32be21759c9e813bada3f";
+const storage = getStorage(appInit); // Storage ativado
+const appId = firebaseConfig.appId; 
 
 // CONSTANTES E CONFIGURAÇÕES
 const C_USERS = 'expliq_users_v9';
@@ -22,14 +31,13 @@ const C_QUOTES = 'expliq_quotes_v9';
 const C_TEMPLATES = 'expliq_templates_v9';
 
 // !!! SEGURANÇA ADMIN !!!
-// Coloque aqui o email do treinador.
-const ADMIN_EMAILS = ["lucas_maia9@hotmail.com"]; 
+const ADMIN_EMAILS = ["treinador@nuts.com"]; 
 
 let currentUser = null;
 let currentMonth = new Date();
 let selectedDayDate = null; 
 
-// Variáveis temporárias (não use Base64 para storage, use File object)
+// Variáveis temporárias
 let tempPostFile = null;
 let tempNewsFile = null;
 let tempRecFile = null;
@@ -59,19 +67,29 @@ window.app = {
         app.renderCalendar();
     },
     
-    // --- HELPER DE UPLOAD (Storage) ---
-    // Recebe o arquivo e uma pasta (ex: 'avatars' ou 'posts')
-    uploadFileToStorage: async (file, folder) => {
-        if(!file) return null;
+    // --- UPLOAD HELPER (MÉTODO PROFISSIONAL) ---
+    // Envia o arquivo para o Firebase Storage e retorna o link de download
+    uploadImage: async (file, folderName) => {
+        if (!file) return null;
         try {
+            // Cria uma referência única: pasta/data_nomearquivo
             const fileName = `${Date.now()}_${file.name}`;
-            const storageRef = ref(storage, `${folder}/${fileName}`);
+            const storageRef = ref(storage, `${folderName}/${fileName}`);
+            
+            // Faz o upload
             const snapshot = await uploadBytes(storageRef, file);
+            
+            // Pega a URL pública
             const downloadURL = await getDownloadURL(snapshot.ref);
             return downloadURL;
         } catch (error) {
-            console.error("Erro upload:", error);
-            app.toast("Erro ao enviar imagem");
+            console.error("Erro no Upload:", error);
+            // Erro comum: CORS ou Storage não ativado no console
+            if(error.code === 'storage/unauthorized') {
+                app.toast("Erro: Permissão negada. Ative o Storage em 'Modo Teste' no console.");
+            } else {
+                app.toast("Erro ao enviar imagem. Verifique o console.");
+            }
             return null;
         }
     },
@@ -134,8 +152,7 @@ window.app = {
         const email = document.getElementById('reg-email').value.toLowerCase();
         const pass = document.getElementById('reg-pass').value;
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-            const user = userCredential.user;
+            await createUserWithEmailAndPassword(auth, email, pass);
             const newUser = { name, email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), newUser);
             await signOut(auth);
@@ -146,6 +163,7 @@ window.app = {
             if(err.code === 'auth/email-already-in-use') msg = 'Email já registado. Por favor, faça login.';
             else if(err.code === 'auth/weak-password') msg = 'Senha muito fraca.';
             app.toast(msg); 
+            console.error(err);
         }
     },
 
@@ -156,14 +174,16 @@ window.app = {
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
             const user = userCredential.user;
-            // Se o usuário não existir no Firestore (criado manualmente no Auth), cria aqui
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.email);
             const snap = await getDoc(docRef);
             if (!snap.exists()) {
                 const newUser = { name: "Aluno(a)", email: user.email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
                 await setDoc(docRef, newUser);
             }
-        } catch(err) { app.toast('Email ou senha inválidos.'); }
+        } catch(err) { 
+            console.error(err);
+            app.toast('Email ou senha inválidos.'); 
+        }
     },
 
     forgotPassword: () => {
@@ -175,20 +195,19 @@ window.app = {
     },
 
     loadUser: (email) => {
-        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), (doc) => {
-            if(doc.exists()) {
-                currentUser = doc.data();
-                
-                // SEGURANÇA ADMIN: Verifica se o email está na lista de admins
+        onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), (docSnap) => {
+            if(docSnap.exists()) {
+                currentUser = docSnap.data();
                 if(ADMIN_EMAILS.includes(currentUser.email)) {
-                     document.getElementById('btn-admin-access').style.display = 'block';
+                     const btnAdmin = document.getElementById('btn-admin-access');
+                     if(btnAdmin) btnAdmin.style.display = 'block';
                 } else {
-                     document.getElementById('btn-admin-access').style.display = 'none';
+                     const btnAdmin = document.getElementById('btn-admin-access');
+                     if(btnAdmin) btnAdmin.style.display = 'none';
                 }
 
                 if (document.getElementById('view-admin').classList.contains('active')) return;
                 
-                // Se for admin, pula a verificação de 'active'
                 if(!currentUser.active && !ADMIN_EMAILS.includes(currentUser.email)) { 
                     app.screen('view-pending'); 
                     return; 
@@ -216,6 +235,8 @@ window.app = {
         document.getElementById('profile-email-big').innerText = currentUser.email;
         const img = document.getElementById('profile-img-big');
         if(currentUser.avatar) { img.src=currentUser.avatar; img.style.display='block'; }
+        else { img.style.display='none'; }
+        
         const hList = document.getElementById('profile-history');
         hList.innerHTML = '';
         (currentUser.races || []).forEach(r => {
@@ -227,13 +248,15 @@ window.app = {
     },
     closeProfile: () => app.screen('view-app'),
     
-    // UPLOAD AVATAR (STORAGE)
     uploadAvatar: async (input) => {
         if(input.files && input.files[0]) {
             app.toast("Enviando imagem...");
-            const url = await app.uploadFileToStorage(input.files[0], 'avatars');
-            if(url) {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { avatar: url });
+            // Uso da nova função de Storage
+            const imgUrl = await app.uploadImage(input.files[0], 'avatars');
+            
+            if(imgUrl) {
+                app.toast("Salvando perfil...");
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { avatar: imgUrl });
                 app.toast("Foto atualizada!");
                 app.openProfile();
             }
@@ -544,7 +567,6 @@ window.app = {
     },
     openCreatePost: () => app.screen('view-create-post'),
     closeCreatePost: () => app.screen('view-app'),
-    // PREVIEW IMAGEM POST (agora apenas mostra, não converte base64 para variavel final)
     previewPostImg: (input) => { 
         if(input.files && input.files[0]) {
             tempPostFile = input.files[0];
@@ -563,7 +585,8 @@ window.app = {
         
         let imgUrl = null;
         if(tempPostFile) {
-            imgUrl = await app.uploadFileToStorage(tempPostFile, 'posts');
+            // Uso da nova função de Storage
+            imgUrl = await app.uploadImage(tempPostFile, 'posts');
         }
 
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS)), { 
@@ -919,10 +942,11 @@ window.app = {
 
         let imgUrl = null;
         if(tempNewsFile) {
-            imgUrl = await app.uploadFileToStorage(tempNewsFile, 'news');
+            // Uso da nova função de Storage
+            imgUrl = await app.uploadImage(tempNewsFile, 'news');
         }
 
-        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS)), { title, body, img: imgUrl, created: Date.now() });
+        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS)), { title, body, img: imgUrl, created: Date.now() });
         app.toast('Publicado!'); 
         document.getElementById('news-title').value=''; 
         document.getElementById('news-body').value=''; 
@@ -965,7 +989,8 @@ window.app = {
 
         let imgUrl = null;
         if(tempRecFile) {
-            imgUrl = await app.uploadFileToStorage(tempRecFile, 'recipes');
+            // Uso da nova função de Storage
+            imgUrl = await app.uploadImage(tempRecFile, 'recipes');
         }
 
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_RECIPES)), {
@@ -1000,5 +1025,6 @@ window.app = {
     admDelQuote: async (id) => { app.showConfirm('Apagar frase?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id))); },
 };
 
-
 window.onload = app.init;
+window.onload = app.init;
+
