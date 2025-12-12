@@ -31,7 +31,7 @@ const C_QUOTES = 'expliq_quotes_v9';
 const C_TEMPLATES = 'expliq_templates_v9';
 
 // !!! SEGURANÇA ADMIN !!!
-const ADMIN_EMAILS = ["treinador@nuts.com"]; 
+const ADMIN_EMAILS = ["admin@nuts.com"]; 
 
 let currentUser = null;
 let currentMonth = new Date();
@@ -1027,4 +1027,5 @@ window.app = {
 
 window.onload = app.init;
 window.onload = app.init;
+
 
