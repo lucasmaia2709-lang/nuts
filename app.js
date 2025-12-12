@@ -23,7 +23,7 @@ const C_TEMPLATES = 'expliq_templates_v9';
 
 // !!! SEGURANÇA ADMIN !!!
 // Coloque aqui o email do treinador.
-const ADMIN_EMAILS = ["admin@nuts.com", "seuemail@exemplo.com"]; 
+const ADMIN_EMAILS = ["lucas_maia9@hotmail.com"]; 
 
 let currentUser = null;
 let currentMonth = new Date();
@@ -999,5 +999,6 @@ window.app = {
     },
     admDelQuote: async (id) => { app.showConfirm('Apagar frase?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id))); },
 };
+
 
 window.onload = app.init;
