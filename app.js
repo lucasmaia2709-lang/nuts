@@ -71,46 +71,31 @@ window.app = {
     // --- UPLOAD HELPER COM COMPRESSÃO ---
     compressImage: (file) => {
         return new Promise((resolve) => {
-            // Se não for imagem, retorna o original
             if (!file.type.startsWith('image/')) {
                 resolve(file);
                 return;
             }
-
-            const maxWidth = 1080; // Largura máxima (Full HD é ótimo para mobile)
-            const quality = 0.7;   // 70% de qualidade (reduz muito o peso sem perder nitidez visual)
-
+            const maxWidth = 1080; 
+            const quality = 0.7;   
             const reader = new FileReader();
             reader.readAsDataURL(file);
-            
             reader.onload = (event) => {
                 const img = new Image();
                 img.src = event.target.result;
-                
                 img.onload = () => {
                     let width = img.width;
                     let height = img.height;
-
-                    // Lógica de redimensionamento proporcional
                     if (width > maxWidth) {
                         height = Math.round(height * (maxWidth / width));
                         width = maxWidth;
                     }
-
                     const canvas = document.createElement('canvas');
                     canvas.width = width;
                     canvas.height = height;
-                    
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-
-                    // Converte para BLOB (JPEG)
                     canvas.toBlob((blob) => {
-                        if (!blob) {
-                            resolve(file); // Fallback se der erro
-                            return;
-                        }
-                        // Cria novo arquivo comprimido
+                        if (!blob) { resolve(file); return; }
                         const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
                             type: 'image/jpeg',
                             lastModified: Date.now(),
@@ -118,24 +103,28 @@ window.app = {
                         resolve(newFile);
                     }, 'image/jpeg', quality);
                 };
-                
-                img.onerror = () => resolve(file); // Fallback se imagem for inválida
+                img.onerror = () => resolve(file);
             };
-            
-            reader.onerror = () => resolve(file); // Fallback se leitura falhar
+            reader.onerror = () => resolve(file);
         });
     },
 
     uploadImage: async (file, folderName) => {
         if (!file) return null;
         try {
-            app.toast("Otimizando imagem..."); // Feedback visual
+            app.toast("Otimizando imagem...");
             const compressedFile = await app.compressImage(file);
             
             app.toast("Enviando...");
             const fileName = `${Date.now()}_${compressedFile.name}`;
-            const storageRef = ref(storage, `${folderName}/${fileName}`);
             
+            // ORGANIZAÇÃO: Tenta salvar dentro da pasta do usuário para organização
+            let path = `${folderName}/${fileName}`;
+            if (currentUser) {
+                path = `${folderName}/${currentUser.email}/${fileName}`;
+            }
+
+            const storageRef = ref(storage, path);
             const snapshot = await uploadBytes(storageRef, compressedFile);
             const downloadURL = await getDownloadURL(snapshot.ref);
             return downloadURL;
@@ -210,7 +199,6 @@ window.app = {
         try {
             await createUserWithEmailAndPassword(auth, email, pass);
             const newUser = { name, email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
-            // Tenta criar o documento
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), newUser);
                 await signOut(auth);
@@ -236,11 +224,9 @@ window.app = {
         const pass = document.getElementById('log-pass').value;
         
         try {
-            // 1. Tenta Autenticação (Login/Senha)
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
             const user = userCredential.user;
             
-            // 2. Se autenticou, tenta acessar o Banco de Dados
             try {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.email);
                 const snap = await getDoc(docRef);
@@ -251,7 +237,6 @@ window.app = {
                 }
             } catch (dbError) {
                 console.error("Erro Banco de Dados após Login:", dbError);
-                // Se der erro aqui, é permissão do banco, não senha errada
                 app.toast("Login OK, mas erro ao carregar perfil. Verifique permissões.");
             }
             
@@ -279,19 +264,13 @@ window.app = {
     },
 
     loadUser: (email) => {
-        // Verifica se appId está definido corretamente para evitar erro de caminho vazio
         if (!appId) { console.error("AppID não definido"); return; }
         
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), (docSnap) => {
             if(docSnap.exists()) {
                 currentUser = docSnap.data();
-                if(ADMIN_EMAILS.includes(currentUser.email)) {
-                     const btnAdmin = document.getElementById('btn-admin-access');
-                     if(btnAdmin) btnAdmin.style.display = 'block';
-                } else {
-                     const btnAdmin = document.getElementById('btn-admin-access');
-                     if(btnAdmin) btnAdmin.style.display = 'none';
-                }
+                const btnAdmin = document.getElementById('btn-admin-access');
+                if(btnAdmin) btnAdmin.style.display = ADMIN_EMAILS.includes(currentUser.email) ? 'block' : 'none';
 
                 if (document.getElementById('view-admin').classList.contains('active')) return;
                 
@@ -337,9 +316,7 @@ window.app = {
     
     uploadAvatar: async (input) => {
         if(input.files && input.files[0]) {
-            // Uso da nova função de Storage
             const imgUrl = await app.uploadImage(input.files[0], 'avatars');
-            
             if(imgUrl) {
                 app.toast("Salvando perfil...");
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { avatar: imgUrl });
@@ -623,28 +600,126 @@ window.app = {
             const posts = [];
             snap.forEach(d => posts.push({id:d.id, ...d.data()}));
             posts.sort((a,b) => b.created - a.created);
+            
             posts.forEach(p => {
                 const imgUrl = p.img || p.image; 
+                // Permissão de exclusão: Dono do post OU Admin
+                const isOwner = currentUser && p.email === currentUser.email;
+                const isAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email);
+                
                 let deleteBtn = '';
-                if (currentUser && (p.email === currentUser.email || ADMIN_EMAILS.includes(currentUser.email))) {
+                if (isOwner || isAdmin) {
                     deleteBtn = `<button onclick="app.deletePost('${p.id}')" style="border:none; background:none; color:var(--red); font-size:14px; margin-left:auto;"><i class="fa-solid fa-trash"></i></button>`;
                 }
+
+                // Lógica de Likes
+                const likes = p.likes || [];
+                const isLiked = currentUser && likes.includes(currentUser.email);
+                const likeIcon = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+                const likeColor = isLiked ? 'color:var(--red);' : 'color:var(--text-main);';
+
+                // Lógica de Comentários
+                const comments = p.comments || [];
+                let commentsHtml = '';
+                comments.forEach((c, idx) => {
+                    // Dono do comentário ou Admin podem apagar
+                    const canDelComm = (currentUser && c.email === currentUser.email) || isAdmin;
+                    commentsHtml += `
+                    <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between;">
+                        <span><strong style="color:var(--text-main);">${c.userName}</strong> <span style="color:var(--text-main);">${c.text}</span></span>
+                        ${canDelComm ? `<button onclick="app.deleteComment('${p.id}', ${idx})" style="border:none; background:none; color:#ccc; font-size:10px; cursor:pointer;">✕</button>` : ''}
+                    </div>`;
+                });
+
                 feed.innerHTML += `
-                <div class="card" style="padding:0; overflow:hidden;">
-                    <div style="padding:20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid #f5f5f5;">
-                        <div style="width:40px; height:40px; border-radius:50%; background:#EEE; overflow:hidden;">${p.avatar ? `<img src="${p.avatar}" style="width:100%;height:100%;">` : ''}</div>
+                <div class="card" style="padding:0; overflow:hidden; margin-bottom:25px;">
+                    <div style="padding:15px; display:flex; align-items:center; gap:12px;">
+                        <div style="width:35px; height:35px; border-radius:50%; background:#EEE; overflow:hidden;">${p.avatar ? `<img src="${p.avatar}" style="width:100%;height:100%;">` : ''}</div>
                         <div>
-                            <strong style="font-size:15px; display:block; color:var(--text-main);">${p.userName}</strong>
+                            <strong style="font-size:14px; display:block; color:var(--text-main);">${p.userName}</strong>
                             <span style="font-size:11px; color:var(--text-sec);">${new Date(p.created).toLocaleDateString()}</span>
                         </div>
                         ${deleteBtn}
                     </div>
-                    ${imgUrl ? `<img src="${imgUrl}" style="width:100%; max-height:400px; object-fit:cover;">` : ''}
-                    <div style="padding:20px;"><p style="margin:0; font-size:15px; line-height:1.5; color:var(--text-main);">${p.text}</p></div>
+                    
+                    ${imgUrl ? `<img src="${imgUrl}" style="width:100%; max-height:450px; object-fit:cover; display:block;">` : ''}
+                    
+                    <div style="padding:15px;">
+                        <div style="display:flex; gap:15px; margin-bottom:12px;">
+                            <button onclick="app.toggleLike('${p.id}')" style="border:none; background:none; font-size:24px; cursor:pointer; ${likeColor}">
+                                <i class="${likeIcon}"></i>
+                            </button>
+                            <button onclick="document.getElementById('comment-input-${p.id}').focus()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main);">
+                                <i class="fa-regular fa-comment"></i>
+                            </button>
+                        </div>
+                        
+                        <div style="font-weight:600; font-size:14px; margin-bottom:8px; color:var(--text-main);">${likes.length} curtidas</div>
+                        
+                        <p style="margin:0 0 10px 0; font-size:14px; line-height:1.5; color:var(--text-main);">
+                            <strong style="margin-right:5px;">${p.userName}</strong>${p.text}
+                        </p>
+
+                        <div style="margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+                            ${commentsHtml}
+                        </div>
+                        
+                        <div style="display:flex; margin-top:10px; gap:10px;">
+                            <input id="comment-input-${p.id}" type="text" placeholder="Adicione um comentário..." style="flex:1; border:none; outline:none; font-size:13px; background:transparent;">
+                            <button onclick="app.submitComment('${p.id}')" style="border:none; background:none; color:var(--primary); font-weight:600; font-size:13px; cursor:pointer;">Publicar</button>
+                        </div>
+                    </div>
                 </div>`;
             });
         });
     },
+
+    toggleLike: async (postId) => {
+        if(!currentUser) return;
+        const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
+        const postSnap = await getDoc(postRef);
+        if(postSnap.exists()) {
+            const p = postSnap.data();
+            const likes = p.likes || [];
+            if(likes.includes(currentUser.email)) {
+                await updateDoc(postRef, { likes: arrayRemove(currentUser.email) });
+            } else {
+                await updateDoc(postRef, { likes: arrayUnion(currentUser.email) });
+            }
+        }
+    },
+
+    submitComment: async (postId) => {
+        if(!currentUser) return;
+        const input = document.getElementById(`comment-input-${postId}`);
+        const text = input.value.trim();
+        if(!text) return;
+        
+        const newComment = {
+            userName: currentUser.name,
+            email: currentUser.email,
+            text: text,
+            created: Date.now()
+        };
+
+        const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
+        await updateDoc(postRef, { comments: arrayUnion(newComment) });
+        input.value = '';
+    },
+
+    deleteComment: async (postId, commentIndex) => {
+        if(!confirm("Apagar comentário?")) return;
+        const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
+        const postSnap = await getDoc(postRef);
+        if(postSnap.exists()) {
+            const p = postSnap.data();
+            const comments = p.comments || [];
+            // Remove pelo index filtrando o array
+            const newComments = comments.filter((_, idx) => idx !== commentIndex);
+            await updateDoc(postRef, { comments: newComments });
+        }
+    },
+
     deletePost: async (postId) => {
         app.showConfirm("Excluir publicação?", async () => {
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId));
@@ -681,6 +756,8 @@ window.app = {
             avatar: currentUser.avatar, 
             text: text, 
             img: imgUrl, 
+            likes: [],
+            comments: [],
             created: Date.now() 
         });
         
@@ -1112,3 +1189,6 @@ window.app = {
 };
 
 window.onload = app.init;
+
+window.onload = app.init;
+
