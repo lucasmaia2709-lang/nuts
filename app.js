@@ -68,13 +68,75 @@ window.app = {
         app.renderCalendar();
     },
     
-    // --- UPLOAD HELPER ---
+    // --- UPLOAD HELPER COM COMPRESSÃO ---
+    compressImage: (file) => {
+        return new Promise((resolve) => {
+            // Se não for imagem, retorna o original
+            if (!file.type.startsWith('image/')) {
+                resolve(file);
+                return;
+            }
+
+            const maxWidth = 1080; // Largura máxima (Full HD é ótimo para mobile)
+            const quality = 0.7;   // 70% de qualidade (reduz muito o peso sem perder nitidez visual)
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                
+                img.onload = () => {
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Lógica de redimensionamento proporcional
+                    if (width > maxWidth) {
+                        height = Math.round(height * (maxWidth / width));
+                        width = maxWidth;
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Converte para BLOB (JPEG)
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            resolve(file); // Fallback se der erro
+                            return;
+                        }
+                        // Cria novo arquivo comprimido
+                        const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                            type: 'image/jpeg',
+                            lastModified: Date.now(),
+                        });
+                        resolve(newFile);
+                    }, 'image/jpeg', quality);
+                };
+                
+                img.onerror = () => resolve(file); // Fallback se imagem for inválida
+            };
+            
+            reader.onerror = () => resolve(file); // Fallback se leitura falhar
+        });
+    },
+
     uploadImage: async (file, folderName) => {
         if (!file) return null;
         try {
-            const fileName = `${Date.now()}_${file.name}`;
+            app.toast("Otimizando imagem..."); // Feedback visual
+            const compressedFile = await app.compressImage(file);
+            
+            app.toast("Enviando...");
+            const fileName = `${Date.now()}_${compressedFile.name}`;
             const storageRef = ref(storage, `${folderName}/${fileName}`);
-            const snapshot = await uploadBytes(storageRef, file);
+            
+            const snapshot = await uploadBytes(storageRef, compressedFile);
             const downloadURL = await getDownloadURL(snapshot.ref);
             return downloadURL;
         } catch (error) {
@@ -275,7 +337,6 @@ window.app = {
     
     uploadAvatar: async (input) => {
         if(input.files && input.files[0]) {
-            app.toast("Enviando imagem...");
             // Uso da nova função de Storage
             const imgUrl = await app.uploadImage(input.files[0], 'avatars');
             
@@ -1051,5 +1112,3 @@ window.app = {
 };
 
 window.onload = app.init;
-
-
