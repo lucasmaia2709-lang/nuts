@@ -1,10 +1,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-// Adicionando Storage oficial
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-// --- ÁREA DE CONFIGURAÇÃO (MANTENHA SUAS CHAVES AQUI) ---
+// --- ÁREA DE CONFIGURAÇÃO ---
 const firebaseConfig = { 
     apiKey: "AIzaSyDti6glq6Yw_mz_RV8JC167wPyOkbSDs-s", 
     authDomain: "nuts-aea26.firebaseapp.com", 
@@ -19,7 +18,7 @@ const firebaseConfig = {
 const appInit = initializeApp(firebaseConfig);
 const auth = getAuth(appInit);
 const db = getFirestore(appInit);
-const storage = getStorage(appInit); // Storage ativado
+const storage = getStorage(appInit);
 const appId = firebaseConfig.appId; 
 
 // CONSTANTES E CONFIGURAÇÕES
@@ -31,7 +30,7 @@ const C_QUOTES = 'expliq_quotes_v9';
 const C_TEMPLATES = 'expliq_templates_v9';
 
 // !!! SEGURANÇA ADMIN !!!
-const ADMIN_EMAILS = ["admin@nuts.com"]; 
+const ADMIN_EMAILS = ["admin@nuts.com", "treinador@nuts.com"]; 
 
 let currentUser = null;
 let currentMonth = new Date();
@@ -67,24 +66,17 @@ window.app = {
         app.renderCalendar();
     },
     
-    // --- UPLOAD HELPER (MÉTODO PROFISSIONAL) ---
-    // Envia o arquivo para o Firebase Storage e retorna o link de download
+    // --- UPLOAD HELPER ---
     uploadImage: async (file, folderName) => {
         if (!file) return null;
         try {
-            // Cria uma referência única: pasta/data_nomearquivo
             const fileName = `${Date.now()}_${file.name}`;
             const storageRef = ref(storage, `${folderName}/${fileName}`);
-            
-            // Faz o upload
             const snapshot = await uploadBytes(storageRef, file);
-            
-            // Pega a URL pública
             const downloadURL = await getDownloadURL(snapshot.ref);
             return downloadURL;
         } catch (error) {
             console.error("Erro no Upload:", error);
-            // Erro comum: CORS ou Storage não ativado no console
             if(error.code === 'storage/unauthorized') {
                 app.toast("Erro: Permissão negada. Ative o Storage em 'Modo Teste' no console.");
             } else {
@@ -149,7 +141,7 @@ window.app = {
     handleRegister: async (e) => {
         e.preventDefault();
         const name = document.getElementById('reg-name').value;
-        const email = document.getElementById('reg-email').value.toLowerCase();
+        const email = document.getElementById('reg-email').value.trim().toLowerCase();
         const pass = document.getElementById('reg-pass').value;
         try {
             await createUserWithEmailAndPassword(auth, email, pass);
@@ -162,6 +154,7 @@ window.app = {
             let msg = 'Erro ao cadastrar.';
             if(err.code === 'auth/email-already-in-use') msg = 'Email já registado. Por favor, faça login.';
             else if(err.code === 'auth/weak-password') msg = 'Senha muito fraca.';
+            else if(err.code === 'auth/operation-not-allowed') msg = 'Login por Email não ativado no painel.';
             app.toast(msg); 
             console.error(err);
         }
@@ -169,26 +162,36 @@ window.app = {
 
     handleLogin: async (e) => {
         e.preventDefault();
-        const email = document.getElementById('log-email').value.toLowerCase();
+        const email = document.getElementById('log-email').value.trim().toLowerCase(); // Remove espaços extras
         const pass = document.getElementById('log-pass').value;
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
             const user = userCredential.user;
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.email);
             const snap = await getDoc(docRef);
+            // Se o usuário existe no Auth mas não no Banco (criado manualmente no painel)
             if (!snap.exists()) {
                 const newUser = { name: "Aluno(a)", email: user.email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
                 await setDoc(docRef, newUser);
             }
         } catch(err) { 
-            console.error(err);
-            app.toast('Email ou senha inválidos.'); 
+            console.error("Erro Login:", err.code, err.message);
+            let msg = 'Erro ao entrar.';
+            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+                msg = 'Email ou senha incorretos.';
+            } else if (err.code === 'auth/too-many-requests') {
+                msg = 'Muitas tentativas. Tente mais tarde.';
+            } else if (err.code === 'auth/operation-not-allowed') {
+                msg = 'ERRO: Ative "Email/Password" no painel do Firebase (Authentication > Sign-in method).';
+            }
+            app.toast(msg); 
         }
     },
 
     forgotPassword: () => {
         app.showPrompt("Digite seu email para recuperar:", (email) => {
-            sendPasswordResetEmail(auth, email)
+            const e = email.trim();
+            sendPasswordResetEmail(auth, e)
             .then(() => app.toast("Email de recuperação enviado!"))
             .catch(e => app.toast("Erro: " + e.message));
         });
@@ -1026,6 +1029,4 @@ window.app = {
 };
 
 window.onload = app.init;
-window.onload = app.init;
-
 
