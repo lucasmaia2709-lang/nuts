@@ -19,7 +19,9 @@ const appInit = initializeApp(firebaseConfig);
 const auth = getAuth(appInit);
 const db = getFirestore(appInit);
 const storage = getStorage(appInit);
-const appId = firebaseConfig.appId; 
+
+// CORREÇÃO: Usamos um ID manual seguro para evitar erros de caminho no banco
+const appId = 'nuts-app-v1'; 
 
 // CONSTANTES E CONFIGURAÇÕES
 const C_USERS = 'expliq_users_v9';
@@ -146,10 +148,16 @@ window.app = {
         try {
             await createUserWithEmailAndPassword(auth, email, pass);
             const newUser = { name, email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), newUser);
-            await signOut(auth);
-            app.toast("Cadastro realizado! Faça login para entrar.");
-            app.screen('view-login');
+            // Tenta criar o documento
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), newUser);
+                await signOut(auth);
+                app.toast("Cadastro realizado! Faça login para entrar.");
+                app.screen('view-login');
+            } catch (dbError) {
+                console.error("Erro Banco de Dados (Registro):", dbError);
+                app.toast("Conta criada, mas erro ao salvar dados. Contate suporte.");
+            }
         } catch(err) { 
             let msg = 'Erro ao cadastrar.';
             if(err.code === 'auth/email-already-in-use') msg = 'Email já registado. Por favor, faça login.';
@@ -162,18 +170,29 @@ window.app = {
 
     handleLogin: async (e) => {
         e.preventDefault();
-        const email = document.getElementById('log-email').value.trim().toLowerCase(); // Remove espaços extras
+        const email = document.getElementById('log-email').value.trim().toLowerCase();
         const pass = document.getElementById('log-pass').value;
+        
         try {
+            // 1. Tenta Autenticação (Login/Senha)
             const userCredential = await signInWithEmailAndPassword(auth, email, pass);
             const user = userCredential.user;
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.email);
-            const snap = await getDoc(docRef);
-            // Se o usuário existe no Auth mas não no Banco (criado manualmente no painel)
-            if (!snap.exists()) {
-                const newUser = { name: "Aluno(a)", email: user.email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
-                await setDoc(docRef, newUser);
+            
+            // 2. Se autenticou, tenta acessar o Banco de Dados
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.email);
+                const snap = await getDoc(docRef);
+                
+                if (!snap.exists()) {
+                    const newUser = { name: "Aluno(a)", email: user.email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
+                    await setDoc(docRef, newUser);
+                }
+            } catch (dbError) {
+                console.error("Erro Banco de Dados após Login:", dbError);
+                // Se der erro aqui, é permissão do banco, não senha errada
+                app.toast("Login OK, mas erro ao carregar perfil. Verifique permissões.");
             }
+            
         } catch(err) { 
             console.error("Erro Login:", err.code, err.message);
             let msg = 'Erro ao entrar.';
@@ -182,7 +201,7 @@ window.app = {
             } else if (err.code === 'auth/too-many-requests') {
                 msg = 'Muitas tentativas. Tente mais tarde.';
             } else if (err.code === 'auth/operation-not-allowed') {
-                msg = 'ERRO: Ative "Email/Password" no painel do Firebase (Authentication > Sign-in method).';
+                msg = 'ERRO: Ative "Email/Password" no painel do Firebase.';
             }
             app.toast(msg); 
         }
@@ -198,6 +217,9 @@ window.app = {
     },
 
     loadUser: (email) => {
+        // Verifica se appId está definido corretamente para evitar erro de caminho vazio
+        if (!appId) { console.error("AppID não definido"); return; }
+        
         onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), (docSnap) => {
             if(docSnap.exists()) {
                 currentUser = docSnap.data();
@@ -1029,4 +1051,5 @@ window.app = {
 };
 
 window.onload = app.init;
+
 
