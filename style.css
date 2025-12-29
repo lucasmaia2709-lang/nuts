@@ -109,7 +109,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 .input-group { margin-bottom: 20px; width: 100%; }
-.label { display: block; font-size: 11px; font-weight: 700; color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.label { display: block; font-size: 11px; font-weight: 700; color: #262262; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
 .input { width: 100%; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background-color: #FFF; font-size: 16px; color: var(--text-main); outline: none; font-family: var(--font-main); transition: 0.2s; -webkit-appearance: none; box-shadow: var(--shadow); }
 .input:focus { border-color: var(--primary); }
 
@@ -220,3 +220,4 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .adm-item-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 .adm-btn-small { padding: 6px 12px; font-size: 11px; border-radius: 8px; border: 1px solid #ddd; background: #FFF; cursor: pointer; font-weight: 600; color: var(--text-main); }
 .adm-action-btn { color: var(--text-sec); border:none; background:none; font-size:12px; padding:5px; cursor:pointer; }
+
