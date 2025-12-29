@@ -2,7 +2,7 @@
     /* PALETA ATUALIZADA (BRANCO GELO) */
     --bg: #f4f7f9;         /* Branco Gelo (Ice White) */
     --primary: #ff8a41;    /* Laranja (Ação/Botões/Destaques) - Mantido */
-    --secondary: #dbffae;  /* Verde (Detalhes secundários) - Mantido */
+    --secondary: #9cafcc;  /* Verde (Detalhes secundários) - Mantido */
     --surface: #FFFFFF;    /* Branco (Cards/Menu) */
     
     /* CORES DE TEXTO */
@@ -91,7 +91,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: transparent; 
+    background: #9cafcc; 
     position: sticky;
     top: 0;
     z-index: 50;
@@ -160,7 +160,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     left: 0; 
     width: 100%; 
     height: auto;
-    background: #FFFFFF; 
+    background: #9cafcc; 
     /* Arredondamento superior sutil, mas conectando nas bordas laterais */
     border-radius: 25px 25px 0 0; 
     display: flex; 
@@ -220,4 +220,3 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .adm-item-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 .adm-btn-small { padding: 6px 12px; font-size: 11px; border-radius: 8px; border: 1px solid #ddd; background: #FFF; cursor: pointer; font-weight: 600; color: var(--text-main); }
 .adm-action-btn { color: var(--text-sec); border:none; background:none; font-size:12px; padding:5px; cursor:pointer; }
-
