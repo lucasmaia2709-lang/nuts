@@ -110,10 +110,10 @@ window.app = {
     uploadImage: async (file, folderName) => {
         if (!file) return null;
         try {
-            app.toast("Otimizando imagem...");
+            app.toast("OTIMIZANDO IMAGEM...");
             const compressedFile = await app.compressImage(file);
             
-            app.toast("Enviando...");
+            app.toast("ENVIANDO...");
             const fileName = `${Date.now()}_${compressedFile.name}`;
             
             let path = `${folderName}/${fileName}`;
@@ -127,7 +127,7 @@ window.app = {
             return downloadURL;
         } catch (error) {
             console.error("Erro no Upload:", error);
-            app.toast("Erro ao enviar imagem.");
+            app.toast("ERRO AO ENVIAR IMAGEM.");
             return null;
         }
     },
@@ -167,13 +167,13 @@ window.app = {
 
     toast: (msg) => { 
         const t = document.getElementById('toast-container'); 
-        t.innerHTML = `<div class="toast show">${msg}</div>`; 
+        t.innerHTML = `<div class="toast show">${msg.toUpperCase()}</div>`; 
         setTimeout(() => t.innerHTML='', 3000); 
     },
     
     showPrompt: (title, callback) => {
         const el = document.getElementById('modal-prompt');
-        document.getElementById('prompt-title').innerText = title;
+        document.getElementById('prompt-title').innerText = title.toUpperCase();
         const inp = document.getElementById('prompt-input');
         inp.value = '';
         el.classList.add('active');
@@ -188,7 +188,7 @@ window.app = {
     
     showConfirm: (text, callback) => {
         const el = document.getElementById('modal-confirm');
-        document.getElementById('confirm-text').innerText = text;
+        document.getElementById('confirm-text').innerText = text.toUpperCase();
         el.classList.add('active');
         const okBtn = document.getElementById('confirm-ok');
         const cancelBtn = document.getElementById('confirm-cancel');
@@ -204,7 +204,7 @@ window.app = {
 
     handleRegister: async (e) => {
         e.preventDefault();
-        const name = document.getElementById('reg-name').value;
+        const name = document.getElementById('reg-name').value.toUpperCase();
         const email = document.getElementById('reg-email').value.trim().toLowerCase();
         const pass = document.getElementById('reg-pass').value;
         try {
@@ -212,10 +212,10 @@ window.app = {
             const newUser = { name, email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, email), newUser);
             await signOut(auth);
-            app.toast("Cadastro realizado! Faça login.");
+            app.toast("CADASTRO REALIZADO! FAÇA LOGIN.");
             app.screen('view-login');
         } catch(err) { 
-            app.toast('Erro ao cadastrar.'); 
+            app.toast('ERRO AO CADASTRAR.'); 
             console.error(err);
         }
     },
@@ -230,20 +230,20 @@ window.app = {
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.email);
             const snap = await getDoc(docRef);
             if (!snap.exists()) {
-                const newUser = { name: "Aluno(a)", email: user.email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
+                const newUser = { name: "ALUNO(A)", email: user.email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
                 await setDoc(docRef, newUser);
             }
         } catch(err) { 
-            app.toast('Email ou senha incorretos.'); 
+            app.toast('EMAIL OU SENHA INCORRETOS.'); 
         }
     },
 
     forgotPassword: () => {
-        app.showPrompt("Digite seu email para recuperar:", (email) => {
+        app.showPrompt("DIGITE SEU EMAIL PARA RECUPERAR:", (email) => {
             const e = email.trim();
             sendPasswordResetEmail(auth, e)
-            .then(() => app.toast("Email de recuperação enviado!"))
-            .catch(e => app.toast("Erro: " + e.message));
+            .then(() => app.toast("EMAIL DE RECUPERAÇÃO ENVIADO!"))
+            .catch(e => app.toast("ERRO: " + e.message));
         });
     },
 
@@ -276,8 +276,8 @@ window.app = {
     openProfile: () => {
         if(!currentUser) return;
         app.screen('view-profile');
-        document.getElementById('profile-name-big').innerText = currentUser.name;
-        document.getElementById('profile-email-big').innerText = currentUser.email;
+        document.getElementById('profile-name-big').innerText = currentUser.name.toUpperCase();
+        document.getElementById('profile-email-big').innerText = currentUser.email.toLowerCase(); // Email geralmente em minúsculas
         const img = document.getElementById('profile-img-big');
         if(currentUser.avatar) { img.src=currentUser.avatar; img.style.display='block'; }
         else { img.style.display='none'; }
@@ -288,7 +288,7 @@ window.app = {
             const done = r.workouts.filter(w=>w.done).length;
             const total = r.workouts.length;
             const pct = total > 0 ? Math.round((done/total)*100) : 0;
-            hList.innerHTML += `<div style="margin-bottom:15px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size:14px;">${r.name}</strong> <span style="font-size:12px; font-weight:600; color:var(--primary);">${pct}%</span></div><div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--primary);"></div></div></div>`;
+            hList.innerHTML += `<div style="margin-bottom:15px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size:14px;">${r.name.toUpperCase()}</strong> <span style="font-size:12px; font-weight:600; color:var(--primary);">${pct}%</span></div><div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--primary);"></div></div></div>`;
         });
     },
 
@@ -296,14 +296,14 @@ window.app = {
     
     uploadAvatar: async (input) => {
         if(input.files && input.files[0]) {
-            app.toast("Trocando foto...");
+            app.toast("TROCANDO FOTO...");
             if(currentUser.avatar) {
                 await app.deleteFile(currentUser.avatar);
             }
             const imgUrl = await app.uploadImage(input.files[0], 'avatars');
             if(imgUrl) {
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { avatar: imgUrl });
-                app.toast("Foto atualizada!");
+                app.toast("FOTO ATUALIZADA!");
                 app.openProfile();
             }
         }
@@ -311,14 +311,14 @@ window.app = {
     
     showAddRaceModal: () => document.getElementById('modal-add-race').classList.add('active'),
     addStudentRace: async () => {
-        const name = document.getElementById('new-race-name').value;
+        const name = document.getElementById('new-race-name').value.toUpperCase();
         const date = document.getElementById('new-race-date').value;
         if(!name) return;
         const races = currentUser.races || [];
         races.push({ name, date, workouts: [], created: new Date().toISOString() });
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { races });
         document.getElementById('modal-add-race').classList.remove('active');
-        app.toast('Objetivo criado!');
+        app.toast('OBJETIVO CRIADO!');
         app.openProfile();
     },
 
@@ -329,7 +329,7 @@ window.app = {
         const m = currentMonth.getMonth();
         const firstDay = new Date(y, m, 1).getDay();
         const daysInMonth = new Date(y, m+1, 0).getDate();
-        document.getElementById('cal-month-title').innerText = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+        document.getElementById('cal-month-title').innerText = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase();
         const grid = document.getElementById('calendar-days');
         grid.innerHTML = '';
         
@@ -373,15 +373,15 @@ window.app = {
     openDayDetail: (dateStr, workoutData) => {
         selectedDayDate = dateStr;
         const modal = document.getElementById('modal-day-detail');
-        document.getElementById('day-det-title').innerText = `Dia ${dateStr.split('-').reverse().join('/')}`;
+        document.getElementById('day-det-title').innerText = `DIA ${dateStr.split('-').reverse().join('/')}`;
         let content = '';
         if(workoutData) {
             content = `<div style="background:#f5f5f5; padding:15px; border-radius:10px; margin-bottom:15px;">
-                <h4 style="margin:0 0 5px 0;">${workoutData.title}</h4>
-                <p style="margin:0; font-size:13px; color:#666;">${workoutData.desc}</p>
-                ${workoutData.done ? '<strong style="color:var(--success); font-size:12px;">Concluído</strong>' : '<span style="color:var(--orange); font-size:12px;">Pendente</span>'}
+                <h4 style="margin:0 0 5px 0;">${workoutData.title.toUpperCase()}</h4>
+                <p style="margin:0; font-size:13px; color:#666;">${workoutData.desc.toUpperCase()}</p>
+                ${workoutData.done ? '<strong style="color:var(--success); font-size:12px;">CONCLUÍDO</strong>' : '<span style="color:var(--orange); font-size:12px;">PENDENTE</span>'}
             </div>`;
-        } else { content = `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`; }
+        } else { content = `<p style="color:#999; text-align:center; margin-bottom:15px;">SEM TREINO REGISTRADO PARA ESTE DIA.</p>`; }
         document.getElementById('day-det-content').innerHTML = content;
         const notes = currentUser.notes || {};
         document.getElementById('day-det-note').value = notes[dateStr] || '';
@@ -389,12 +389,12 @@ window.app = {
     },
 
     saveDayNote: async () => {
-        const note = document.getElementById('day-det-note').value;
+        const note = document.getElementById('day-det-note').value.toUpperCase();
         const notes = currentUser.notes || {};
         if(note.trim() === '') delete notes[selectedDayDate];
         else notes[selectedDayDate] = note;
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { notes });
-        app.toast("Nota salva!");
+        app.toast("NOTA SALVA!");
         document.getElementById('modal-day-detail').classList.remove('active');
         app.renderCalendar();
     },
@@ -408,13 +408,13 @@ window.app = {
             if(news.length > 0) {
                 const n = news[0];
                 container.innerHTML = `
-                    <h3 style="font-size: 16px; margin: 0 0 15px;">Última Novidade</h3>
+                    <h3 style="font-size: 16px; margin: 0 0 15px;">ÚLTIMA NOVIDADE</h3>
                     <div class="card news-card" style="margin-bottom:0;">
                         ${n.img ? `<img src="${n.img}" class="news-img" style="height:150px;">` : ''}
                         <div class="news-content" style="padding:15px;">
                             <div class="news-date" style="font-size:10px;">${new Date(n.created).toLocaleDateString()}</div>
-                            <h3 class="news-title" style="font-size:16px;">${n.title}</h3>
-                            <div class="news-body" style="font-size:13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${n.body}</div>
+                            <h3 class="news-title" style="font-size:16px;">${n.title.toUpperCase()}</h3>
+                            <div class="news-body" style="font-size:13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${n.body.toUpperCase()}</div>
                         </div>
                     </div>`;
             } else { container.innerHTML = ''; }
@@ -427,7 +427,7 @@ window.app = {
             document.getElementById('today-workout-card').innerHTML = `
                 <div class="card" style="text-align:center; padding:40px 20px;">
                     <i class="fa-regular fa-clock" style="font-size:40px; color:var(--primary); margin-bottom:20px; opacity:0.8;"></i>
-                    <p style="font-size:16px; color:var(--text-sec); font-weight:500;">Aguardando seu professor lançar os treinos...</p>
+                    <p style="font-size:16px; color:var(--text-sec); font-weight:500;">AGUARDANDO SEU PROFESSOR LANÇAR OS TREINOS...</p>
                 </div>`; 
             return; 
         }
@@ -442,14 +442,14 @@ window.app = {
         const totalW = activeRace.workouts.length;
         const doneW = activeRace.workouts.filter(w => w.done).length;
         const pct = totalW > 0 ? (doneW / totalW) * 100 : 0;
-        const raceDate = activeRace.date ? new Date(activeRace.date).toLocaleDateString() : 'Sem data';
+        const raceDate = activeRace.date ? new Date(activeRace.date).toLocaleDateString() : 'SEM DATA';
         let cardHtml = '';
         
-        const safeTitle = target ? app.escape(target.title) : '';
+        const safeTitle = target ? app.escape(target.title).toUpperCase() : '';
         const safeVideo = target && target.video ? app.escape(target.video) : '';
         
         if(target) {
-            const doneBtn = target.done ? `<button class="btn" style="background:rgba(255,255,255,0.2); color:#FFF; flex:1; cursor:default;" disabled><i class="fa-solid fa-check"></i> Feito</button>` : `<button onclick="app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); flex:1;">Concluir</button>`;
+            const doneBtn = target.done ? `<button class="btn" style="background:rgba(255,255,255,0.2); color:#FFF; flex:1; cursor:default;" disabled><i class="fa-solid fa-check"></i> FEITO</button>` : `<button onclick="app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); flex:1;">CONCLUIR</button>`;
             let dateDisplay = "";
             if(target.scheduledDate) {
                 const dParts = target.scheduledDate.split('-');
@@ -460,8 +460,8 @@ window.app = {
             cardHtml = `<div class="card" style="background: #9cafcc; color: var(--text-main); border: none; padding:30px;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:25px;">
                     <div>
-                        <h2 style="margin:0; font-size:24px; line-height:1.2; color:var(--text-main);">${target.title} ${dateDisplay}</h2>
-                        <p style="opacity:0.9; font-size:15px; margin-top:8px; font-weight:400; color:var(--text-main);">${target.desc}</p>
+                        <h2 style="margin:0; font-size:24px; line-height:1.2; color:var(--text-main);">${target.title.toUpperCase()} ${dateDisplay}</h2>
+                        <p style="opacity:0.9; font-size:15px; margin-top:8px; font-weight:400; color:var(--text-main);">${target.desc.toUpperCase()}</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.4); width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
                         <i class="fa-solid fa-person-running" style="font-size:24px; color:var(--text-main);"></i>
@@ -469,14 +469,14 @@ window.app = {
                 </div>
                 <div style="display:flex; gap:15px;">
                     ${doneBtn}
-                    ${safeVideo ? `<button onclick="app.playVideo('${safeVideo}')" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-play"></i> Vídeo</button>` : ''}
+                    ${safeVideo ? `<button onclick="app.playVideo('${safeVideo}')" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-play"></i> VÍDEO</button>` : ''}
                 </div>
             </div>`;
         } else {
-            cardHtml = `<div class="card" style="text-align:center; color:var(--success); padding:40px;"><i class="fa-solid fa-circle-check" style="font-size:48px; margin-bottom:15px;"></i><br><strong style="font-size:18px;">Todos os treinos concluídos!</strong></div>`;
+            cardHtml = `<div class="card" style="text-align:center; color:var(--success); padding:40px;"><i class="fa-solid fa-circle-check" style="font-size:48px; margin-bottom:15px;"></i><br><strong style="font-size:18px;">TODOS OS TREINOS CONCLUÍDOS!</strong></div>`;
         }
         container.innerHTML = cardHtml + `
-            <div style="margin-top:20px; font-size:12px; display:flex; justify-content:space-between; color:var(--text-sec); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;"><span>${doneW}/${totalW} Treinos</span> <span>Meta: ${raceDate}</span></div>
+            <div style="margin-top:20px; font-size:12px; display:flex; justify-content:space-between; color:var(--text-sec); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;"><span>${doneW}/${totalW} TREINOS</span> <span>META: ${raceDate}</span></div>
             <div class="progress-container"><div class="progress-bar" style="width:${pct}%"></div></div>
         `;
     },
@@ -484,13 +484,14 @@ window.app = {
     finishWorkout: async (wTitle) => {
         const races = [...currentUser.races];
         const rIdx = races.length - 1;
-        const wIdx = races[rIdx].workouts.findIndex(w => w.title === wTitle && !w.done);
+        // wTitle already uppercase from DOM
+        const wIdx = races[rIdx].workouts.findIndex(w => w.title.toUpperCase() === wTitle && !w.done);
         if(wIdx > -1) {
             races[rIdx].workouts[wIdx].done = true;
             races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
             currentUser.races = races;
             app.renderHome();
-            app.toast("Treino Concluído!");
+            app.toast("TREINO CONCLUÍDO!");
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { races });
         }
     },
@@ -500,9 +501,9 @@ window.app = {
             const quotes = [];
             s.forEach(d=>quotes.push(d.data().text));
             if(quotes.length>0) {
-                document.getElementById('daily-quote').innerText = quotes[Math.floor(Math.random()*quotes.length)];
+                document.getElementById('daily-quote').innerText = quotes[Math.floor(Math.random()*quotes.length)].toUpperCase();
             } else {
-                document.getElementById('daily-quote').innerText = "O único treino ruim é aquele que não aconteceu.";
+                document.getElementById('daily-quote').innerText = "O ÚNICO TREINO RUIM É AQUELE QUE NÃO ACONTECEU.";
             }
         });
     },
@@ -535,7 +536,7 @@ window.app = {
         <div class="card" style="background:var(--primary); color:#FFF; margin-bottom:25px; padding:25px; display:flex; align-items:center; justify-content:space-between;">
             <div>
                 <h2 style="margin:0; font-size:36px; color:#FFF;">${pendingCount}</h2>
-                <p style="margin:0; opacity:0.9; font-size:14px; color:#FFF;">Treinos Restantes</p>
+                <p style="margin:0; opacity:0.9; font-size:14px; color:#FFF;">TREINOS RESTANTES</p>
             </div>
             <i class="fa-solid fa-list-check" style="font-size:40px; opacity:0.5; color:#FFF;"></i>
         </div>`;
@@ -552,10 +553,10 @@ window.app = {
             list.innerHTML += `<div class="card" style="display:flex; align-items:center; gap: 15px; opacity: ${w.done?0.6:1}; padding:20px;">
                 <div style="color:${color}; font-size:24px;"><i class="fa-solid ${icon}"></i></div>
                 <div style="flex:1;">
-                    <h4 style="margin:0; font-size:16px;">${w.title} ${dateBadge}</h4>
-                    <p style="margin:0; font-size:13px; color:var(--text-sec); margin-top:4px;">${w.desc}</p>
+                    <h4 style="margin:0; font-size:16px;">${w.title.toUpperCase()} ${dateBadge}</h4>
+                    <p style="margin:0; font-size:13px; color:var(--text-sec); margin-top:4px;">${w.desc.toUpperCase()}</p>
                 </div>
-                ${safeVideo ? `<button onclick="app.playVideo('${safeVideo}')" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-play" style="color:var(--primary);"></i> Vídeo</button>` : ''}
+                ${safeVideo ? `<button onclick="app.playVideo('${safeVideo}')" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-play" style="color:var(--primary);"></i> VÍDEO</button>` : ''}
             </div>`;
         });
     },
@@ -589,7 +590,7 @@ window.app = {
                     const canDelComm = (currentUser && c.email === currentUser.email) || isAdmin;
                     commentsHtml += `
                     <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:flex-start;">
-                        <span><strong style="color:var(--text-main);">${c.userName}</strong> <span style="color:#555;">${c.text}</span></span>
+                        <span><strong style="color:var(--text-main);">${c.userName.toUpperCase()}</strong> <span style="color:#555;">${c.text.toUpperCase()}</span></span>
                         ${canDelComm ? `<button onclick="app.deleteComment('${p.id}', ${idx})" style="border:none; background:none; color:#ccc; font-size:10px; cursor:pointer;">✕</button>` : ''}
                     </div>`;
                 });
@@ -599,7 +600,7 @@ window.app = {
                     <div style="padding:15px; display:flex; align-items:center; gap:12px;">
                         <div style="width:35px; height:35px; border-radius:50%; background:#EEE; overflow:hidden;">${p.avatar ? `<img src="${p.avatar}" style="width:100%;height:100%;">` : ''}</div>
                         <div>
-                            <strong style="font-size:14px; display:block; color:var(--text-main);">${p.userName}</strong>
+                            <strong style="font-size:14px; display:block; color:var(--text-main);">${p.userName.toUpperCase()}</strong>
                             <span style="font-size:11px; color:var(--text-sec);">${new Date(p.created).toLocaleDateString()}</span>
                         </div>
                         ${deleteBtn}
@@ -617,14 +618,14 @@ window.app = {
                             </button>
                         </div>
                         <p style="margin:0 0 10px 0; font-size:14px; line-height:1.5; color:var(--text-main);">
-                            <strong style="margin-right:5px;">${p.userName}</strong>${p.text}
+                            <strong style="margin-right:5px;">${p.userName.toUpperCase()}</strong>${p.text.toUpperCase()}
                         </p>
                         <div style="margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
                             ${commentsHtml}
                         </div>
                         <div style="display:flex; margin-top:10px; gap:10px;">
-                            <input id="comment-input-${p.id}" type="text" placeholder="Adicione um comentário..." style="flex:1; border:none; outline:none; font-size:13px; background:transparent;">
-                            <button onclick="app.submitComment('${p.id}')" style="border:none; background:none; color:var(--primary); font-weight:600; font-size:13px; cursor:pointer;">Publicar</button>
+                            <input id="comment-input-${p.id}" type="text" placeholder="ADICIONE UM COMENTÁRIO..." style="flex:1; border:none; outline:none; font-size:13px; background:transparent; text-transform: uppercase;">
+                            <button onclick="app.submitComment('${p.id}')" style="border:none; background:none; color:var(--primary); font-weight:600; font-size:13px; cursor:pointer;">PUBLICAR</button>
                         </div>
                     </div>
                 </div>`;
@@ -650,7 +651,7 @@ window.app = {
     submitComment: async (postId) => {
         if(!currentUser) return;
         const input = document.getElementById(`comment-input-${postId}`);
-        const text = input.value.trim();
+        const text = input.value.trim().toUpperCase();
         if(!text) return;
         const newComment = { userName: currentUser.name, email: currentUser.email, text: text, created: Date.now() };
         const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
@@ -659,7 +660,7 @@ window.app = {
     },
 
     deleteComment: async (postId, commentIndex) => {
-        if(!confirm("Apagar comentário?")) return;
+        if(!confirm("APAGAR COMENTÁRIO?")) return;
         const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
         const postSnap = await getDoc(postRef);
         if(postSnap.exists()) {
@@ -671,12 +672,12 @@ window.app = {
     },
 
     deletePost: async (postId) => {
-        app.showConfirm("Excluir publicação?", async () => {
+        app.showConfirm("EXCLUIR PUBLICAÇÃO?", async () => {
             const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
             const snap = await getDoc(postRef);
             if(snap.exists() && snap.data().img) await app.deleteFile(snap.data().img);
             await deleteDoc(postRef);
-            app.toast("Publicação removida.");
+            app.toast("PUBLICAÇÃO REMOVIDA.");
         });
     },
 
@@ -692,10 +693,10 @@ window.app = {
         }
     },
     submitPost: async () => {
-        const text = document.getElementById('post-text').value;
+        const text = document.getElementById('post-text').value.toUpperCase();
         if(!text && !tempPostFile) return;
         document.getElementById('btn-submit-post').disabled = true;
-        app.toast("Enviando...");
+        app.toast("ENVIANDO...");
         let imgUrl = null;
         if(tempPostFile) imgUrl = await app.uploadImage(tempPostFile, 'posts');
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS)), { 
@@ -716,7 +717,7 @@ window.app = {
                 const r = {id: d.id, ...d.data()};
                 allRecipes.push(r);
                 const rImg = r.img || r.image || 'https://via.placeholder.com/300x200?text=No+Image';
-                l.innerHTML += `<div class="recipe-card" onclick="app.openRecipeDetail('${r.id}')"><div class="recipe-img" style="background-image:url('${rImg}')"></div><div style="padding:15px;"><strong style="font-size:16px; color:var(--text-main);">${r.title}</strong><div class="recipe-meta" style="margin-top:5px; color:var(--primary);">${r.kcal} kcal | ${r.time} min</div></div></div>`;
+                l.innerHTML += `<div class="recipe-card" onclick="app.openRecipeDetail('${r.id}')"><div class="recipe-img" style="background-image:url('${rImg}')"></div><div style="padding:15px;"><strong style="font-size:16px; color:var(--text-main);">${r.title.toUpperCase()}</strong><div class="recipe-meta" style="margin-top:5px; color:var(--primary);">${r.kcal} KCAL | ${r.time} MIN</div></div></div>`;
             });
         });
     },
@@ -726,15 +727,15 @@ window.app = {
         if(!r) return;
         const rImg = r.img || r.image || 'https://via.placeholder.com/300x200?text=No+Image';
         document.getElementById('rec-det-img').style.backgroundImage = `url('${rImg}')`;
-        document.getElementById('rec-det-title').innerText = r.title;
-        document.getElementById('rec-det-meta').innerText = `${r.kcal} kcal | ${r.time} min`;
+        document.getElementById('rec-det-title').innerText = r.title.toUpperCase();
+        document.getElementById('rec-det-meta').innerText = `${r.kcal} KCAL | ${r.time} MIN`;
         document.getElementById('rec-det-p').innerText = r.p || 0;
         document.getElementById('rec-det-c').innerText = r.c || 0;
         document.getElementById('rec-det-f').innerText = r.f || 0;
         const ul = document.getElementById('rec-det-ing'); ul.innerHTML = '';
-        if(r.ingredients) (Array.isArray(r.ingredients) ? r.ingredients : r.ingredients.split('\n')).forEach(i => ul.innerHTML+=`<li>${i}</li>`);
+        if(r.ingredients) (Array.isArray(r.ingredients) ? r.ingredients : r.ingredients.split('\n')).forEach(i => ul.innerHTML+=`<li>${i.toUpperCase()}</li>`);
         const st = document.getElementById('rec-det-steps'); st.innerHTML = '';
-        if(r.steps) (Array.isArray(r.steps) ? r.steps : r.steps.split('\n')).forEach((s, i) => st.innerHTML+=`<p><strong>${i+1}.</strong> ${s}</p>`);
+        if(r.steps) (Array.isArray(r.steps) ? r.steps : r.steps.split('\n')).forEach((s, i) => st.innerHTML+=`<p><strong>${i+1}.</strong> ${s.toUpperCase()}</p>`);
         document.getElementById('view-recipe-detail').classList.add('active');
     },
 
@@ -750,8 +751,8 @@ window.app = {
                     ${n.img ? `<img src="${n.img}" class="news-img">` : ''}
                     <div class="news-content">
                         <div class="news-date">${new Date(n.created).toLocaleDateString()}</div>
-                        <h3 class="news-title">${n.title}</h3>
-                        <div class="news-body" style="font-size:15px; line-height:1.6; color:var(--text-main);">${n.body}</div>
+                        <h3 class="news-title">${n.title.toUpperCase()}</h3>
+                        <div class="news-body" style="font-size:15px; line-height:1.6; color:var(--text-main);">${n.body.toUpperCase()}</div>
                     </div>
                 </div>`; 
             });
@@ -788,14 +789,14 @@ window.app = {
                             r.workouts.forEach((w, wIdx) => {
                                 let wDate = "";
                                 if(w.scheduledDate) { const dp = w.scheduledDate.split('-'); wDate = `<span style="font-size:10px; color:#666; background:#eee; padding:2px 5px; border-radius:4px;">${dp[2]}/${dp[1]}</span>`; }
-                                workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:5px 0;"><span style="font-size:12px;">${wDate} ${w.title}</span><button onclick="app.admDeleteWorkoutInline('${safeId}', ${rIdx}, ${wIdx})" style="color:var(--red); border:none; background:none; cursor:pointer;"><i class="fa-solid fa-times"></i></button></div>`;
+                                workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:5px 0;"><span style="font-size:12px;">${wDate} ${w.title.toUpperCase()}</span><button onclick="app.admDeleteWorkoutInline('${safeId}', ${rIdx}, ${wIdx})" style="color:var(--red); border:none; background:none; cursor:pointer;"><i class="fa-solid fa-times"></i></button></div>`;
                             });
-                        } else { workoutsHtml = '<p style="font-size:11px; color:#999;">Sem treinos.</p>'; }
-                        workoutsHtml += `<div style="display:flex; gap:5px; margin-top:10px; justify-content:flex-end;"><button onclick="app.admAddWorkoutInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ Treino</button><button onclick="app.admImportTemplateInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ Modelo</button></div>`;
-                        goalsHtml += `<div class="adm-item-box"><div class="adm-row-header" onclick="app.admToggleGoal('${raceKey}')"><strong>${r.name}</strong><i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i></div><div id="goal-content-${raceKey}" class="adm-nested ${isRaceOpen}">${workoutsHtml}<div style="text-align:right; margin-top:5px;"><button onclick="app.admDelRaceInline('${safeId}', ${rIdx})" style="font-size:10px; color:red; border:none; background:none; cursor:pointer;">Excluir Objetivo</button></div></div></div>`;
+                        } else { workoutsHtml = '<p style="font-size:11px; color:#999;">SEM TREINOS.</p>'; }
+                        workoutsHtml += `<div style="display:flex; gap:5px; margin-top:10px; justify-content:flex-end;"><button onclick="app.admAddWorkoutInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ TREINO</button><button onclick="app.admImportTemplateInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ MODELO</button></div>`;
+                        goalsHtml += `<div class="adm-item-box"><div class="adm-row-header" onclick="app.admToggleGoal('${raceKey}')"><strong>${r.name.toUpperCase()}</strong><i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i></div><div id="goal-content-${raceKey}" class="adm-nested ${isRaceOpen}">${workoutsHtml}<div style="text-align:right; margin-top:5px;"><button onclick="app.admDelRaceInline('${safeId}', ${rIdx})" style="font-size:10px; color:red; border:none; background:none; cursor:pointer;">EXCLUIR OBJETIVO</button></div></div></div>`;
                     });
-                } else { goalsHtml = '<p style="font-size:12px; color:#999; padding:10px;">Sem objetivos.</p>'; }
-                html += `<div class="card" style="padding:15px; margin-bottom:10px;"><div style="display:flex; align-items:center; gap:15px; padding-bottom:5px;"><input type="checkbox" class="check-toggle" ${checked} onchange="app.admToggleStatus('${safeId}', this.checked)"><div style="flex:1; cursor:pointer;" onclick="app.admToggleUser('${safeId}')"><span style="font-weight:700; font-size:16px;">${u.name}</span><br><span style="font-size:12px; color:#888;">${u.email}</span></div><button onclick="app.admDeleteUserQuick('${safeId}')" style="border:none; background:none; color:var(--red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div><div id="user-content-${docId}" class="adm-nested ${isUserOpen}" style="border-left:none; padding-left:0; margin-top:15px;">${goalsHtml}<button onclick="app.admAddRaceInline('${safeId}')" style="width:100%; border:2px dashed #eee; background:none; padding:12px; font-size:13px; margin-top:10px; color:var(--primary); font-weight:600; border-radius:12px; cursor:pointer;">+ Novo Objetivo</button></div></div>`;
+                } else { goalsHtml = '<p style="font-size:12px; color:#999; padding:10px;">SEM OBJETIVOS.</p>'; }
+                html += `<div class="card" style="padding:15px; margin-bottom:10px;"><div style="display:flex; align-items:center; gap:15px; padding-bottom:5px;"><input type="checkbox" class="check-toggle" ${checked} onchange="app.admToggleStatus('${safeId}', this.checked)"><div style="flex:1; cursor:pointer;" onclick="app.admToggleUser('${safeId}')"><span style="font-weight:700; font-size:16px;">${u.name.toUpperCase()}</span><br><span style="font-size:12px; color:#888;">${u.email}</span></div><button onclick="app.admDeleteUserQuick('${safeId}')" style="border:none; background:none; color:var(--red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div><div id="user-content-${docId}" class="adm-nested ${isUserOpen}" style="border-left:none; padding-left:0; margin-top:15px;">${goalsHtml}<button onclick="app.admAddRaceInline('${safeId}')" style="width:100%; border:2px dashed #eee; background:none; padding:12px; font-size:13px; margin-top:10px; color:var(--primary); font-weight:600; border-radius:12px; cursor:pointer;">+ NOVO OBJETIVO</button></div></div>`;
             });
             list.innerHTML = html;
         });
@@ -803,14 +804,14 @@ window.app = {
     
     admToggleUser: (docId) => { if(expandedUsers.has(docId)) expandedUsers.delete(docId); else expandedUsers.add(docId); const el = document.getElementById(`user-content-${docId}`); if(el) el.classList.toggle('open'); },
     admToggleGoal: (key) => { if(expandedRaces.has(key)) expandedRaces.delete(key); else expandedRaces.add(key); const el = document.getElementById(`goal-content-${key}`); if(el) el.classList.toggle('open'); },
-    admToggleStatus: async (docId, status) => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status }); app.toast(status ? "Aluno aprovado" : "Aluno bloqueado"); },
-    admAddWorkoutInline: (docId, rIdx) => { currentAdmUser = docId; currentAdmRaceIdx = rIdx; isEditingTemplate = false; editingWorkoutIndex = null; document.getElementById('modal-workout-title').innerText = "Novo Treino"; document.getElementById('new-w-title').value = ''; document.getElementById('new-w-desc').value = ''; document.getElementById('new-w-video').value = ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
+    admToggleStatus: async (docId, status) => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status }); app.toast(status ? "ALUNO APROVADO" : "ALUNO BLOQUEADO"); },
+    admAddWorkoutInline: (docId, rIdx) => { currentAdmUser = docId; currentAdmRaceIdx = rIdx; isEditingTemplate = false; editingWorkoutIndex = null; document.getElementById('modal-workout-title').innerText = "NOVO TREINO"; document.getElementById('new-w-title').value = ''; document.getElementById('new-w-desc').value = ''; document.getElementById('new-w-video').value = ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
     
     saveSingleWorkout: async () => {
-        const title = document.getElementById('new-w-title').value;
-        const desc = document.getElementById('new-w-desc').value;
+        const title = document.getElementById('new-w-title').value.toUpperCase();
+        const desc = document.getElementById('new-w-desc').value.toUpperCase();
         const video = document.getElementById('new-w-video').value;
-        if(!title) return app.toast('Título obrigatório');
+        if(!title) return app.toast('TÍTULO OBRIGATÓRIO');
         if (isEditingTemplate) {
             const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, currentTemplateId));
             const t = snap.data();
@@ -825,7 +826,7 @@ window.app = {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser), { races: u.races });
         }
         document.getElementById('modal-add-single-workout').classList.remove('active');
-        app.toast("Salvo com sucesso!");
+        app.toast("SALVO COM SUCESSO!");
     },
 
     admImportTemplateInline: (docId, rIdx) => {
@@ -834,7 +835,7 @@ window.app = {
             const list = document.getElementById('template-select-list'); list.innerHTML = '';
             s.forEach(d => {
                 const t = d.data();
-                list.innerHTML += `<label style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;"><input type="radio" name="selected_template" value="${d.id}" style="margin-right:15px; width:18px; height:18px;"><div><strong style="font-size:16px;">${t.name}</strong><br><span style="font-size:12px; color:#888;">${t.workouts.length} treinos</span></div></label>`;
+                list.innerHTML += `<label style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;"><input type="radio" name="selected_template" value="${d.id}" style="margin-right:15px; width:18px; height:18px;"><div><strong style="font-size:16px;">${t.name.toUpperCase()}</strong><br><span style="font-size:12px; color:#888;">${t.workouts.length} TREINOS</span></div></label>`;
             });
             document.getElementById('modal-select-template').classList.add('active');
         });
@@ -843,7 +844,7 @@ window.app = {
     confirmTemplateImport: async () => {
         const selected = document.querySelector('input[name="selected_template"]:checked');
         const startDateInput = document.getElementById('template-start-date').value;
-        if(!selected || !startDateInput) return app.toast('Preencha os campos');
+        if(!selected || !startDateInput) return app.toast('PREENCHA OS CAMPOS');
         const templateId = selected.value;
         const tSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, templateId));
         const tData = tSnap.data();
@@ -857,14 +858,14 @@ window.app = {
         });
         u.races[currentAdmRaceIdx].workouts.push(...newWorkouts);
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser), { races: u.races });
-        app.toast("Modelo importado!");
+        app.toast("MODELO IMPORTADO!");
         document.getElementById('modal-select-template').classList.remove('active');
     },
 
-    admDeleteWorkoutInline: async (docId, rIdx, wIdx) => { app.showConfirm("Remover treino?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races[rIdx].workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
-    admAddRaceInline: async (docId) => { app.showPrompt("Nome do Objetivo:", async (name) => { if(!name) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); const races = u.races || []; races.push({ name, date: '', workouts: [], created: new Date().toISOString() }); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races }); }); },
-    admDelRaceInline: async (docId, rIdx) => { app.showConfirm("Apagar objetivo?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races.splice(rIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
-    admDeleteUserQuick: async (docId) => { app.showConfirm(`Apagar permanentemente?`, async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); }); },
+    admDeleteWorkoutInline: async (docId, rIdx, wIdx) => { app.showConfirm("REMOVER TREINO?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races[rIdx].workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
+    admAddRaceInline: async (docId) => { app.showPrompt("NOME DO OBJETIVO:", async (name) => { if(!name) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); const races = u.races || []; races.push({ name, date: '', workouts: [], created: new Date().toISOString() }); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races }); }); },
+    admDelRaceInline: async (docId, rIdx) => { app.showConfirm("APAGAR OBJETIVO?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races.splice(rIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
+    admDeleteUserQuick: async (docId) => { app.showConfirm(`APAGAR PERMANENTEMENTE?`, async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); }); },
 
     admLoadTemplates: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES), (snap) => {
@@ -875,22 +876,22 @@ window.app = {
                 let workoutsHtml = '';
                 if(t.workouts && t.workouts.length > 0) {
                     t.workouts.forEach((w, wIdx) => {
-                        workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;"><div style="flex:1;"><span style="font-size:13px; font-weight:600;">${w.title}</span><br><small>${w.desc}</small></div><div style="display:flex; gap:5px;"><button onclick="app.admMoveWorkout('${tId}', ${wIdx}, -1)"><i class="fa-solid fa-arrow-up"></i></button><button onclick="app.admMoveWorkout('${tId}', ${wIdx}, 1)"><i class="fa-solid fa-arrow-down"></i></button><button onclick="app.admEditWorkoutFromTemplate('${tId}', ${wIdx})"><i class="fa-solid fa-pencil"></i></button><button onclick="app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:red">X</button></div></div>`;
+                        workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;"><div style="flex:1;"><span style="font-size:13px; font-weight:600;">${w.title.toUpperCase()}</span><br><small>${w.desc.toUpperCase()}</small></div><div style="display:flex; gap:5px;"><button onclick="app.admMoveWorkout('${tId}', ${wIdx}, -1)"><i class="fa-solid fa-arrow-up"></i></button><button onclick="app.admMoveWorkout('${tId}', ${wIdx}, 1)"><i class="fa-solid fa-arrow-down"></i></button><button onclick="app.admEditWorkoutFromTemplate('${tId}', ${wIdx})"><i class="fa-solid fa-pencil"></i></button><button onclick="app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:red">X</button></div></div>`;
                     });
-                } else { workoutsHtml = '<small>Sem treinos.</small>'; }
-                html += `<div class="card" style="padding:10px; margin-bottom:10px;"><div class="adm-row-header" onclick="app.admToggleTemplate('${tId}')"><span>${t.name}</span><i class="fa-solid fa-chevron-down"></i></div><div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">${workoutsHtml}<div style="display:flex; justify-content:space-between; margin-top:10px;"><button onclick="app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small">+ Treino</button><button onclick="app.admDelTemplate('${tId}')" style="color:red; font-size:11px; border:none; background:none;">Excluir Modelo</button></div></div></div>`;
+                } else { workoutsHtml = '<small>SEM TREINOS.</small>'; }
+                html += `<div class="card" style="padding:10px; margin-bottom:10px;"><div class="adm-row-header" onclick="app.admToggleTemplate('${tId}')"><span>${t.name.toUpperCase()}</span><i class="fa-solid fa-chevron-down"></i></div><div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">${workoutsHtml}<div style="display:flex; justify-content:space-between; margin-top:10px;"><button onclick="app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small">+ TREINO</button><button onclick="app.admDelTemplate('${tId}')" style="color:red; font-size:11px; border:none; background:none;">EXCLUIR MODELO</button></div></div></div>`;
             });
             list.innerHTML = html;
         });
     },
 
     admToggleTemplate: (tId) => { if(expandedTemplates.has(tId)) expandedTemplates.delete(tId); else expandedTemplates.add(tId); const el = document.getElementById(`tpl-content-${tId}`); if(el) el.classList.toggle('open'); },
-    admAddTemplateInline: async () => { app.showPrompt("Nome do Modelo:", async (name) => { if(!name) return; await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES)), { name, workouts: [] }); }); },
+    admAddTemplateInline: async () => { app.showPrompt("NOME DO MODELO:", async (name) => { if(!name) return; await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES)), { name, workouts: [] }); }); },
     admAddWorkoutToTemplateInline: (tId) => { isEditingTemplate = true; currentTemplateId = tId; editingWorkoutIndex = null; document.getElementById('modal-add-single-workout').classList.add('active'); },
     admEditWorkoutFromTemplate: async (tId, wIdx) => { isEditingTemplate = true; currentTemplateId = tId; editingWorkoutIndex = wIdx; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const w = snap.data().workouts[wIdx]; document.getElementById('new-w-title').value = w.title; document.getElementById('new-w-desc').value = w.desc; document.getElementById('new-w-video').value = w.video || ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
     admMoveWorkout: async (tId, wIdx, direction) => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); const workouts = t.workouts; const newIdx = wIdx + direction; if (newIdx < 0 || newIdx >= workouts.length) return; const temp = workouts[wIdx]; workouts[wIdx] = workouts[newIdx]; workouts[newIdx] = temp; await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts }); },
-    admDeleteWorkoutFromTemplate: async (tId, wIdx) => { if(!confirm("Remover?")) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); t.workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts: t.workouts }); },
-    admDelTemplate: async (id) => { app.showConfirm("Apagar modelo?", async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, id))); },
+    admDeleteWorkoutFromTemplate: async (tId, wIdx) => { if(!confirm("REMOVER?")) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); t.workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts: t.workouts }); },
+    admDelTemplate: async (id) => { app.showConfirm("APAGAR MODELO?", async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, id))); },
 
     previewNewsImg: (input) => { 
         if(input.files && input.files[0]) {
@@ -903,14 +904,14 @@ window.app = {
     },
 
     postNews: async () => {
-        const title = document.getElementById('news-title').value; 
-        const body = document.getElementById('news-body').value;
-        if(!title || !body) return app.toast('Preencha tudo');
+        const title = document.getElementById('news-title').value.toUpperCase(); 
+        const body = document.getElementById('news-body').value.toUpperCase();
+        if(!title || !body) return app.toast('PREENCHA TUDO');
         document.getElementById('btn-post-news').disabled = true;
         let imgUrl = null;
         if(tempNewsFile) imgUrl = await app.uploadImage(tempNewsFile, 'news');
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS)), { title, body, img: imgUrl, created: Date.now() });
-        app.toast('Publicado!'); 
+        app.toast('PUBLICADO!'); 
         document.getElementById('news-title').value=''; document.getElementById('news-body').value=''; document.getElementById('news-preview').style.display='none'; 
         tempNewsFile = null; document.getElementById('btn-post-news').disabled = false;
     },
@@ -918,12 +919,12 @@ window.app = {
     admLoadNewsHistory: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
             const div = document.getElementById('adm-news-history'); div.innerHTML = '';
-            snap.forEach(d => { div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #CCC; display:flex; justify-content:space-between;"><span>${d.data().title}</span><button onclick="app.admDeleteNews('${d.id}')" style="color:red; border:none; background:none;">X</button></div>`; });
+            snap.forEach(d => { div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #CCC; display:flex; justify-content:space-between;"><span>${d.data().title.toUpperCase()}</span><button onclick="app.admDeleteNews('${d.id}')" style="color:red; border:none; background:none;">X</button></div>`; });
         });
     },
     
     admDeleteNews: async (id) => { 
-        if(confirm("Apagar notícia?")) { 
+        if(confirm("APAGAR NOTÍCIA?")) { 
             const refDoc = doc(db, 'artifacts', appId, 'public', 'data', C_NEWS, id);
             const snap = await getDoc(refDoc);
             if(snap.exists() && snap.data().img) await app.deleteFile(snap.data().img);
@@ -941,8 +942,8 @@ window.app = {
     },
 
     postRecipe: async () => {
-        const title = document.getElementById('adm-rec-title').value;
-        if(!title) return app.toast('Titulo obrigatorio');
+        const title = document.getElementById('adm-rec-title').value.toUpperCase();
+        if(!title) return app.toast('TITULO OBRIGATORIO');
         document.getElementById('btn-post-recipe').disabled = true;
         let imgUrl = null;
         if(tempRecFile) imgUrl = await app.uploadImage(tempRecFile, 'recipes');
@@ -952,19 +953,19 @@ window.app = {
             ingredients: document.getElementById('adm-rec-ing').value.split('\n'), steps: document.getElementById('adm-rec-steps').value.split('\n'), 
             img: imgUrl, created: Date.now()
         });
-        app.toast('Salvo!');
+        app.toast('SALVO!');
         tempRecFile = null; document.getElementById('adm-rec-preview').style.display='none'; document.getElementById('btn-post-recipe').disabled = false;
     },
 
     admLoadRecipes: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_RECIPES), (s) => {
             const l = document.getElementById('adm-recipes-list'); l.innerHTML = '';
-            s.forEach(d=>{ l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">${d.data().title} <button onclick="app.admDelRec('${d.id}')" style="color:red;float:right;border:none;">X</button></div>` });
+            s.forEach(d=>{ l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">${d.data().title.toUpperCase()} <button onclick="app.admDelRec('${d.id}')" style="color:red;float:right;border:none;">X</button></div>` });
         });
     },
     
     admDelRec: async (id) => { 
-        app.showConfirm('Apagar receita?', async () => {
+        app.showConfirm('APAGAR RECEITA?', async () => {
             const refDoc = doc(db, 'artifacts', appId, 'public', 'data', C_RECIPES, id);
             const snap = await getDoc(refDoc);
             if(snap.exists() && snap.data().img) await app.deleteFile(snap.data().img);
@@ -973,7 +974,7 @@ window.app = {
     },
 
     postQuote: async () => {
-        const text = document.getElementById('adm-quote-text').value; if(!text) return;
+        const text = document.getElementById('adm-quote-text').value.toUpperCase(); if(!text) return;
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES)), { text, created: Date.now() });
         document.getElementById('adm-quote-text').value = '';
     },
@@ -981,11 +982,11 @@ window.app = {
     admLoadQuotes: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s) => {
             const l = document.getElementById('adm-quotes-list'); l.innerHTML = '';
-            s.forEach(d=>{ l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">"${d.data().text}" <button onclick="app.admDelQuote('${d.id}')" style="color:red;float:right;border:none;">X</button></div>` });
+            s.forEach(d=>{ l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">"${d.data().text.toUpperCase()}" <button onclick="app.admDelQuote('${d.id}')" style="color:red;float:right;border:none;">X</button></div>` });
         });
     },
 
-    admDelQuote: async (id) => { app.showConfirm('Apagar frase?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id))); },
+    admDelQuote: async (id) => { app.showConfirm('APAGAR FRASE?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id))); },
 };
 
 window.onload = app.init;
