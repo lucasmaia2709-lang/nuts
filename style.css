@@ -40,14 +40,66 @@ body {
 
 h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--text-main); /* Títulos em azul para contraste no fundo gelo */ }
 
-/* Estilo especial para o Logo .Nuts */
+/* --- RESTAURAÇÃO DOS LOGOS --- */
+.logo-container-large {
+    margin-bottom: 20px;
+    text-align: center;
+}
+.logo-were {
+    font-family: var(--font-were);
+    font-size: 30px;
+    
+    /* --- COR DO PREENCHIMENTO DO TEXTO --- */
+    color: #ff66c4; 
+    
+    letter-spacing: -2px;
+
+    /* --- CONTORNO --- */
+    /* Formato: espessura cor */
+    -webkit-text-stroke: 1px #dbffae;
+}
+.logo-nuts {
+    font-family: var(--font-nuts);
+    font-size: 130px;
+    color: #dbffae;
+    
+    /* ALTERAÃ‡ÃƒO: TUDO MINÃšSCULO e THIN (FINO) */
+    text-transform: lowercase; /* ForÃ§a minÃºsculas */
+    font-weight: 300; /* Peso "Thin" / Light */
+    font-style: normal;
+    letter-spacing: -3px; 
+}
+
+/* Logo Pequeno (Header) */
+.logo-container-small {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 0.9;
+}
+.logo-were-small {
+    font-family: 'Major Mono Display', monospace;
+    font-size: 14px;
+    color: var(--text-main);
+    font-weight: 600;
+}
+.logo-nuts-small {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    color: var(--primary);
+    font-style: italic;
+    font-weight: 600;
+}
+
+/* Estilo legado para compatibilidade se necessário */
 .brand-logo {
     font-family: var(--font-logo);
     font-weight: 700;
     font-size: 26px;
     color: var(--primary); 
     letter-spacing: -1px;
-    text-shadow: none; /* Removido shadow para look mais clean */
+    text-shadow: none;
 }
 
 /* SCREENS */
@@ -62,7 +114,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     flex-direction: column; 
     z-index: 10; 
     padding-top: env(safe-area-inset-top);
-    padding-bottom: 0; /* Removido padding fixo, controlado pelo container interno */
+    padding-bottom: 0; 
 }
 
 #view-app.screen {
@@ -81,7 +133,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     overflow: hidden; 
     display: flex;
     flex-direction: column;
-    background: #f8fafc; /* Fundo levemente diferente para admin */
+    background: #f8fafc; 
 }
 
 /* HEADER PRINCIPAL DO APP */
@@ -101,7 +153,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    /* Espaço extra no final para o conteúdo não ficar atrás do menu */
     padding-bottom: calc(var(--nav-height) + 20px); 
     -webkit-overflow-scrolling: touch;
 }
@@ -161,12 +212,10 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     width: 100%; 
     height: auto;
     background: #9cafcc; 
-    /* Arredondamento superior sutil, mas conectando nas bordas laterais */
     border-radius: 25px 25px 0 0; 
     display: flex; 
     justify-content: space-around; 
     align-items: center;
-    /* Padding inferior ajustado para safe-area (iPhone) e visual sem borda extra */
     padding: 12px 10px calc(12px + env(safe-area-inset-bottom));
     z-index: 300; 
     box-shadow: 0 -5px 30px rgba(43, 76, 126, 0.08);
@@ -211,7 +260,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     border-radius: 12px;
     box-shadow: 0 0 10px rgba(255,255,255, 0.4); 
 }
-/* Nova classe para barra colorida no fundo branco do admin */
+/* NOVA CLASSE PARA A BARRA DE PROGRESSO NO ADMIN (Fundo Branco requer cor) */
 .progress-bar.colored {
     background: var(--success);
     box-shadow: none;
