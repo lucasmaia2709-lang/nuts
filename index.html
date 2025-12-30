@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>We're Nuts</title>
+    
+    <!-- PWA iOS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="We're Nuts">
+    
+    <!-- Ícones e Fontes -->
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/lucasmaia2709-lang/treinocorrida-/refs/heads/main/logo.jpg">
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/lucasmaia2709-lang/treinocorrida-/refs/heads/main/logo.jpg">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=Bodoni+Moda:opsz,wght@6..96,400;6..96,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            /* NOVA PALETA DE CORES */
+            --bg: #9cafcc;         /* Azul Acinzentado */
+            --primary: #ff8a41;    /* Laranja NUTS */
+            --secondary: #dbffae;  /* Verde Lima */
+            --dark-blue: #1b265b;  /* Azul Escuro dos Botões */
+            --pink: #ff66c4;       /* Rosa de destaque no Login */
+            --surface: #FFFFFF;
+            
+            /* FONTES SOLICITADAS */
+            --font-main: 'Copperplate Gothic Bold', 'Copperplate', 'Cinzel', serif;
+            --font-were: 'Major Mono Display', monospace;
+            --font-nuts: 'TAN PEARL', 'Bodoni Moda', serif;
+            
+            --text-main: #1b265b;
+            --text-light: #FFFFFF;
+            
+            --radius: 20px;
+            --shadow: 0 8px 25px rgba(27, 38, 91, 0.15);
+            --nav-height: 85px;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+            margin: 0; padding: 0;
+        }
+
+        body { 
+            font-family: var(--font-main); 
+            background-color: var(--bg); 
+            color: var(--text-main); 
+            width: 100vw;
+            height: 100dvh; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column;
+            text-transform: uppercase; /* Copperplate é tradicionalmente all-caps */
+        }
+
+        /* TIPOGRAFIA DO LOGO */
+        .font-were {
+            font-family: var(--font-were);
+            text-transform: none; /* Mantém o estilo misto da Major Mono */
+        }
+
+        .font-nuts {
+            font-family: var(--font-nuts);
+            font-weight: 700;
+        }
+
+        .brand-logo {
+            text-align: center;
+            line-height: 1.1;
+        }
+
+        /* TELAS (SCREENS) */
+        .screen { 
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%; 
+            background-color: var(--bg); 
+            display: none; 
+            flex-direction: column; 
+            z-index: 10; 
+            padding-top: env(safe-area-inset-top);
+        }
+        .screen.active { display: flex; animation: fadeIn 0.4s ease; }
+
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        /* COMPONENTES */
+        .app-header {
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: transparent;
+            z-index: 100;
+        }
+
+        .header-avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #FFF; border: 2px solid var(--dark-blue);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; font-weight: bold;
+        }
+
+        #main-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: calc(var(--nav-height) + 20px);
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .card { 
+            background: var(--surface); 
+            border-radius: var(--radius); 
+            padding: 25px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 20px; 
+            border: none;
+        }
+
+        .input-group { margin-bottom: 20px; width: 100%; }
+        .label { 
+            display: block; font-size: 10px; font-weight: 700; 
+            color: var(--dark-blue); margin-bottom: 8px; 
+            letter-spacing: 1px; 
+        }
+        .input { 
+            width: 100%; padding: 18px; border-radius: var(--radius); 
+            border: 1px solid var(--border); background: #FFF; 
+            font-family: var(--font-main); font-size: 14px; outline: none;
+        }
+
+        .btn { 
+            width: 100%; padding: 18px; border-radius: var(--radius); 
+            border: none; font-family: var(--font-main); 
+            font-weight: 700; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn-primary { background: var(--dark-blue); color: #FFF; border: 2px solid #FFF; }
+        .btn-text { background: none; color: var(--secondary); font-size: 12px; }
+
+        /* CALENDÁRIO */
+        .calendar-wrapper { padding: 0 20px 20px; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .cal-cell { 
+            aspect-ratio: 1/1; background: #FFF; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* NAV BAR */
+        .nav-bar { 
+            position: fixed; bottom: 0; width: 100%; 
+            background: #FFF; border-radius: 25px 25px 0 0; 
+            display: flex; justify-content: space-around;
+            padding: 12px 10px calc(12px + env(safe-area-inset-bottom));
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .nav-item { background: none; border: none; font-size: 24px; color: #dce1e8; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+
+        .hidden { display: none !important; }
+        #toast-container { position: fixed; top: 20px; width: 100%; z-index: 9999; display: flex; justify-content: center; pointer-events: none; }
+        .toast { background: var(--dark-blue); color: #FFF; padding: 12px 25px; border-radius: 50px; font-size: 11px; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <!-- 0. LANDING -->
+    <div id="view-landing" class="screen active" style="align-items: center; justify-content: center; padding: 40px; text-align: center;">
+        <h1 class="brand-logo" style="margin-bottom: 30px;">
+            <span class="font-were" style="font-size: 40px; color: var(--dark-blue);">We're</span><br>
+            <span class="font-nuts" style="font-size: 80px; color: var(--primary);">NUTS</span>
+        </h1>
+        <p style="color: #ffff; letter-spacing: 2px; font-size: 12px; margin-top: 10px; font-weight: 600;">SUA JORNADA COMEÇA AGORA</p>
+        <div style="width: 100%; margin-top: 80px;">
+            <button onclick="app.goToRegister()" class="btn btn-primary">Começar Agora</button>
+            <button onclick="app.goToLogin()" class="btn btn-text">Já tenho conta</button>
+        </div>
+    </div>
+
+    <!-- 1. LOGIN -->
+    <div id="view-login" class="screen" style="justify-content: center; padding: 40px;">
+        <button onclick="app.goToLanding()" style="position:absolute; top:50px; left:20px; border:none; background:none; font-size:24px; color:var(--dark-blue);"><i class="fa-solid fa-arrow-left"></i></button>
+        <h1 style="font-size: 32px; margin-bottom: 40px; text-align:center; color: var(--secondary);">LOGIN</h1>
+        <form onsubmit="app.handleLogin(event)">
+            <div class="input-group"><label class="label">Email</label><input type="email" id="log-email" class="input" required></div>
+            <div class="input-group"><label class="label">Senha</label><input type="password" id="log-pass" class="input" required></div>
+            <button type="submit" class="btn" style="margin-top: 20px; background: var(--secondary); color: var(--pink);">Entrar</button>
+        </form>
+        <p onclick="app.forgotPassword()" style="text-align: center; color: var(--dark-blue); font-size: 13px; margin-top: 20px; cursor: pointer; text-decoration: underline;">Esqueci minha senha</p>
+    </div>
+
+    <!-- 2. CADASTRO -->
+    <div id="view-register" class="screen" style="justify-content: center; padding: 40px;">
+        <button onclick="app.goToLanding()" style="position:absolute; top:50px; left:20px; border:none; background:none; font-size:18px; color:var(--dark-blue);"><i class="fa-solid fa-arrow-left"></i></button>
+        <h1 style="font-size: 32px; margin-bottom: 40px; text-align:center; color: var(--secondary);">Criar Conta</h1>
+        <form onsubmit="app.handleRegister(event)">
+            <div class="input-group"><label class="label">Nome</label><input type="text" id="reg-name" class="input" required></div>
+            <div class="input-group"><label class="label">Email</label><input type="email" id="reg-email" class="input" required></div>
+            <div class="input-group"><label class="label">Senha</label><input type="password" id="reg-pass" class="input" required></div>
+            <button type="submit" class="btn" style="margin-top: 20px; background: var(--secondary); color: var(--pink);">Cadastrar</button>
+        </form>
+    </div>
+
+    <!-- 3. PENDENTE -->
+    <div id="view-pending" class="screen" style="align-items: center; justify-content: center; padding: 40px; text-align: center;">
+        <div class="card">
+            <i class="fa-regular fa-clock" style="font-size: 50px; color: var(--primary); margin-bottom: 20px;"></i>
+            <h2>Aprovação Pendente</h2>
+            <p style="font-size: 14px; margin-top: 10px;">Seu treinador precisa liberar seu acesso.</p>
+            <button onclick="app.logout()" class="btn" style="margin-top: 30px; border: 1px solid var(--dark-blue); background: none;">Sair</button>
+        </div>
+    </div>
+
+    <!-- 4. APP PRINCIPAL -->
+    <div id="view-app" class="screen">
+        <div class="app-header">
+            <div class="header-avatar" onclick="app.openProfile()">
+                <img id="header-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+                <span id="header-avatar-txt">U</span>
+            </div>
+            <div class="brand-logo" style="display: flex; align-items: center; gap: 5px;">
+                <span class="font-were" style="font-size: 14px; color: var(--dark-blue);">We're</span>
+                <span class="font-nuts" style="font-size: 22px; color: var(--primary);">NUTS</span>
+            </div>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <div id="main-scroll">
+            <div id="tab-home" class="tab-content">
+                <div class="calendar-wrapper">
+                    <div class="calendar-header">
+                        <button onclick="app.changeMonth(-1)" style="border:none; background:none;"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="cal-month-title">Mês</span>
+                        <button onclick="app.changeMonth(1)" style="border:none; background:none;"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <div id="calendar-days" class="calendar-grid"></div>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <div class="card" style="background: var(--bg); text-align: center;">
+                        <h3 style="font-size: 12px; margin-bottom: 15px; opacity: 0.8;">Motivação do Dia</h3>
+                        <p id="daily-quote" style="font-style: italic; font-size: 18px;">Carregando...</p> 
+                    </div>
+
+                    <h3 style="font-size: 16px; margin: 20px 0 15px;">Treino de Hoje</h3>
+                    <div id="today-workout-card"></div>
+                </div>
+            </div>
+            <!-- Outras abas (Treinos, Social, etc) seguem a mesma lógica -->
+        </div>
+
+        <div class="nav-bar">
+            <button class="nav-item" onclick="app.nav('social')"><i class="fa-solid fa-users"></i></button>
+            <button class="nav-item" onclick="app.nav('workouts')"><i class="fa-solid fa-person-running"></i></button>
+            <button class="nav-item active" onclick="app.nav('home')"><i class="fa-solid fa-house"></i></button>
+            <button class="nav-item" onclick="app.nav('recipes')"><i class="fa-solid fa-utensils"></i></button>
+            <button class="nav-item" onclick="app.nav('news')"><i class="fa-solid fa-bullhorn"></i></button>
+        </div>
+    </div>
+
+    <!-- Script Integrado -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyDti6glq6Yw_mz_RV8JC167wPyOkbSDs-s", 
+            authDomain: "nuts-aea26.firebaseapp.com", 
+            projectId: "nuts-aea26", 
+            storageBucket: "nuts-aea26.firebasestorage.app", 
+            appId: "1:790944551064:web:eec0a496c599a58cc040ed" 
+        };
+
+        const appInit = initializeApp(firebaseConfig);
+        const auth = getAuth(appInit);
+        const db = getFirestore(appInit);
+        const appId = 'nuts-app-v1';
+
+        let currentUser = null;
+        let currentMonth = new Date();
+
+        window.app = {
+            init: () => {
+                onAuthStateChanged(auth, (user) => {
+                    if (user) { app.loadUser(user.email); } 
+                    else { app.screen('view-landing'); }
+                });
+            },
+            screen: (id) => {
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+            },
+            nav: (tab) => {
+                app.toast("Carregando " + tab + "...");
+                // Lógica de troca de aba aqui
+            },
+            toast: (msg) => {
+                const c = document.getElementById('toast-container');
+                c.innerHTML = `<div class="toast">${msg}</div>`;
+                setTimeout(() => c.innerHTML = '', 3000);
+            },
+            loadUser: (email) => {
+                onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'expliq_users_v9', email), (snap) => {
+                    if(snap.exists()) {
+                        currentUser = snap.data();
+                        if(!currentUser.active) return app.screen('view-pending');
+                        app.screen('view-app');
+                        app.renderHome();
+                    }
+                });
+            },
+            renderHome: () => {
+                app.renderCalendar();
+                app.loadQuote();
+                // Renderizar card de hoje
+            },
+            renderCalendar: () => {
+                const grid = document.getElementById('calendar-days');
+                grid.innerHTML = '';
+                const y = currentMonth.getFullYear();
+                const m = currentMonth.getMonth();
+                const days = new Date(y, m+1, 0).getDate();
+                document.getElementById('cal-month-title').innerText = currentMonth.toLocaleDateString('pt-BR', {month:'long'});
+                for(let i=1; i<=days; i++) {
+                    grid.innerHTML += `<div class="cal-cell">${i}</div>`;
+                }
+            },
+            loadQuote: () => {
+                onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'expliq_quotes_v9'), (s) => {
+                    const q = []; s.forEach(d => q.push(d.data().text));
+                    if(q.length) document.getElementById('daily-quote').innerText = q[Math.floor(Math.random()*q.length)];
+                });
+            },
+            changeMonth: (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); app.renderCalendar(); },
+            goToLogin: () => app.screen('view-login'),
+            goToRegister: () => app.screen('view-register'),
+            goToLanding: () => app.screen('view-landing'),
+            handleLogin: async (e) => {
+                e.preventDefault();
+                app.toast("Autenticando...");
+                const email = document.getElementById('log-email').value;
+                const pass = document.getElementById('log-pass').value;
+                try { await signInWithEmailAndPassword(auth, email, pass); }
+                catch(e) { app.toast("Erro ao entrar."); }
+            },
+            handleRegister: async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('reg-name').value;
+                const email = document.getElementById('reg-email').value;
+                const pass = document.getElementById('reg-pass').value;
+                try {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'expliq_users_v9', email), {
+                        name, email, active: false, created: Date.now(), races: [], notes: {}
+                    });
+                    app.toast("Cadastro realizado!");
+                } catch(e) { app.toast("Erro no cadastro."); }
+            },
+            logout: () => signOut(auth).then(() => window.location.reload())
+        };
+
+        window.onload = app.init;
+    </script>
+</body>
+</html>
