@@ -17,7 +17,7 @@
     
     /* Fontes do Logo */
     --font-were: 'Major Mono Display', monospace;
-    --font-nuts: 'Cinzel Decorative', cursive; /* Substituto visual para TEN Pearl */
+    --font-nuts: 'Cormorant Garamond', serif; /* SUBSTITUTO DA AGATO THIN/TAN PEARL */
     
     --success: #2ecc71;
     --red: #e74c3c;
@@ -67,9 +67,14 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .logo-were {
     font-family: var(--font-were);
     font-size: 50px;
-    color: var(--text-main);
+    
+    /* --- COR DO PREENCHIMENTO DO TEXTO --- */
+    color: var(--text-main); 
+    
     letter-spacing: -2px;
-    /* ADICIONADO CONTORNO AQUI */
+
+    /* --- CONTORNO --- */
+    /* Formato: espessura cor */
     -webkit-text-stroke: 1px #dbffae;
 }
 
@@ -77,7 +82,12 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     font-family: var(--font-nuts);
     font-size: 90px;
     color: var(--primary);
-    font-weight: 900;
+    
+    /* ALTERAÇÃO: TUDO MINÚSCULO e THIN (FINO) */
+    text-transform: lowercase; /* Força minúsculas */
+    font-weight: 300; /* Peso "Thin" / Light */
+    font-style: normal;
+    letter-spacing: -3px; 
 }
 
 /* LOGO PEQUENO NO HEADER */
@@ -91,13 +101,18 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     font-family: var(--font-were);
     font-size: 10px;
     color: var(--text-main);
-    /* Opcional: Adicionar contorno no pequeno também? Geralmente fica ruim em tamanho pequeno. Vou deixar sem por legibilidade, ou colocar bem fino */
 }
 .logo-nuts-small {
     font-family: var(--font-nuts);
     font-size: 22px;
     color: var(--primary);
-    font-weight: 700;
+    
+    /* ALTERAÇÃO: TUDO MINÚSCULO e THIN (FINO) */
+    text-transform: lowercase;
+    font-weight: 300;
+    
+    font-style: normal;
+    letter-spacing: -1px;
 }
 
 
