@@ -880,7 +880,7 @@ window.app = {
         });
     },
 
-    // NOVA FUNÇÃO PARA ALTERAR STATUS DO TREINO NO ADMIN
+    // FUNÇÃO PARA ALTERAR STATUS DO TREINO NO ADMIN
     admToggleWorkoutStatus: async (docId, rIdx, wIdx, status) => {
         const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
         if(snap.exists()) {
