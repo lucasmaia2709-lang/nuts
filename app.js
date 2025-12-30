@@ -777,29 +777,124 @@ window.app = {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_USERS), (snap) => {
             const list = document.getElementById('adm-users-list'); 
             let html = '';
+            
             snap.forEach(d => {
-                const u = d.data(); const docId = d.id; const safeId = app.escape(docId);
-                const isUserOpen = expandedUsers.has(docId) ? 'open' : ''; const checked = u.active ? 'checked' : '';
+                const u = d.data(); 
+                const docId = d.id; 
+                const safeId = app.escape(docId);
+                const isUserOpen = expandedUsers.has(docId) ? 'open' : ''; 
+                const checked = u.active ? 'checked' : '';
+                
+                // CALCULAR PROGRESSO GLOBAL
+                let totalWorkouts = 0;
+                let doneWorkouts = 0;
+                if(u.races && u.races.length > 0) {
+                    u.races.forEach(r => {
+                        if(r.workouts) {
+                            totalWorkouts += r.workouts.length;
+                            doneWorkouts += r.workouts.filter(w => w.done).length;
+                        }
+                    });
+                }
+                const globalPct = totalWorkouts > 0 ? Math.round((doneWorkouts / totalWorkouts) * 100) : 0;
+                
                 let goalsHtml = '';
                 if(u.races && u.races.length > 0) {
                     u.races.forEach((r, rIdx) => {
-                        const raceKey = `${docId}-${rIdx}`; const isRaceOpen = expandedRaces.has(raceKey) ? 'open' : '';
+                        const raceKey = `${docId}-${rIdx}`; 
+                        const isRaceOpen = expandedRaces.has(raceKey) ? 'open' : '';
+                        
                         let workoutsHtml = '';
                         if(r.workouts && r.workouts.length > 0) {
                             r.workouts.forEach((w, wIdx) => {
                                 let wDate = "";
-                                if(w.scheduledDate) { const dp = w.scheduledDate.split('-'); wDate = `<span style="font-size:10px; color:#666; background:#eee; padding:2px 5px; border-radius:4px;">${dp[2]}/${dp[1]}</span>`; }
-                                workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:5px 0;"><span style="font-size:12px;">${wDate} ${w.title.toUpperCase()}</span><button onclick="app.admDeleteWorkoutInline('${safeId}', ${rIdx}, ${wIdx})" style="color:var(--red); border:none; background:none; cursor:pointer;"><i class="fa-solid fa-times"></i></button></div>`;
+                                if(w.scheduledDate) { 
+                                    const dp = w.scheduledDate.split('-'); 
+                                    wDate = `<span style="font-size:10px; color:#666; background:#eee; padding:2px 5px; border-radius:4px;">${dp[2]}/${dp[1]}</span>`; 
+                                }
+                                
+                                // ÍCONE DE STATUS E BOTÃO DE DESFAZER
+                                const isDone = w.done;
+                                const statusIcon = isDone ? '<i class="fa-solid fa-circle-check" style="color:var(--success)"></i>' : '<i class="fa-regular fa-circle" style="color:#ccc"></i>';
+                                const undoBtn = isDone ? `<button onclick="app.admToggleWorkoutStatus('${safeId}', ${rIdx}, ${wIdx}, false)" style="color:var(--text-sec); font-size:10px; border:1px solid #ddd; border-radius:4px; padding:2px 5px; cursor:pointer; margin-right:5px; background:#fff;">DESFAZER</button>` : '';
+                                
+                                workoutsHtml += `
+                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        ${statusIcon}
+                                        <div style="display:flex; flex-direction:column;">
+                                            <span style="font-size:12px; font-weight:600;">${wDate} ${w.title.toUpperCase()}</span>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center;">
+                                        ${undoBtn}
+                                        <button onclick="app.admDeleteWorkoutInline('${safeId}', ${rIdx}, ${wIdx})" style="color:var(--red); border:none; background:none; cursor:pointer;"><i class="fa-solid fa-times"></i></button>
+                                    </div>
+                                </div>`;
                             });
-                        } else { workoutsHtml = '<p style="font-size:11px; color:#999;">SEM TREINOS.</p>'; }
+                        } else { 
+                            workoutsHtml = '<p style="font-size:11px; color:#999;">SEM TREINOS.</p>'; 
+                        }
+                        
                         workoutsHtml += `<div style="display:flex; gap:5px; margin-top:10px; justify-content:flex-end;"><button onclick="app.admAddWorkoutInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ TREINO</button><button onclick="app.admImportTemplateInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ MODELO</button></div>`;
-                        goalsHtml += `<div class="adm-item-box"><div class="adm-row-header" onclick="app.admToggleGoal('${raceKey}')"><strong>${r.name.toUpperCase()}</strong><i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i></div><div id="goal-content-${raceKey}" class="adm-nested ${isRaceOpen}">${workoutsHtml}<div style="text-align:right; margin-top:5px;"><button onclick="app.admDelRaceInline('${safeId}', ${rIdx})" style="font-size:10px; color:red; border:none; background:none; cursor:pointer;">EXCLUIR OBJETIVO</button></div></div></div>`;
+                        
+                        goalsHtml += `
+                        <div class="adm-item-box">
+                            <div class="adm-row-header" onclick="app.admToggleGoal('${raceKey}')">
+                                <strong>${r.name.toUpperCase()}</strong>
+                                <i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i>
+                            </div>
+                            <div id="goal-content-${raceKey}" class="adm-nested ${isRaceOpen}">
+                                ${workoutsHtml}
+                                <div style="text-align:right; margin-top:5px;"><button onclick="app.admDelRaceInline('${safeId}', ${rIdx})" style="font-size:10px; color:red; border:none; background:none; cursor:pointer;">EXCLUIR OBJETIVO</button></div>
+                            </div>
+                        </div>`;
                     });
-                } else { goalsHtml = '<p style="font-size:12px; color:#999; padding:10px;">SEM OBJETIVOS.</p>'; }
-                html += `<div class="card" style="padding:15px; margin-bottom:10px;"><div style="display:flex; align-items:center; gap:15px; padding-bottom:5px;"><input type="checkbox" class="check-toggle" ${checked} onchange="app.admToggleStatus('${safeId}', this.checked)"><div style="flex:1; cursor:pointer;" onclick="app.admToggleUser('${safeId}')"><span style="font-weight:700; font-size:16px;">${u.name.toUpperCase()}</span><br><span style="font-size:12px; color:#888;">${u.email}</span></div><button onclick="app.admDeleteUserQuick('${safeId}')" style="border:none; background:none; color:var(--red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div><div id="user-content-${docId}" class="adm-nested ${isUserOpen}" style="border-left:none; padding-left:0; margin-top:15px;">${goalsHtml}<button onclick="app.admAddRaceInline('${safeId}')" style="width:100%; border:2px dashed #eee; background:none; padding:12px; font-size:13px; margin-top:10px; color:var(--primary); font-weight:600; border-radius:12px; cursor:pointer;">+ NOVO OBJETIVO</button></div></div>`;
+                } else { 
+                    goalsHtml = '<p style="font-size:12px; color:#999; padding:10px;">SEM OBJETIVOS.</p>'; 
+                }
+                
+                html += `
+                <div class="card" style="padding:15px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; gap:15px; padding-bottom:5px;">
+                        <input type="checkbox" class="check-toggle" ${checked} onchange="app.admToggleStatus('${safeId}', this.checked)">
+                        <div style="flex:1; cursor:pointer;" onclick="app.admToggleUser('${safeId}')">
+                            <span style="font-weight:700; font-size:16px;">${u.name.toUpperCase()}</span><br>
+                            <span style="font-size:12px; color:#888;">${u.email}</span>
+                            
+                            <!-- BARRA DE PROGRESSO ADMIN -->
+                            <div class="progress-container" style="height:6px; margin-top:8px; background:#eee;">
+                                <div class="progress-bar colored" style="width:${globalPct}%;"></div>
+                            </div>
+                            <div style="font-size:9px; color:#999; margin-top:3px; text-align:right;">${doneWorkouts}/${totalWorkouts} CONCLUÍDOS</div>
+                        </div>
+                        <button onclick="app.admDeleteUserQuick('${safeId}')" style="border:none; background:none; color:var(--red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div id="user-content-${docId}" class="adm-nested ${isUserOpen}" style="border-left:none; padding-left:0; margin-top:15px;">
+                        ${goalsHtml}
+                        <button onclick="app.admAddRaceInline('${safeId}')" style="width:100%; border:2px dashed #eee; background:none; padding:12px; font-size:13px; margin-top:10px; color:var(--primary); font-weight:600; border-radius:12px; cursor:pointer;">+ NOVO OBJETIVO</button>
+                    </div>
+                </div>`;
             });
             list.innerHTML = html;
         });
+    },
+
+    // NOVA FUNÇÃO PARA ALTERAR STATUS DO TREINO NO ADMIN
+    admToggleWorkoutStatus: async (docId, rIdx, wIdx, status) => {
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
+        if(snap.exists()) {
+            const u = snap.data();
+            if(u.races && u.races[rIdx] && u.races[rIdx].workouts && u.races[rIdx].workouts[wIdx]) {
+                u.races[rIdx].workouts[wIdx].done = status;
+                // Se estiver reativando (desfazendo), removemos a data de conclusão
+                if(!status) {
+                    delete u.races[rIdx].workouts[wIdx].completedAt;
+                }
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races });
+                app.toast(status ? "TREINO CONCLUÍDO MANUALMENTE" : "TREINO REATIVADO!");
+            }
+        }
     },
     
     admToggleUser: (docId) => { if(expandedUsers.has(docId)) expandedUsers.delete(docId); else expandedUsers.add(docId); const el = document.getElementById(`user-content-${docId}`); if(el) el.classList.toggle('open'); },
