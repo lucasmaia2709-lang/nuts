@@ -1,25 +1,29 @@
 :root {
     /* PALETA ATUALIZADA (BRANCO GELO) */
-    --bg: #f4f7f9;         /* Branco Gelo (Ice White) */
-    --primary: #ff8a41;    /* Laranja (Ação/Botões/Destaques) - Mantido */
-    --secondary: #9cafcc;  /* Verde (Detalhes secundários) - Mantido */
-    --surface: #FFFFFF;    /* Branco (Cards/Menu) */
+    --bg: #f4f7f9;         
+    --primary: #ff8a41;    
+    --secondary: #9cafcc;  
+    --surface: #FFFFFF;    
     
     /* CORES DE TEXTO */
-    --text-main: #2b4c7e;  /* Azul Profundo - Mantido */
-    --text-sec: #e67e22;   /* Laranja Escuro - Mantido */
+    --text-main: #2b4c7e;  
+    --text-sec: #e67e22;   
     
     --radius: 20px;
     
-    /* FONTES */
-    --font-main: 'Bodoni Moda', serif; 
-    --font-logo: 'Playfair Display', serif;
+    /* FONTES ATUALIZADAS */
+    /* Substituindo Copperplate Gothic por Cinzel (Google Fonts) para Web-Safe */
+    --font-main: 'Cinzel', serif; 
+    
+    /* Fontes do Logo */
+    --font-were: 'Major Mono Display', monospace;
+    --font-nuts: 'Cinzel Decorative', cursive; /* Substituto visual para TEN Pearl */
     
     --success: #2ecc71;
     --red: #e74c3c;
     --border: #edf2f7;
-    --shadow: 0 8px 25px rgba(43, 76, 126, 0.08); /* Sombra mais suave para o fundo claro */
-    --nav-height: 85px; /* Altura ajustada do menu */
+    --shadow: 0 8px 25px rgba(43, 76, 126, 0.08); 
+    --nav-height: 85px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -35,20 +39,67 @@ body {
     height: 100dvh; 
     overflow: hidden; 
     display: flex; 
-    flex-direction: column; 
+    flex-direction: column;
+    /* RESTO DO APP EM CAIXA ALTA */
+    text-transform: uppercase;
 }
 
-h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--text-main); /* Títulos em azul para contraste no fundo gelo */ }
+/* Permitir caixa normal apenas em inputs para legibilidade se necessário, mas mantendo uppercase visual */
+input, textarea {
+    text-transform: uppercase; 
+}
+::placeholder {
+    text-transform: uppercase;
+}
 
-/* Estilo especial para o Logo .Nuts */
-.brand-logo {
-    font-family: var(--font-logo);
+h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--text-main); }
+
+/* ESTILIZAÇÃO DO LOGO NOVO */
+.logo-container-large {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 30px;
+    line-height: 0.85; 
+}
+
+.logo-were {
+    font-family: var(--font-were);
+    font-size: 50px;
+    color: var(--text-main);
+    letter-spacing: -2px;
+    /* ADICIONADO CONTORNO AQUI */
+    -webkit-text-stroke: 1px #dbffae;
+}
+
+.logo-nuts {
+    font-family: var(--font-nuts);
+    font-size: 90px;
+    color: var(--primary);
+    font-weight: 900;
+}
+
+/* LOGO PEQUENO NO HEADER */
+.logo-container-small {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 0.8;
+}
+.logo-were-small {
+    font-family: var(--font-were);
+    font-size: 10px;
+    color: var(--text-main);
+    /* Opcional: Adicionar contorno no pequeno também? Geralmente fica ruim em tamanho pequeno. Vou deixar sem por legibilidade, ou colocar bem fino */
+}
+.logo-nuts-small {
+    font-family: var(--font-nuts);
+    font-size: 22px;
+    color: var(--primary);
     font-weight: 700;
-    font-size: 26px;
-    color: var(--primary); 
-    letter-spacing: -1px;
-    text-shadow: none; /* Removido shadow para look mais clean */
 }
+
 
 /* SCREENS */
 .screen { 
@@ -62,7 +113,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     flex-direction: column; 
     z-index: 10; 
     padding-top: env(safe-area-inset-top);
-    padding-bottom: 0; /* Removido padding fixo, controlado pelo container interno */
+    padding-bottom: 0; 
 }
 
 #view-app.screen {
@@ -81,7 +132,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     overflow: hidden; 
     display: flex;
     flex-direction: column;
-    background: #f8fafc; /* Fundo levemente diferente para admin */
+    background: #f8fafc; 
 }
 
 /* HEADER PRINCIPAL DO APP */
@@ -101,7 +152,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    /* Espaço extra no final para o conteúdo não ficar atrás do menu */
     padding-bottom: calc(var(--nav-height) + 20px); 
     -webkit-overflow-scrolling: touch;
 }
@@ -109,12 +159,12 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 .input-group { margin-bottom: 20px; width: 100%; }
-.label { display: block; font-size: 11px; font-weight: 700; color: #262262; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.label { display: block; font-size: 11px; font-weight: 700; color: #262262; margin-bottom: 8px; letter-spacing: 1px; }
 .input { width: 100%; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background-color: #FFF; font-size: 16px; color: var(--text-main); outline: none; font-family: var(--font-main); transition: 0.2s; -webkit-appearance: none; box-shadow: var(--shadow); }
 .input:focus { border-color: var(--primary); }
 
 /* Botões */
-.btn { width: 100%; padding: 18px; border-radius: var(--radius); border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: var(--font-main); transition: 0.2s; -webkit-user-select: none; letter-spacing: 0.5px; }
+.btn { width: 100%; padding: 18px; border-radius: var(--radius); border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: var(--font-main); transition: 0.2s; -webkit-user-select: none; letter-spacing: 0.5px; text-transform: uppercase; }
 .btn-primary { background-color: var(--primary); color: #FFF; box-shadow: 0 5px 15px rgba(255, 138, 65, 0.4); }
 .btn-primary:active { transform: scale(0.98); }
 .btn-primary:disabled { background-color: #ccc; box-shadow: none; cursor: not-allowed; }
@@ -125,9 +175,9 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 /* CALENDÁRIO */
 .calendar-wrapper { padding: 0 20px 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.calendar-title { font-weight: 700; font-size: 24px; text-transform: capitalize; color: var(--text-main); }
+.calendar-title { font-weight: 700; font-size: 24px; color: var(--text-main); }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; width: 100%; }
-.cal-head-day { font-size: 10px; color: var(--text-main); opacity: 0.7; text-align: center; font-weight: 700; padding-bottom: 5px; text-transform: uppercase; }
+.cal-head-day { font-size: 10px; color: var(--text-main); opacity: 0.7; text-align: center; font-weight: 700; padding-bottom: 5px; }
 .cal-cell { aspect-ratio: 1/1; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; font-weight: 500; color: var(--text-main); position: relative; cursor: pointer; border: 1px solid transparent; background: #FFF; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
 .cal-cell.today { border: 2px solid var(--primary); color: var(--primary); font-weight: 800; }
 .cal-cell.other-month { opacity: 0.4; background: rgba(255,255,255,0.5); }
@@ -144,16 +194,16 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .recipe-card { display: flex; flex-direction: column; overflow: hidden; background: #FFF; border-radius: var(--radius); border: none; box-shadow: var(--shadow); cursor: pointer; transition: transform 0.2s; }
 .recipe-card:active { transform: scale(0.98); }
 .recipe-img { width: 100%; height: 180px; background-size: cover; background-position: center; margin-bottom: 15px; background-color: #F0F0F0; }
-.recipe-meta { font-size: 11px; color: var(--primary); text-transform: uppercase; font-weight: 700; letter-spacing: 1px; }
+.recipe-meta { font-size: 11px; color: var(--primary); font-weight: 700; letter-spacing: 1px; }
 
 /* NEWS CARD */
 .news-card { overflow: hidden; padding: 0; display: flex; flex-direction: column; border: none; box-shadow: var(--shadow); border-radius: var(--radius); background: #FFF; margin-bottom: 20px; }
 .news-img { width: 100%; height: 220px; object-fit: cover; background: #EEE; }
 .news-content { padding: 25px; }
-.news-date { font-size: 11px; color: var(--text-sec); margin-bottom: 8px; text-transform: uppercase; font-weight: 700; }
-.news-title { font-size: 18px; font-weight: 700; margin: 0 0 10px 0; line-height: 1.2; font-family: var(--font-logo); color: var(--text-main); }
+.news-date { font-size: 11px; color: var(--text-sec); margin-bottom: 8px; font-weight: 700; }
+.news-title { font-size: 18px; font-weight: 700; margin: 0 0 10px 0; line-height: 1.2; color: var(--text-main); }
 
-/* NAV BAR (MENU INFERIOR AJUSTADO) */
+/* NAV BAR */
 .nav-bar { 
     position: fixed; 
     bottom: 0; 
@@ -161,12 +211,10 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     width: 100%; 
     height: auto;
     background: #9cafcc; 
-    /* Arredondamento superior sutil, mas conectando nas bordas laterais */
     border-radius: 25px 25px 0 0; 
     display: flex; 
     justify-content: space-around; 
     align-items: center;
-    /* Padding inferior ajustado para safe-area (iPhone) e visual sem borda extra */
     padding: 12px 10px calc(12px + env(safe-area-inset-bottom));
     z-index: 300; 
     box-shadow: 0 -5px 30px rgba(43, 76, 126, 0.08);
@@ -220,4 +268,3 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .adm-item-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 .adm-btn-small { padding: 6px 12px; font-size: 11px; border-radius: 8px; border: 1px solid #ddd; background: #FFF; cursor: pointer; font-weight: 600; color: var(--text-main); }
 .adm-action-btn { color: var(--text-sec); border:none; background:none; font-size:12px; padding:5px; cursor:pointer; }
-
