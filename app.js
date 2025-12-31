@@ -757,7 +757,12 @@ window.app = {
         // Esconde o menu inferior para leitura
         document.querySelector('.nav-bar').style.display = 'none';
         
-        document.getElementById('view-news-detail').classList.add('active');
+        const detailScreen = document.getElementById('view-news-detail');
+        detailScreen.classList.add('active');
+        
+        // CORREÇÃO: Habilitar scroll na tela de detalhes e resetar posição
+        detailScreen.style.overflowY = 'auto';
+        detailScreen.scrollTop = 0;
     },
 
     closeNewsDetail: () => {
