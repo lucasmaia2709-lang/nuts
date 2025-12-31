@@ -754,11 +754,16 @@ window.app = {
         document.getElementById('news-det-title').innerText = app.formatText(n.title);
         document.getElementById('news-det-body').innerText = app.formatText(n.body);
         
+        // Esconde o menu inferior para leitura
+        document.querySelector('.nav-bar').style.display = 'none';
+        
         document.getElementById('view-news-detail').classList.add('active');
     },
 
     closeNewsDetail: () => {
         document.getElementById('view-news-detail').classList.remove('active');
+        // Restaura o menu inferior
+        document.querySelector('.nav-bar').style.display = 'flex';
     },
 
     loadAdmin: () => { document.getElementById('view-admin').classList.add('active'); app.admTab('users'); },
