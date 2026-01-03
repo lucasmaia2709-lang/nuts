@@ -31,7 +31,7 @@ const C_POSTS = 'expliq_posts_v9';
 const C_NEWS = 'expliq_news_v9';
 const C_QUOTES = 'expliq_quotes_v9';
 const C_TEMPLATES = 'expliq_templates_v9';
-const C_VIDEOS = 'expliq_strength_videos_v9'; // Nova coleção
+const C_VIDEOS = 'expliq_strength_videos_v9'; 
 
 // !!! SEGURANÇA ADMIN !!!
 const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edgarzanin@outlook.com"]; 
@@ -39,6 +39,7 @@ const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edg
 let currentUser = null;
 let currentMonth = new Date();
 let selectedDayDate = null; 
+let allUsersCache = []; // Cache de todos os usuários para o calendário do Admin
 
 // Variáveis temporárias
 let tempPostFile = null;
@@ -264,6 +265,18 @@ window.app = {
                 currentUser = docSnap.data();
                 const btnAdmin = document.getElementById('btn-admin-access');
                 if(btnAdmin) btnAdmin.style.display = ADMIN_EMAILS.includes(currentUser.email) ? 'block' : 'none';
+                
+                // Se for Admin, carregar dados de todos os usuários para o calendário
+                if (ADMIN_EMAILS.includes(currentUser.email)) {
+                    onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_USERS), (snap) => {
+                        allUsersCache = [];
+                        snap.forEach(d => allUsersCache.push(d.data()));
+                        // Re-renderiza o calendário quando os dados chegarem
+                        if (document.getElementById('view-app').classList.contains('active')) {
+                            window.app.renderCalendar();
+                        }
+                    });
+                }
 
                 if (document.getElementById('view-admin').classList.contains('active')) return;
                 
@@ -331,6 +344,10 @@ window.app = {
         const timeEl = document.getElementById('new-race-est-time');
         const estTime = timeEl ? timeEl.value : "Não informado";
         
+        // NOVO: Captura o link do vídeo
+        const strengthVideoEl = document.getElementById('new-race-strength-video');
+        const strengthVideo = strengthVideoEl ? strengthVideoEl.value : "";
+
         const date = document.getElementById('new-race-date').value;
 
         if(!name || !date) return window.app.toast("Preencha o nome e data.");
@@ -361,7 +378,8 @@ window.app = {
                     dist: dist,
                     estTime: estTime,
                     startDate: startDateStr,
-                    raceDate: date
+                    raceDate: date,
+                    strengthVideo: strengthVideo // Envia o vídeo para o Worker
                 })
             });
 
@@ -448,21 +466,50 @@ window.app = {
             const scheduled = workouts.find(w => w.scheduledDate === dateStr);
             const doneHere = workouts.find(w => w.done && w.completedAt === dateStr);
             
+            // CORREÇÃO: Inicializa modalData vazio a cada dia
+            let modalData = { studentRaces: [] }; 
+
             if (scheduled) {
                  cellClass += ' has-workout'; 
                  dotHtml += `<div class="cal-dot"></div>`;
-                 workoutData = scheduled;
+                 modalData = { ...scheduled, studentRaces: [] }; // Preserva dados do treino e reinicia array de alunos
                  if(scheduled.done) cellClass += ' done';
             }
-            else if(doneHere) { cellClass += ' done'; dotHtml += `<div class="cal-dot"></div>`; workoutData = doneHere; } 
+            else if(doneHere) { 
+                 cellClass += ' done'; 
+                 dotHtml += `<div class="cal-dot"></div>`; 
+                 modalData = { ...doneHere, studentRaces: [] }; 
+            } 
             
             if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
+
+            // Lógica para Admin: Mostrar provas dos alunos
+            if (ADMIN_EMAILS.includes(currentUser.email)) {
+                // Filtra provas de alunos para este dia específico
+                let hasStudentRace = false;
+                allUsersCache.forEach(u => {
+                    if (u.races) {
+                        u.races.forEach(r => {
+                            if (r.date === dateStr) {
+                                hasStudentRace = true;
+                                modalData.studentRaces.push({ studentName: u.name, raceName: r.name });
+                            }
+                        });
+                    }
+                });
+                
+                if (hasStudentRace) {
+                    dotHtml += `<div class="cal-race-marker" title="Prova de aluno"></div>`;
+                }
+            }
             
             const el = document.createElement('div');
             el.className = cellClass;
             el.innerText = d;
             el.innerHTML += dotHtml;
-            el.onclick = () => window.app.openDayDetail(dateStr, workoutData);
+            // Passa uma cópia dos dados para evitar referências compartilhadas erradas
+            const dataToPass = JSON.parse(JSON.stringify(modalData));
+            el.onclick = () => window.app.openDayDetail(dateStr, dataToPass);
             grid.appendChild(el);
         }
     },
@@ -472,13 +519,32 @@ window.app = {
         const modal = document.getElementById('modal-day-detail');
         document.getElementById('day-det-title').innerText = `Dia ${dateStr.split('-').reverse().join('/')}`;
         let content = '';
-        if(workoutData) {
-            content = `<div style="background:#f5f5f5; padding:15px; border-radius:10px; margin-bottom:15px;">
+
+        // Mostra treino do próprio usuário (se houver)
+        if(workoutData && (workoutData.title || workoutData.desc)) {
+            content += `<div style="background:#f5f5f5; padding:15px; border-radius:10px; margin-bottom:15px;">
                 <h4 style="margin:0 0 5px 0;">${workoutData.title}</h4>
                 <p style="margin:0; font-size:13px; color:#666;">${workoutData.desc}</p>
                 ${workoutData.done ? '<strong style="color:var(--success); font-size:12px;">Concluído</strong>' : '<span style="color:var(--orange); font-size:12px;">Pendente</span>'}
             </div>`;
-        } else { content = `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`; }
+        } else if (!workoutData || (!workoutData.title && (!workoutData.studentRaces || workoutData.studentRaces.length === 0))) { 
+            content += `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`; 
+        }
+
+        // Mostra provas dos alunos (se for admin e houver provas)
+        // CORREÇÃO: A lista já vem limpa e filtrada do renderCalendar
+        if (workoutData && workoutData.studentRaces && workoutData.studentRaces.length > 0) {
+            content += `<div style="margin-top:15px;">
+                <h4 style="font-size:14px; color:var(--primary); margin-bottom:10px;">Provas de Alunos:</h4>`;
+            workoutData.studentRaces.forEach(race => {
+                content += `<div style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; margin-bottom:5px; font-size:13px;">
+                    <strong>${race.studentName}</strong><br>
+                    <span style="color:#666;">${race.raceName}</span>
+                </div>`;
+            });
+            content += `</div>`;
+        }
+
         document.getElementById('day-det-content').innerHTML = content;
         const notes = currentUser.notes || {};
         document.getElementById('day-det-note').value = notes[dateStr] || '';
