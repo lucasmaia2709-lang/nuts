@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, onSnapshot, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- ÁREA DE CONFIGURAÇÃO ---
@@ -59,6 +59,8 @@ let editingWorkoutIndex = null;
 let allNews = [];
 
 window.app = {
+    admUsersCache: {}, // Cache local para acesso rápido aos dados dos usuários no admin
+
     init: async () => {
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -992,6 +994,9 @@ window.app = {
                 const isUserOpen = expandedUsers.has(docId) ? 'open' : ''; 
                 const checked = u.active ? 'checked' : '';
                 
+                // POPULAR CACHE
+                window.app.admUsersCache[docId] = u;
+
                 // CALCULAR PROGRESSO GLOBAL
                 let totalWorkouts = 0;
                 let doneWorkouts = 0;
@@ -1029,7 +1034,7 @@ window.app = {
                                     <div style="display:flex; align-items:center; gap:8px;">
                                         ${statusIcon}
                                         <div style="display:flex; flex-direction:column;">
-                                            <span style="font-size:12px; font-weight:600;">${wDate} ${w.title}</span>
+                                            <span onclick="window.app.admShowWorkoutDetail('${safeId}', ${rIdx}, ${wIdx})" style="font-size:12px; font-weight:600; cursor:pointer; text-decoration:underline; color:var(--primary);">${wDate} ${w.title}</span>
                                         </div>
                                     </div>
                                     <div style="display:flex; align-items:center;">
@@ -1141,6 +1146,28 @@ window.app = {
             }
         }
     },
+
+    // --- NOVA FUNÇÃO: MOSTRAR DETALHES DO TREINO (ADMIN) ---
+    admShowWorkoutDetail: (userId, rIdx, wIdx) => {
+        const user = window.app.admUsersCache[userId];
+        if (!user || !user.races[rIdx] || !user.races[rIdx].workouts[wIdx]) return;
+
+        const w = user.races[rIdx].workouts[wIdx];
+        
+        document.getElementById('adm-workout-det-title').innerText = w.title;
+        document.getElementById('adm-workout-det-desc').innerText = w.desc;
+        const vidContainer = document.getElementById('adm-workout-det-video-container');
+        
+        if (w.video) {
+            const safeVideo = window.app.escape(w.video);
+            vidContainer.style.display = 'block';
+            vidContainer.innerHTML = `<button onclick="window.app.playVideo('${safeVideo}')" class="btn btn-primary" style="font-size:14px;"><i class="fa-solid fa-play"></i> Ver Vídeo</button>`;
+        } else {
+            vidContainer.style.display = 'none';
+        }
+        
+        document.getElementById('modal-adm-workout-detail').classList.add('active');
+    },
     
     admToggleUser: (docId) => { if(expandedUsers.has(docId)) expandedUsers.delete(docId); else expandedUsers.add(docId); const el = document.getElementById(`user-content-${docId}`); if(el) el.classList.toggle('open'); },
     admToggleGoal: (key) => { if(expandedRaces.has(key)) expandedRaces.delete(key); else expandedRaces.add(key); const el = document.getElementById(`goal-content-${key}`); if(el) el.classList.toggle('open'); },
@@ -1203,7 +1230,161 @@ window.app = {
     },
 
     admDeleteWorkoutInline: async (docId, rIdx, wIdx) => { window.app.showConfirm("Remover treino?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races[rIdx].workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
-    admAddRaceInline: async (docId) => { window.app.showPrompt("Nome do Objetivo:", async (name) => { if(!name) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); const races = u.races || []; races.push({ name, date: '', workouts: [], created: new Date().toISOString() }); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races }); }); },
+    
+    // --- FUNÇÕES NOVAS PARA ADMIN ADICIONAR OBJETIVO COM IA/MODELO ---
+    
+    admAddRaceInline: async (docId) => { 
+        currentAdmUser = docId;
+        
+        // Popular Modelos
+        const tplSelect = document.getElementById('adm-race-template-select');
+        tplSelect.innerHTML = '<option value="">Carregando...</option>';
+        
+        // Resetar Campos
+        document.getElementById('adm-race-name').value = '';
+        document.getElementById('adm-race-date').value = '';
+        
+        // Data de Início padrão (Amanhã)
+        const tomorrow = new Date(); 
+        tomorrow.setDate(tomorrow.getDate()+1);
+        document.getElementById('adm-start-date').value = tomorrow.toISOString().split('T')[0];
+        
+        document.getElementById('adm-race-method').value = 'ia';
+        document.getElementById('adm-race-dist').value = '';
+        document.getElementById('adm-race-time').value = '';
+        document.getElementById('adm-race-video').value = '';
+        
+        window.app.admToggleRaceMode();
+        document.getElementById('modal-adm-add-race').classList.add('active');
+
+        // Buscar templates uma vez
+        const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES));
+        tplSelect.innerHTML = '<option value="">Selecione...</option>';
+        querySnapshot.forEach((doc) => {
+            const t = doc.data();
+            tplSelect.innerHTML += `<option value="${doc.id}">${t.name} (${t.workouts.length} treinos)</option>`;
+        });
+    },
+
+    admToggleRaceMode: () => {
+        const mode = document.getElementById('adm-race-method').value;
+        if (mode === 'ia') {
+            document.getElementById('adm-race-ia-fields').classList.remove('hidden');
+            document.getElementById('adm-race-tpl-fields').classList.add('hidden');
+        } else {
+            document.getElementById('adm-race-ia-fields').classList.add('hidden');
+            document.getElementById('adm-race-tpl-fields').classList.remove('hidden');
+        }
+    },
+
+    admConfirmAddRace: async () => {
+        const name = document.getElementById('adm-race-name').value;
+        const raceDate = document.getElementById('adm-race-date').value;
+        const startDateStr = document.getElementById('adm-start-date').value;
+        const method = document.getElementById('adm-race-method').value;
+
+        if (!name || !raceDate || !startDateStr) return window.app.toast("Preencha Nome e Datas.");
+
+        let newWorkouts = [];
+        let targetDistance = 0;
+        let estimatedTime = "Não informado";
+
+        const btn = document.querySelector('#modal-adm-add-race button.btn-primary');
+        if(btn) { btn.disabled = true; btn.innerText = "Processando..."; }
+
+        try {
+            if (method === 'ia') {
+                const dist = parseFloat(document.getElementById('adm-race-dist').value) || 0;
+                const time = document.getElementById('adm-race-time').value || "Não informado";
+                const video = document.getElementById('adm-race-video').value || "";
+
+                targetDistance = dist;
+                estimatedTime = time;
+
+                // Chamada ao Worker (Mesma lógica do aluno)
+                const response = await fetch(CF_WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        dist: dist,
+                        estTime: time,
+                        startDate: startDateStr,
+                        raceDate: raceDate,
+                        strengthVideo: video
+                    })
+                });
+
+                if (!response.ok) {
+                    let errorDetails = "Erro desconhecido";
+                    try {
+                        const errorJson = await response.json();
+                        errorDetails = errorJson.error || JSON.stringify(errorJson);
+                    } catch(e) { errorDetails = await response.text(); }
+                    throw new Error(`Worker Error: ${errorDetails}`);
+                }
+
+                const aiWorkoutsRaw = await response.json();
+                if (!Array.isArray(aiWorkoutsRaw)) throw new Error("Formato inválido recebido da IA.");
+
+                newWorkouts = aiWorkoutsRaw.map(w => ({
+                    title: w.title,
+                    desc: w.desc,
+                    video: w.video || "",
+                    done: false,
+                    scheduledDate: w.date,
+                    type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run')
+                }));
+
+            } else {
+                // MODO TEMPLATE
+                const tplId = document.getElementById('adm-race-template-select').value;
+                if (!tplId) throw new Error("Selecione um modelo.");
+
+                const tSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tplId));
+                if (!tSnap.exists()) throw new Error("Modelo não encontrado.");
+                
+                const tData = tSnap.data();
+                const startDate = new Date(startDateStr);
+                
+                newWorkouts = tData.workouts.map((w, index) => {
+                    const date = new Date(startDate);
+                    date.setDate(date.getDate() + index);
+                    // Não checa se ultrapassa a data da prova, apenas lança a partir da data de início
+                    return { ...w, scheduledDate: date.toISOString().split('T')[0], done: false };
+                });
+            }
+
+            // SALVAR NO USUÁRIO
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser);
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) throw new Error("Usuário não encontrado.");
+            
+            const uData = userSnap.data();
+            const races = uData.races || [];
+            
+            races.push({ 
+                name, 
+                date: raceDate, 
+                targetDistance, 
+                estimatedTime,
+                workouts: newWorkouts, 
+                created: new Date().toISOString() 
+            });
+
+            await updateDoc(userRef, { races });
+            
+            window.app.toast("Objetivo criado com sucesso!");
+            document.getElementById('modal-adm-add-race').classList.remove('active');
+
+        } catch (error) {
+            console.error(error);
+            window.app.toast("Erro: " + error.message);
+        } finally {
+            if(btn) { btn.disabled = false; btn.innerText = "Criar"; }
+        }
+    },
+
     admDelRaceInline: async (docId, rIdx) => { window.app.showConfirm("Apagar objetivo?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races.splice(rIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
     admDeleteUserQuick: async (docId) => { window.app.showConfirm(`Apagar permanentemente?`, async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); }); },
 
