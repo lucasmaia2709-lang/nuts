@@ -282,7 +282,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE ADICIONAR OBJETIVO -->
+    <!-- MODAL DE ADICIONAR OBJETIVO (ALUNO) -->
     <div id="modal-add-race" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Novo Objetivo</h3>
@@ -302,6 +302,68 @@
             
             <button onclick="window.app.addStudentRace()" class="btn btn-primary">Gerar Plano & Salvar</button>
             <button onclick="document.getElementById('modal-add-race').classList.remove('active')" class="btn btn-text">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL ADMIN ADD RACE (NOVO) -->
+    <div id="modal-adm-add-race" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Adicionar Objetivo (Admin)</h3>
+            
+            <label class="label">Nome da Prova</label>
+            <input id="adm-race-name" class="input" placeholder="Ex: Maratona SP" style="margin-bottom:10px;">
+
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="flex:1;">
+                    <label class="label">Data da Prova</label>
+                    <input type="date" id="adm-race-date" class="input">
+                </div>
+                <div style="flex:1;">
+                    <label class="label">Início Treinos</label>
+                    <input type="date" id="adm-start-date" class="input">
+                </div>
+            </div>
+
+            <label class="label">Método</label>
+            <select id="adm-race-method" class="input" style="margin-bottom:15px;" onchange="window.app.admToggleRaceMode()">
+                <option value="ia">Gerar com IA</option>
+                <option value="template">Usar Modelo</option>
+            </select>
+
+            <!-- IA FIELDS -->
+            <div id="adm-race-ia-fields">
+                <label class="label">Distância (KM)</label>
+                <input id="adm-race-dist" class="input" type="number" placeholder="Ex: 42" style="margin-bottom:10px;">
+                
+                <label class="label">Tempo Est. / Ritmo</label>
+                <input id="adm-race-time" class="input" placeholder="Ex: 4h 00m" style="margin-bottom:10px;">
+
+                <label class="label">Vídeo de Fortalecimento (Link)</label>
+                <input id="adm-race-video" class="input" placeholder="Opcional" style="margin-bottom:10px;">
+            </div>
+
+            <!-- TEMPLATE FIELDS -->
+            <div id="adm-race-tpl-fields" class="hidden">
+                <label class="label">Selecionar Modelo</label>
+                <select id="adm-race-template-select" class="input" style="margin-bottom:10px;"></select>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button onclick="window.app.admConfirmAddRace()" class="btn btn-primary">Criar</button>
+                <button onclick="document.getElementById('modal-adm-add-race').classList.remove('active')" class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ADMIN VER DETALHES DO TREINO (NOVO) -->
+    <div id="modal-adm-workout-detail" class="modal-overlay">
+        <div class="modal-card">
+            <h3 id="adm-workout-det-title" style="color:var(--text-main);">Título do Treino</h3>
+            <p id="adm-workout-det-desc" style="color:var(--text-sec); white-space: pre-wrap; margin: 20px 0;">Descrição...</p>
+            <div id="adm-workout-det-video-container" style="display:none; margin-bottom: 20px;">
+                <!-- Video Button will go here -->
+            </div>
+            <button onclick="document.getElementById('modal-adm-workout-detail').classList.remove('active')" class="btn btn-outline">Fechar</button>
         </div>
     </div>
 
