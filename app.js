@@ -683,18 +683,22 @@ window.app = {
             // Lógica para botão de vídeo na lista
             let actionBtn = '';
             if (w.type === 'strength' || w.title.toLowerCase().includes('fortalecimento')) {
-                actionBtn = `<button onclick="window.app.openStrengthVideosModal()" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell" style="color:var(--primary);"></i> Ver Exercícios</button>`;
+                // Layout corrigido: Botão com display inline-flex
+                actionBtn = `<button onclick="window.app.openStrengthVideosModal()" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell" style="color:var(--primary);"></i> Ver Exercícios</button>`;
             } else if (safeVideo) {
-                actionBtn = `<button onclick="window.app.playVideo('${safeVideo}')" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-play" style="color:var(--primary);"></i> Vídeo</button>`;
+                actionBtn = `<button onclick="window.app.playVideo('${safeVideo}')" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-play" style="color:var(--primary);"></i> Vídeo</button>`;
             }
 
-            list.innerHTML += `<div class="card" style="display:flex; align-items:center; gap: 15px; opacity: ${w.done?0.6:1}; padding:20px;">
-                <div style="color:${color}; font-size:24px;"><i class="fa-solid ${icon}"></i></div>
+            // MODIFICAÇÃO PRINCIPAL: 
+            // 1. align-items mudado de 'center' para 'flex-start' para alinhar ícone no topo.
+            // 2. actionBtn colocado dentro da div de texto, com margin-top para ficar abaixo da descrição.
+            list.innerHTML += `<div class="card" style="display:flex; align-items:flex-start; gap: 15px; opacity: ${w.done?0.6:1}; padding:20px;">
+                <div style="color:${color}; font-size:24px; margin-top:2px;"><i class="fa-solid ${icon}"></i></div>
                 <div style="flex:1;">
                     <h4 style="margin:0; font-size:16px;">${w.title} ${dateBadge}</h4>
                     <p style="margin:0; font-size:13px; color:var(--text-sec); margin-top:4px;">${w.desc}</p>
+                    ${actionBtn ? `<div style="margin-top:12px;">${actionBtn}</div>` : ''}
                 </div>
-                ${actionBtn}
             </div>`;
         });
     },
