@@ -364,7 +364,7 @@ window.app = {
         if (diffTime <= 0) return window.app.toast("Data deve ser futura.");
 
         // Feedback visual
-        window.app.toast("A IA está criando seu treino... (pode levar 10s)");
+        window.app.toast("Seu professor está criando seu treino...");
         const btn = document.querySelector('#modal-add-race button.btn-primary');
         if(btn) { btn.disabled = true; btn.innerText = "Gerando..."; }
 
@@ -411,7 +411,7 @@ window.app = {
                 type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run') // Garante o tipo
             }));
 
-            if (generatedWorkouts.length === 0) throw new Error("A IA não gerou nenhum treino.");
+            if (generatedWorkouts.length === 0) throw new Error("Erro ao gerar seu treino.");
 
             const races = currentUser.races || [];
             races.push({ 
