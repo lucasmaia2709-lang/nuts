@@ -34,7 +34,7 @@ const C_TEMPLATES = 'expliq_templates_v9';
 const C_VIDEOS = 'expliq_strength_videos_v9'; // Nova coleção
 
 // !!! SEGURANÇA ADMIN !!!
-const ADMIN_EMAILS = ["admin@nuts.com", "treinador@nuts.com"]; 
+const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edgarzanin@outlook.com"]; 
 
 let currentUser = null;
 let currentMonth = new Date();
