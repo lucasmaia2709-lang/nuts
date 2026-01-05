@@ -101,7 +101,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
 
 /* CALENDÁRIO */
-.calendar-wrapper { padding: 0 20px 20px; }
+.calendar-wrapper { padding: 20px 20px 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .calendar-title { font-weight: 700; font-size: 24px; text-transform: capitalize; color: var(--text-main); }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; width: 100%; }
