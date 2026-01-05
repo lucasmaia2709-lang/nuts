@@ -446,7 +446,10 @@ window.app = {
         const m = currentMonth.getMonth();
         const firstDay = new Date(y, m, 1).getDay();
         const daysInMonth = new Date(y, m+1, 0).getDate();
-       document.getElementById('cal-month-title').innerText = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(' de ', ' ');
+        
+        // Remove o " de " e deixa apenas o mês e ano
+        document.getElementById('cal-month-title').innerText = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(' de ', ' ');
+        
         const grid = document.getElementById('calendar-days');
         grid.innerHTML = '';
         
@@ -687,7 +690,14 @@ window.app = {
             races[rIdx].workouts[wIdx].done = true;
             races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
             currentUser.races = races;
-            window.app.renderHome();
+            
+            // Atualiza UI
+            window.app.renderHome(); 
+            // Se estiver na aba de treinos, atualiza ela também para refletir a mudança
+            if(!document.getElementById('tab-workouts').classList.contains('hidden')) {
+                window.app.renderWorkoutsList();
+            }
+            
             window.app.toast("Treino concluído!");
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { races });
         }
@@ -738,10 +748,15 @@ window.app = {
             <i class="fa-solid fa-list-check" style="font-size:40px; opacity:0.5; color:#FFF;"></i>
         </div>`;
 
+        // Define a data de hoje para comparação
+        const todayStr = new Date().toISOString().split('T')[0];
+
         activeRace.workouts.forEach((w, i) => {
             const color = w.done ? 'var(--success)' : '#E0E0E0';
             const icon = w.done ? 'fa-circle-check' : 'fa-circle';
             const safeVideo = w.video ? window.app.escape(w.video) : '';
+            const safeTitle = window.app.escape(w.title);
+            
             let dateBadge = '';
             if(w.scheduledDate) {
                  const dParts = w.scheduledDate.split('-');
@@ -749,23 +764,29 @@ window.app = {
             }
             
             // Lógica para botão de vídeo na lista
-            let actionBtn = '';
+            let videoBtn = '';
             if (w.type === 'strength' || w.title.toLowerCase().includes('fortalecimento')) {
-                // Layout corrigido: Botão com display inline-flex
-                actionBtn = `<button onclick="window.app.openStrengthVideosModal()" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell" style="color:var(--primary);"></i> Ver Exercícios</button>`;
+                videoBtn = `<button onclick="window.app.openStrengthVideosModal()" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell" style="color:var(--primary);"></i> Ver Exercícios</button>`;
             } else if (safeVideo) {
-                actionBtn = `<button onclick="window.app.playVideo('${safeVideo}')" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-play" style="color:var(--primary);"></i> Vídeo</button>`;
+                videoBtn = `<button onclick="window.app.playVideo('${safeVideo}')" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-play" style="color:var(--primary);"></i> Vídeo</button>`;
             }
 
-            // MODIFICAÇÃO PRINCIPAL: 
-            // 1. align-items mudado de 'center' para 'flex-start' para alinhar ícone no topo.
-            // 2. actionBtn colocado dentro da div de texto, com margin-top para ficar abaixo da descrição.
+            // Lógica para botão de CONCLUIR na lista
+            // Só exibe se NÃO estiver feito E a data for hoje ou anterior
+            let finishBtn = '';
+            if(!w.done && (!w.scheduledDate || w.scheduledDate <= todayStr)) {
+                finishBtn = `<button onclick="event.stopPropagation(); window.app.finishWorkout('${safeTitle}')" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; margin-right: 8px;"><i class="fa-solid fa-check"></i> Concluir</button>`;
+            }
+
             list.innerHTML += `<div class="card" style="display:flex; align-items:flex-start; gap: 15px; opacity: ${w.done?0.6:1}; padding:20px;">
                 <div style="color:${color}; font-size:24px; margin-top:2px;"><i class="fa-solid ${icon}"></i></div>
                 <div style="flex:1;">
                     <h4 style="margin:0; font-size:16px;">${w.title} ${dateBadge}</h4>
                     <p style="margin:0; font-size:13px; color:var(--text-sec); margin-top:4px;">${w.desc}</p>
-                    ${actionBtn ? `<div style="margin-top:12px;">${actionBtn}</div>` : ''}
+                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
+                        ${finishBtn}
+                        ${videoBtn}
+                    </div>
                 </div>
             </div>`;
         });
