@@ -446,7 +446,7 @@ window.app = {
         const m = currentMonth.getMonth();
         const firstDay = new Date(y, m, 1).getDay();
         const daysInMonth = new Date(y, m+1, 0).getDate();
-        document.getElementById('cal-month-title').innerText = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+       document.getElementById('cal-month-title').innerText = currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(' de ', ' ');
         const grid = document.getElementById('calendar-days');
         grid.innerHTML = '';
         
