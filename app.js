@@ -63,7 +63,7 @@ let editingStudentRaceIndex = null;
 
 // Estado de Conclusão de Treino
 let pendingFinishWorkoutTitle = null; // Título do treino que está sendo concluído
-let selectedPainLevel = 0; // Nível de dor selecionado
+let selectedPainLevel = null; // Nível de dor selecionado
 
 window.app = {
     admUsersCache: {}, // Cache local para acesso rápido aos dados dos usuários no admin
@@ -355,6 +355,20 @@ window.app = {
                 </div>
             </div>`;
         });
+
+        // --- LÓGICA DE BOTÃO NOVO OBJETIVO ---
+        const btnAddRace = document.getElementById('btn-add-race');
+        if(btnAddRace) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            // Verifica se existe ALGUMA prova ativa (data futura ou hoje)
+            const hasActiveGoal = (currentUser.races || []).some(r => r.date >= todayStr);
+            
+            if (hasActiveGoal) {
+                btnAddRace.style.display = 'none';
+            } else {
+                btnAddRace.style.display = 'block';
+            }
+        }
     },
 
     // --- NOVA FUNÇÃO PARA EDITAR DATA DA PROVA ---
@@ -875,7 +889,7 @@ window.app = {
     finishWorkout: (wTitle) => {
         // Guarda titulo para confirmar depois
         pendingFinishWorkoutTitle = wTitle;
-        selectedPainLevel = 0;
+        selectedPainLevel = null;
         
         // Reseta UI do Modal
         document.getElementById('workout-feedback-text').value = '';
@@ -887,7 +901,8 @@ window.app = {
     renderPainScale: () => {
         const container = document.getElementById('pain-scale-container');
         container.innerHTML = '';
-        for(let i=1; i<=7; i++) {
+        // CORREÇÃO: Escala de 0 a 7
+        for(let i=0; i<=7; i++) {
             const isActive = i === selectedPainLevel;
             const bg = isActive ? 'var(--primary)' : '#FFF';
             const color = isActive ? '#FFF' : 'var(--text-main)';
@@ -906,23 +921,29 @@ window.app = {
 
     confirmFinishWorkout: async () => {
         if (!pendingFinishWorkoutTitle) return;
-        const notes = document.getElementById('workout-feedback-text').value;
+        const notes = document.getElementById('workout-feedback-text').value.trim();
         
-        if (selectedPainLevel === 0) return window.app.toast("Selecione o nível de dor.");
+        // VALIDAÇÃO NOVA: 0-7, 0 é opcional, 1+ obrigatório texto
+        if (selectedPainLevel === null) return window.app.toast("Selecione o nível de dor.");
+        if (selectedPainLevel > 0 && !notes) return window.app.toast("Descreva o que doeu (Obrigatório para dor > 0).");
 
         const races = [...currentUser.races];
         const rIdx = races.length - 1;
         const wIdx = races[rIdx].workouts.findIndex(w => w.title === pendingFinishWorkoutTitle && !w.done);
         
         if(wIdx > -1) {
-            // Salva dados de conclusão E feedback
+            // Salva dados de conclusão
             races[rIdx].workouts[wIdx].done = true;
             races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
-            races[rIdx].workouts[wIdx].feedback = {
-                painLevel: selectedPainLevel,
-                notes: notes,
-                timestamp: Date.now()
-            };
+            
+            // Só salva feedback se houver dor OU se houver anotação (mesmo com dor 0)
+            if (selectedPainLevel > 0 || notes) {
+                races[rIdx].workouts[wIdx].feedback = {
+                    painLevel: selectedPainLevel,
+                    notes: notes,
+                    timestamp: Date.now()
+                };
+            }
 
             currentUser.races = races;
             
@@ -1288,7 +1309,7 @@ window.app = {
                                 
                                 // INCLUSÃO: Exibir feedback de dor se existir
                                 let feedbackHtml = '';
-                                if(w.feedback && (w.feedback.painLevel || w.feedback.notes)) {
+                                if(w.feedback && (w.feedback.painLevel !== undefined || w.feedback.notes)) {
                                     feedbackHtml = `
                                     <div style="font-size:11px; color:var(--text-sec); background:#fff5eb; padding:6px; border-radius:6px; margin-top:5px; border-left:3px solid var(--primary);">
                                         <div style="font-weight:700;">Nível de Dor: ${w.feedback.painLevel}/7</div>
@@ -1701,10 +1722,549 @@ window.app = {
         document.getElementById('btn-post-news').disabled = true;
         let imgUrl = null;
         if(tempNewsFile) imgUrl = await window.app.uploadImage(tempNewsFile, 'news');
-        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS)), { title, body, img: imgUrl, created: Date.now() });
-        window.app.toast('Publicado!'); 
-        document.getElementById('news-title').value=''; document.getElementById('news-body').value=''; document.getElementById('news-preview').style.display='none'; 
-        tempNewsFile = null; document.getElementById('btn-post-news').disabled = false;
+        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS)), { 
+            userName: currentUser.name, email: currentUser.email, avatar: currentUser.avatar, text: text, img: imgUrl, likes: [], comments: [], created: Date.now() 
+        });
+        document.getElementById('post-text').value = ''; 
+        tempPostFile = null; 
+        document.getElementById('post-img-preview').style.display = 'none'; 
+        document.getElementById('btn-submit-post').disabled = false;
+        window.app.closeCreatePost();
+    },
+
+    loadNews: () => {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
+            const feed = document.getElementById('news-feed'); feed.innerHTML = '';
+            const news = []; snap.forEach(d => news.push({id: d.id, ...d.data()})); 
+            news.sort((a,b) => b.created - a.created);
+            allNews = news; // Atualiza cache
+            
+            // Só mostra capa e titulo
+            news.forEach(n => { 
+                feed.innerHTML += `
+                <div class="card news-card" onclick="window.app.openNewsDetail('${n.id}')">
+                    ${n.img ? `<img src="${n.img}" class="news-img">` : ''}
+                    <div class="news-content">
+                        <div class="news-date">${new Date(n.created).toLocaleDateString()}</div>
+                        <h3 class="news-title">${window.app.formatText(n.title)}</h3>
+                    </div>
+                </div>`; 
+            });
+        });
+    },
+
+    openNewsDetail: (id) => {
+        const n = allNews.find(item => item.id === id);
+        if(!n) return;
+        
+        const imgContainer = document.getElementById('news-det-img-container');
+        if(n.img) {
+            imgContainer.style.backgroundImage = `url('${n.img}')`;
+            imgContainer.style.display = 'block';
+        } else {
+            imgContainer.style.display = 'none';
+        }
+        
+        document.getElementById('news-det-date').innerText = new Date(n.created).toLocaleDateString();
+        document.getElementById('news-det-title').innerText = window.app.formatText(n.title);
+        document.getElementById('news-det-body').innerText = window.app.formatText(n.body);
+        
+        document.querySelector('.nav-bar').style.display = 'none';
+        const detailScreen = document.getElementById('view-news-detail');
+        detailScreen.classList.add('active');
+        detailScreen.style.overflowY = 'auto';
+        detailScreen.scrollTop = 0;
+    },
+
+    closeNewsDetail: () => {
+        document.getElementById('view-news-detail').classList.remove('active');
+        document.querySelector('.nav-bar').style.display = 'flex';
+    },
+
+    loadAdmin: () => { document.getElementById('view-admin').classList.add('active'); window.app.admTab('users'); },
+    closeAdmin: () => window.app.screen('view-landing'),
+    admTab: (t) => {
+        document.querySelectorAll('[id^="adm-content"]').forEach(e=>e.classList.add('hidden'));
+        document.getElementById('adm-content-'+t).classList.remove('hidden');
+        document.querySelectorAll('.admin-tab-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById('btn-adm-'+t).classList.add('active');
+        if(t === 'users') window.app.admLoadUsers();
+        if(t === 'news') window.app.admLoadNewsHistory();
+        if(t === 'quotes') window.app.admLoadQuotes();
+        if(t === 'templates') window.app.admLoadTemplates();
+        if(t === 'videos') window.app.admLoadStrengthVideos();
+    },
+    
+    admLoadUsers: () => {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_USERS), (snap) => {
+            const list = document.getElementById('adm-users-list'); 
+            let html = '';
+            
+            snap.forEach(d => {
+                const u = d.data(); 
+                const docId = d.id; 
+                const safeId = window.app.escape(docId);
+                const isUserOpen = expandedUsers.has(docId) ? 'open' : ''; 
+                const checked = u.active ? 'checked' : '';
+                
+                // POPULAR CACHE
+                window.app.admUsersCache[docId] = u;
+
+                // CALCULAR PROGRESSO GLOBAL
+                let totalWorkouts = 0;
+                let doneWorkouts = 0;
+                if(u.races && u.races.length > 0) {
+                    u.races.forEach(r => {
+                        if(r.workouts) {
+                            totalWorkouts += r.workouts.length;
+                            doneWorkouts += r.workouts.filter(w => w.done).length;
+                        }
+                    });
+                }
+                const globalPct = totalWorkouts > 0 ? Math.round((doneWorkouts / totalWorkouts) * 100) : 0;
+                
+                let goalsHtml = '';
+                if(u.races && u.races.length > 0) {
+                    u.races.forEach((r, rIdx) => {
+                        const raceKey = `${docId}-${rIdx}`; 
+                        const isRaceOpen = expandedRaces.has(raceKey) ? 'open' : '';
+                        
+                        let workoutsHtml = '';
+                        if(r.workouts && r.workouts.length > 0) {
+                            r.workouts.forEach((w, wIdx) => {
+                                let wDate = "";
+                                if(w.scheduledDate) { 
+                                    const dp = w.scheduledDate.split('-'); 
+                                    wDate = `<span style="font-size:10px; color:#666; background:#eee; padding:2px 5px; border-radius:4px;">${dp[2]}/${dp[1]}</span>`; 
+                                }
+                                
+                                const isDone = w.done;
+                                const statusIcon = isDone ? '<i class="fa-solid fa-circle-check" style="color:var(--success)"></i>' : '<i class="fa-regular fa-circle" style="color:#ccc"></i>';
+                                const undoBtn = isDone ? `<button onclick="window.app.admToggleWorkoutStatus('${safeId}', ${rIdx}, ${wIdx}, false)" style="color:var(--text-sec); font-size:10px; border:1px solid #ddd; border-radius:4px; padding:2px 5px; cursor:pointer; margin-right:5px; background:#fff;">Desfazer</button>` : '';
+                                
+                                // INCLUSÃO: Exibir feedback de dor se existir
+                                let feedbackHtml = '';
+                                if(w.feedback && (w.feedback.painLevel !== undefined || w.feedback.notes)) {
+                                    feedbackHtml = `
+                                    <div style="font-size:11px; color:var(--text-sec); background:#fff5eb; padding:6px; border-radius:6px; margin-top:5px; border-left:3px solid var(--primary);">
+                                        <div style="font-weight:700;">Nível de Dor: ${w.feedback.painLevel}/7</div>
+                                        <div style="margin-top:2px;">${w.feedback.notes || 'Sem observações.'}</div>
+                                    </div>`;
+                                }
+
+                                workoutsHtml += `
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #eee; padding:8px 0;">
+                                    <div style="flex:1;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            ${statusIcon}
+                                            <div style="display:flex; flex-direction:column;">
+                                                <span onclick="window.app.admShowWorkoutDetail('${safeId}', ${rIdx}, ${wIdx})" style="font-size:12px; font-weight:600; cursor:pointer; text-decoration:underline; color:var(--primary);">${wDate} ${w.title}</span>
+                                            </div>
+                                        </div>
+                                        ${feedbackHtml}
+                                    </div>
+                                    <div style="display:flex; align-items:center; margin-left:10px;">
+                                        ${undoBtn}
+                                        <button onclick="window.app.admDeleteWorkoutInline('${safeId}', ${rIdx}, ${wIdx})" style="color:var(--red); border:none; background:none; cursor:pointer;"><i class="fa-solid fa-times"></i></button>
+                                    </div>
+                                </div>`;
+                            });
+                        } else { 
+                            workoutsHtml = '<p style="font-size:11px; color:#999;">Sem treinos.</p>'; 
+                        }
+                        
+                        workoutsHtml += `<div style="display:flex; gap:5px; margin-top:10px; justify-content:flex-end;"><button onclick="window.app.admAddWorkoutInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ Treino</button><button onclick="window.app.admImportTemplateInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ Modelo</button></div>`;
+                        
+                        goalsHtml += `
+                        <div class="adm-item-box">
+                            <div class="adm-row-header" onclick="window.app.admToggleGoal('${raceKey}')">
+                                <strong>${r.name}</strong>
+                                <i class="fa-solid fa-chevron-down" style="font-size:12px; opacity:0.5;"></i>
+                            </div>
+                            <div id="goal-content-${raceKey}" class="adm-nested ${isRaceOpen}">
+                                ${workoutsHtml}
+                                <div style="text-align:right; margin-top:5px;"><button onclick="window.app.admDelRaceInline('${safeId}', ${rIdx})" style="font-size:10px; color:red; border:none; background:none; cursor:pointer;">Excluir Objetivo</button></div>
+                            </div>
+                        </div>`;
+                    });
+                } else { 
+                    goalsHtml = '<p style="font-size:12px; color:#999; padding:10px;">Sem objetivos.</p>'; 
+                }
+                
+                html += `
+                <div class="card" style="padding:15px; margin-bottom:10px;">
+                    <div style="display:flex; align-items:center; gap:15px; padding-bottom:5px;">
+                        <input type="checkbox" class="check-toggle" ${checked} onchange="window.app.admToggleStatus('${safeId}', this.checked)">
+                        <div style="flex:1; cursor:pointer;" onclick="window.app.admToggleUser('${safeId}')">
+                            <span style="font-weight:700; font-size:16px;">${u.name}</span><br>
+                            <span style="font-size:12px; color:#888;">${u.email}</span>
+                            
+                            <!-- BARRA DE PROGRESSO ADMIN -->
+                            <div class="progress-container" style="height:6px; margin-top:8px; background:#eee;">
+                                <div class="progress-bar colored" style="width:${globalPct}%;"></div>
+                            </div>
+                            <div style="font-size:9px; color:#999; margin-top:3px; text-align:right;">${doneWorkouts}/${totalWorkouts} Concluídos</div>
+                        </div>
+                        <button onclick="window.app.admDeleteUserQuick('${safeId}')" style="border:none; background:none; color:var(--red); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div id="user-content-${docId}" class="adm-nested ${isUserOpen}" style="border-left:none; padding-left:0; margin-top:15px;">
+                        ${goalsHtml}
+                        <button onclick="window.app.admAddRaceInline('${safeId}')" style="width:100%; border:2px dashed #eee; background:none; padding:12px; font-size:13px; margin-top:10px; color:var(--primary); font-weight:600; border-radius:12px; cursor:pointer;">+ Novo Objetivo</button>
+                    </div>
+                </div>`;
+            });
+            list.innerHTML = html;
+        });
+    },
+
+    // --- LÓGICA DE VÍDEOS ADMIN ---
+    admAddStrengthVideo: async () => {
+        const title = document.getElementById('adm-video-title').value;
+        const link = document.getElementById('adm-video-link').value;
+        if(!title || !link) return window.app.toast("Preencha título e link");
+        
+        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS)), { 
+            title, link, created: Date.now() 
+        });
+        window.app.toast("Vídeo cadastrado!");
+        document.getElementById('adm-video-title').value = '';
+        document.getElementById('adm-video-link').value = '';
+    },
+
+    admLoadStrengthVideos: () => {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
+            const list = document.getElementById('adm-videos-list');
+            list.innerHTML = '';
+            snap.forEach(d => {
+                const v = d.data();
+                const safeLink = window.app.escape(v.link);
+                list.innerHTML += `
+                <div style="background:#fff; border-bottom:1px solid #eee; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>${v.title}</strong><br>
+                        <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary);">Ver Vídeo</a>
+                    </div>
+                    <button onclick="window.app.admDeleteStrengthVideo('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer;">X</button>
+                </div>`;
+            });
+        });
+    },
+
+    admDeleteStrengthVideo: async (id) => {
+        if(confirm("Apagar vídeo?")) {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_VIDEOS, id));
+        }
+    },
+
+    // FUNÇÃO PARA ALTERAR STATUS DO TREINO NO ADMIN
+    admToggleWorkoutStatus: async (docId, rIdx, wIdx, status) => {
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
+        if(snap.exists()) {
+            const u = snap.data();
+            if(u.races && u.races[rIdx] && u.races[rIdx].workouts && u.races[rIdx].workouts[wIdx]) {
+                u.races[rIdx].workouts[wIdx].done = status;
+                // Se estiver reativando (desfazendo), removemos a data de conclusão
+                if(!status) {
+                    delete u.races[rIdx].workouts[wIdx].completedAt;
+                }
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races });
+                window.app.toast(status ? "Treino concluído manualmente" : "Treino reativado!");
+            }
+        }
+    },
+
+    // --- NOVA FUNÇÃO: MOSTRAR DETALHES DO TREINO (ADMIN) ---
+    admShowWorkoutDetail: (userId, rIdx, wIdx) => {
+        const user = window.app.admUsersCache[userId];
+        if (!user || !user.races[rIdx] || !user.races[rIdx].workouts[wIdx]) return;
+
+        const w = user.races[rIdx].workouts[wIdx];
+        
+        document.getElementById('adm-workout-det-title').innerText = w.title;
+        document.getElementById('adm-workout-det-desc').innerText = w.desc;
+        const vidContainer = document.getElementById('adm-workout-det-video-container');
+        
+        if (w.video) {
+            const safeVideo = window.app.escape(w.video);
+            vidContainer.style.display = 'block';
+            vidContainer.innerHTML = `<button onclick="window.app.playVideo('${safeVideo}')" class="btn btn-primary" style="font-size:14px;"><i class="fa-solid fa-play"></i> Ver Vídeo</button>`;
+        } else {
+            vidContainer.style.display = 'none';
+        }
+        
+        document.getElementById('modal-adm-workout-detail').classList.add('active');
+    },
+    
+    admToggleUser: (docId) => { if(expandedUsers.has(docId)) expandedUsers.delete(docId); else expandedUsers.add(docId); const el = document.getElementById(`user-content-${docId}`); if(el) el.classList.toggle('open'); },
+    admToggleGoal: (key) => { if(expandedRaces.has(key)) expandedRaces.delete(key); else expandedRaces.add(key); const el = document.getElementById(`goal-content-${key}`); if(el) el.classList.toggle('open'); },
+    admToggleStatus: async (docId, status) => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status }); window.app.toast(status ? "Aluno Aprovado" : "Aluno Bloqueado"); },
+    admAddWorkoutInline: (docId, rIdx) => { currentAdmUser = docId; currentAdmRaceIdx = rIdx; isEditingTemplate = false; editingWorkoutIndex = null; document.getElementById('modal-workout-title').innerText = "Novo Treino"; document.getElementById('new-w-title').value = ''; document.getElementById('new-w-desc').value = ''; document.getElementById('new-w-video').value = ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
+    
+    saveSingleWorkout: async () => {
+        const title = document.getElementById('new-w-title').value;
+        const desc = document.getElementById('new-w-desc').value;
+        const video = document.getElementById('new-w-video').value;
+        if(!title) return window.app.toast('Título obrigatório');
+        if (isEditingTemplate) {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, currentTemplateId));
+            const t = snap.data();
+            if (editingWorkoutIndex !== null) t.workouts[editingWorkoutIndex] = { title, desc, video, done: false }; 
+            else t.workouts.push({ title, desc, video, done: false });
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, currentTemplateId), { workouts: t.workouts });
+        } else {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser));
+            const u = snap.data();
+            if (!u.races[currentAdmRaceIdx].workouts) u.races[currentAdmRaceIdx].workouts = [];
+            u.races[currentAdmRaceIdx].workouts.push({title, desc, video, done:false});
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser), { races: u.races });
+        }
+        document.getElementById('modal-add-single-workout').classList.remove('active');
+        window.app.toast("Salvo com sucesso!");
+    },
+
+    admImportTemplateInline: (docId, rIdx) => {
+        currentAdmUser = docId; currentAdmRaceIdx = rIdx;
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES), (s) => {
+            const list = document.getElementById('template-select-list'); list.innerHTML = '';
+            s.forEach(d => {
+                const t = d.data();
+                list.innerHTML += `<label style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;"><input type="radio" name="selected_template" value="${d.id}" style="margin-right:15px; width:18px; height:18px;"><div><strong style="font-size:16px;">${t.name}</strong><br><span style="font-size:12px; color:#888;">${t.workouts.length} Treinos</span></div></label>`;
+            });
+            document.getElementById('modal-select-template').classList.add('active');
+        });
+    },
+
+    confirmTemplateImport: async () => {
+        const selected = document.querySelector('input[name="selected_template"]:checked');
+        const startDateInput = document.getElementById('template-start-date').value;
+        if(!selected || !startDateInput) return window.app.toast('Preencha os campos');
+        const templateId = selected.value;
+        const tSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, templateId));
+        const tData = tSnap.data();
+        const uSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser));
+        const u = uSnap.data();
+        const startDate = new Date(startDateInput);
+        const newWorkouts = tData.workouts.map((w, index) => {
+            const date = new Date(startDate);
+            date.setDate(date.getDate() + index);
+            return { ...w, scheduledDate: date.toISOString().split('T')[0], done: false };
+        });
+        u.races[currentAdmRaceIdx].workouts.push(...newWorkouts);
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser), { races: u.races });
+        window.app.toast("Modelo importado!");
+        document.getElementById('modal-select-template').classList.remove('active');
+    },
+
+    admDeleteWorkoutInline: async (docId, rIdx, wIdx) => { window.app.showConfirm("Remover treino?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races[rIdx].workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
+    
+    // --- FUNÇÕES NOVAS PARA ADMIN ADICIONAR OBJETIVO COM IA/MODELO ---
+    
+    admAddRaceInline: async (docId) => { 
+        currentAdmUser = docId;
+        
+        // Popular Modelos
+        const tplSelect = document.getElementById('adm-race-template-select');
+        tplSelect.innerHTML = '<option value="">Carregando...</option>';
+        
+        // Resetar Campos
+        document.getElementById('adm-race-name').value = '';
+        document.getElementById('adm-race-date').value = '';
+        
+        // Data de Início padrão (Amanhã)
+        const tomorrow = new Date(); 
+        tomorrow.setDate(tomorrow.getDate()+1);
+        document.getElementById('adm-start-date').value = tomorrow.toISOString().split('T')[0];
+        
+        document.getElementById('adm-race-method').value = 'ia';
+        document.getElementById('adm-race-dist').value = '';
+        document.getElementById('adm-race-time').value = '';
+        document.getElementById('adm-race-video').value = '';
+        
+        window.app.admToggleRaceMode();
+        document.getElementById('modal-adm-add-race').classList.add('active');
+
+        // Buscar templates uma vez
+        const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES));
+        tplSelect.innerHTML = '<option value="">Selecione...</option>';
+        querySnapshot.forEach((doc) => {
+            const t = doc.data();
+            tplSelect.innerHTML += `<option value="${doc.id}">${t.name} (${t.workouts.length} treinos)</option>`;
+        });
+    },
+
+    admToggleRaceMode: () => {
+        const mode = document.getElementById('adm-race-method').value;
+        if (mode === 'ia') {
+            document.getElementById('adm-race-ia-fields').classList.remove('hidden');
+            document.getElementById('adm-race-tpl-fields').classList.add('hidden');
+        } else {
+            document.getElementById('adm-race-ia-fields').classList.add('hidden');
+            document.getElementById('adm-race-tpl-fields').classList.remove('hidden');
+        }
+    },
+
+    admConfirmAddRace: async () => {
+        const name = document.getElementById('adm-race-name').value;
+        const raceDate = document.getElementById('adm-race-date').value;
+        const startDateStr = document.getElementById('adm-start-date').value;
+        const method = document.getElementById('adm-race-method').value;
+
+        if (!name || !raceDate || !startDateStr) return window.app.toast("Preencha Nome e Datas.");
+
+        let newWorkouts = [];
+        let targetDistance = 0;
+        let estimatedTime = "Não informado";
+
+        const btn = document.querySelector('#modal-adm-add-race button.btn-primary');
+        if(btn) { btn.disabled = true; btn.innerText = "Processando..."; }
+
+        try {
+            if (method === 'ia') {
+                const dist = parseFloat(document.getElementById('adm-race-dist').value) || 0;
+                const time = document.getElementById('adm-race-time').value || "Não informado";
+                const video = document.getElementById('adm-race-video').value || "";
+
+                targetDistance = dist;
+                estimatedTime = time;
+
+                // Chamada ao Worker (Mesma lógica do aluno)
+                const response = await fetch(CF_WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        dist: dist,
+                        estTime: time,
+                        startDate: startDateStr,
+                        raceDate: raceDate,
+                        strengthVideo: video
+                    })
+                });
+
+                if (!response.ok) {
+                    let errorDetails = "Erro desconhecido";
+                    try {
+                        const errorJson = await response.json();
+                        errorDetails = errorJson.error || JSON.stringify(errorJson);
+                    } catch(e) { errorDetails = await response.text(); }
+                    throw new Error(`Worker Error: ${errorDetails}`);
+                }
+
+                const aiWorkoutsRaw = await response.json();
+                if (!Array.isArray(aiWorkoutsRaw)) throw new Error("Formato inválido recebido da IA.");
+
+                newWorkouts = aiWorkoutsRaw.map(w => ({
+                    title: w.title,
+                    desc: w.desc,
+                    video: w.video || "",
+                    done: false,
+                    scheduledDate: w.date,
+                    type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run')
+                }));
+
+            } else {
+                // MODO TEMPLATE
+                const tplId = document.getElementById('adm-race-template-select').value;
+                if (!tplId) throw new Error("Selecione um modelo.");
+
+                const tSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tplId));
+                if (!tSnap.exists()) throw new Error("Modelo não encontrado.");
+                
+                const tData = tSnap.data();
+                const startDate = new Date(startDateStr);
+                
+                newWorkouts = tData.workouts.map((w, index) => {
+                    const date = new Date(startDate);
+                    date.setDate(date.getDate() + index);
+                    // Não checa se ultrapassa a data da prova, apenas lança a partir da data de início
+                    return { ...w, scheduledDate: date.toISOString().split('T')[0], done: false };
+                });
+            }
+
+            // SALVAR NO USUÁRIO
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser);
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) throw new Error("Usuário não encontrado.");
+            
+            const uData = userSnap.data();
+            const races = uData.races || [];
+            
+            races.push({ 
+                name, 
+                date: raceDate, 
+                targetDistance, 
+                estimatedTime,
+                workouts: newWorkouts, 
+                created: new Date().toISOString() 
+            });
+
+            await updateDoc(userRef, { races });
+            
+            window.app.toast("Objetivo criado com sucesso!");
+            document.getElementById('modal-adm-add-race').classList.remove('active');
+
+        } catch (error) {
+            console.error(error);
+            window.app.toast("Erro: " + error.message);
+        } finally {
+            if(btn) { btn.disabled = false; btn.innerText = "Criar"; }
+        }
+    },
+
+    admDelRaceInline: async (docId, rIdx) => { window.app.showConfirm("Apagar objetivo?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races.splice(rIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
+    admDeleteUserQuick: async (docId) => { window.app.showConfirm(`Apagar permanentemente?`, async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); }); },
+
+    admLoadTemplates: () => {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES), (snap) => {
+            const list = document.getElementById('adm-templates-list'); list.innerHTML = '';
+            let html = '';
+            snap.forEach(d => {
+                const t = d.data(); const tId = d.id; const isTplOpen = expandedTemplates.has(tId) ? 'open' : '';
+                let workoutsHtml = '';
+                if(t.workouts && t.workouts.length > 0) {
+                    t.workouts.forEach((w, wIdx) => {
+                        workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;"><div style="flex:1;"><span style="font-size:13px; font-weight:600;">${w.title}</span><br><small>${w.desc}</small></div><div style="display:flex; gap:5px;"><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, -1)"><i class="fa-solid fa-arrow-up"></i></button><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, 1)"><i class="fa-solid fa-arrow-down"></i></button><button onclick="window.app.admEditWorkoutFromTemplate('${tId}', ${wIdx})"><i class="fa-solid fa-pencil"></i></button><button onclick="window.app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:red">X</button></div></div>`;
+                    });
+                } else { workoutsHtml = '<small>Sem treinos.</small>'; }
+                html += `<div class="card" style="padding:10px; margin-bottom:10px;"><div class="adm-row-header" onclick="window.app.admToggleTemplate('${tId}')"><span>${t.name}</span><i class="fa-solid fa-chevron-down"></i></div><div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">${workoutsHtml}<div style="display:flex; justify-content:space-between; margin-top:10px;"><button onclick="window.app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small">+ Treino</button><button onclick="window.app.admDelTemplate('${tId}')" style="color:red; font-size:11px; border:none; background:none;">Excluir Modelo</button></div></div></div>`;
+            });
+            list.innerHTML = html;
+        });
+    },
+
+    admToggleTemplate: (tId) => { if(expandedTemplates.has(tId)) expandedTemplates.delete(tId); else expandedTemplates.add(tId); const el = document.getElementById(`tpl-content-${tId}`); if(el) el.classList.toggle('open'); },
+    admAddTemplateInline: async () => { window.app.showPrompt("Nome do Modelo:", async (name) => { if(!name) return; await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES)), { name, workouts: [] }); }); },
+    admAddWorkoutToTemplateInline: (tId) => { isEditingTemplate = true; currentTemplateId = tId; editingWorkoutIndex = null; document.getElementById('modal-add-single-workout').classList.add('active'); },
+    admEditWorkoutFromTemplate: async (tId, wIdx) => { isEditingTemplate = true; currentTemplateId = tId; editingWorkoutIndex = wIdx; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const w = snap.data().workouts[wIdx]; document.getElementById('new-w-title').value = w.title; document.getElementById('new-w-desc').value = w.desc; document.getElementById('new-w-video').value = w.video || ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
+    admMoveWorkout: async (tId, wIdx, direction) => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); const workouts = t.workouts; const newIdx = wIdx + direction; if (newIdx < 0 || newIdx >= workouts.length) return; const temp = workouts[wIdx]; workouts[wIdx] = workouts[newIdx]; workouts[newIdx] = temp; await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts }); },
+    admDeleteWorkoutFromTemplate: async (tId, wIdx) => { if(!confirm("Remover?")) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); t.workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts: t.workouts }); },
+    admDelTemplate: async (id) => { window.app.showConfirm("Apagar modelo?", async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, id))); },
+
+    previewNewsImg: (input) => { 
+        if(input.files && input.files[0]) {
+            tempNewsFile = input.files[0];
+            const url = URL.createObjectURL(tempNewsFile);
+            const img = document.getElementById('news-preview'); 
+            img.src = url; 
+            img.style.display = 'block'; 
+        }
+    },
+
+    postNews: async () => {
+        const title = document.getElementById('news-title').value; 
+        const body = document.getElementById('news-body').value;
+        if(!title || !body) return window.app.toast('Preencha tudo');
+        document.getElementById('btn-post-news').disabled = true;
+        let imgUrl = null;
+        if(tempNewsFile) imgUrl = await window.app.uploadImage(tempNewsFile, 'news');
+        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS)), { 
+            userName: currentUser.name, email: currentUser.email, avatar: currentUser.avatar, text: text, img: imgUrl, likes: [], comments: [], created: Date.now() 
+        });
+        document.getElementById('post-text').value = ''; 
+        tempPostFile = null; 
+        document.getElementById('post-img-preview').style.display = 'none'; 
+        document.getElementById('btn-post-news').disabled = false;
+        window.app.closeCreatePost();
     },
 
     admLoadNewsHistory: () => {
