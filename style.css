@@ -108,7 +108,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .news-title { font-size: 18px; font-weight: 700; margin: 0; line-height: 1.2; font-family: var(--font-logo); color: var(--text-main); }
 
 /* NAV BAR */
-.nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: auto; background: #9cafcc; border-radius: 25px 25px 0 0; display: flex; justify-content: space-around; align-items: center; padding: 12px 10px 5px ; z-index: 300; box-shadow: 0 -5px 30px rgba(43, 76, 126, 0.08); }
+.nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: auto; background: #9cafcc; border-radius: 25px 25px 0 0; display: flex; justify-content: space-around; align-items: center; padding: 12px 10px calc(5px + env(safe-area-inset-bottom)) ; z-index: 300; box-shadow: 0 -5px 30px rgba(43, 76, 126, 0.08); }
 .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: none; border: none; color: #dce1e8; cursor: pointer; }
 .nav-item i { font-size: 24px; transition: 0.3s; }
 .nav-item.active { color: var(--text-main); }
