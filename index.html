@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -148,7 +148,7 @@
 
     <!-- MODAIS E TELAS EXTRAS -->
     
-    <div id="view-profile" class="screen full-screen">
+    <div id="view-profile" class="screen full-screen" style="overflow-y: auto; -webkit-overflow-scrolling: touch;">
         <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
             <button onclick="window.app.closeProfile()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main);"><i class="fa-solid fa-times"></i></button>
             <h3 style="margin:0;">Meu Perfil</h3>
@@ -163,10 +163,65 @@
             <h2 id="profile-name-big" style="margin:0; font-size:28px; color:var(--text-main);">NOME</h2>
             <p id="profile-email-big" style="color: var(--text-sec); font-size: 16px;">EMAIL</p>
             
+            <!-- ÁREA DE DADOS PESSOAIS (ATUALIZADA) -->
+            <div class="card" style="text-align: left; margin-top: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h4 style="margin:0; color:var(--primary);">Dados Pessoais</h4>
+                    <button id="btn-edit-profile" onclick="window.app.toggleEditProfile(true)" style="font-size:12px; color:var(--text-sec); border:1px solid var(--border); background:white; padding:4px 10px; border-radius:10px;">Alterar Perfil</button>
+                </div>
+                
+                <div id="profile-form-container">
+                    <label class="label">Data de Nascimento</label>
+                    <input id="prof-birth" type="date" class="input" disabled style="margin-bottom:10px;">
+                    
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label class="label">Cidade</label>
+                            <input id="prof-city" class="input" disabled style="margin-bottom:10px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label class="label">País</label>
+                            <input id="prof-country" class="input" disabled style="margin-bottom:10px;">
+                        </div>
+                    </div>
+
+                    <label class="label">Altura (cm)</label>
+                    <input id="prof-height" type="number" class="input" disabled style="margin-bottom:10px;">
+
+                    <div id="profile-edit-actions" style="display:none; gap:10px; margin-top:15px;">
+                        <button onclick="window.app.saveProfile()" class="btn btn-primary">Salvar</button>
+                        <button onclick="window.app.toggleEditProfile(false)" class="btn btn-outline">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD EXCLUSIVO DE PESO (ATUALIZADO) -->
+            <div class="card" style="text-align: left; margin-top: 20px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <label class="label" style="font-size: 12px; color: var(--text-sec);">Peso Atual</label>
+                        <!-- Container sem KG hardcoded -->
+                        <div id="display-current-weight" style="font-size: 32px; font-weight: 700; color: var(--text-main);">
+                            --
+                        </div>
+                    </div>
+                    <button onclick="window.app.openWeightModal()" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+                
+                <div style="border-top: 1px dashed #eee; padding-top: 15px;">
+                    <label class="label" style="margin-bottom: 10px; display: block; font-size: 11px; opacity: 0.7;">HISTÓRICO</label>
+                    <div id="weight-history-list" style="max-height: 150px; overflow-y: auto;">
+                        <!-- JS vai popular aqui -->
+                    </div>
+                </div>
+            </div>
+
             <button onclick="window.app.showAddRaceModal()" class="btn btn-primary" style="margin-top: 30px;">+ Novo Objetivo</button>
 
             <div class="card" style="margin-top: 40px; text-align: left;">
-                <h4 style="margin-top:0; color:var(--primary);">Histórico</h4>
+                <h4 style="margin-top:0; color:var(--primary);">Histórico de Provas</h4>
                 <div id="profile-history"></div>
             </div>
         </div>
@@ -214,6 +269,51 @@
             <div style="display:flex; gap:10px; margin-top:20px;">
                 <button onclick="document.getElementById('modal-day-detail').classList.remove('active')" class="btn btn-outline">Fechar</button>
                 <button onclick="window.app.saveDayNote()" class="btn btn-primary">Salvar Nota</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR DATA PROVA (NOVO) -->
+    <div id="modal-edit-date" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Alterar Data da Prova</h3>
+            <label class="label">Nova Data</label>
+            <input type="date" id="edit-race-date-input" class="input" style="margin-bottom:20px;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.saveRaceDate()" class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-edit-date').classList.remove('active')" class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE FEEDBACK AO CONCLUIR (NOVO) -->
+    <div id="modal-finish-workout" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Como foi o treino?</h3>
+            <label class="label" style="margin-top:15px; margin-bottom:10px; display:block;">Nível de Dor (1 - 7)</label>
+            <div id="pain-scale-container" style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <!-- JS vai popular os botões -->
+            </div>
+            
+            <label class="label">O que doeu? / Observações:</label>
+            <textarea id="workout-feedback-text" class="input" style="height:100px; resize:none; margin-bottom:20px;" placeholder="Descreva aqui..."></textarea>
+            
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.confirmFinishWorkout()" class="btn btn-primary">Confirmar Conclusão</button>
+                <button onclick="document.getElementById('modal-finish-workout').classList.remove('active')" class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ADD PESO -->
+    <div id="modal-add-weight" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Registrar Peso</h3>
+            <label class="label">Peso (kg)</label>
+            <input type="number" id="new-weight-input" class="input" step="0.1" placeholder="Ex: 75.5" style="margin-bottom:20px;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.saveNewWeight()" class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-add-weight').classList.remove('active')" class="btn btn-outline">Cancelar</button>
             </div>
         </div>
     </div>
