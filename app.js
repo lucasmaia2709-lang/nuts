@@ -58,6 +58,13 @@ let currentTemplateId = null;
 let editingWorkoutIndex = null;
 let allNews = [];
 
+// Estado de Edição de Prova (Aluno)
+let editingStudentRaceIndex = null;
+
+// Estado de Conclusão de Treino
+let pendingFinishWorkoutTitle = null; // Título do treino que está sendo concluído
+let selectedPainLevel = 0; // Nível de dor selecionado
+
 window.app = {
     admUsersCache: {}, // Cache local para acesso rápido aos dados dos usuários no admin
 
@@ -299,23 +306,206 @@ window.app = {
 
     logout: () => { signOut(auth).then(() => { currentUser = null; window.app.screen('view-landing'); }); },
     
+    // --- FUNÇÃO PERFIL ATUALIZADA ---
     openProfile: () => {
         if(!currentUser) return;
         window.app.screen('view-profile');
+        
+        // Cabeçalho Básico
         document.getElementById('profile-name-big').innerText = currentUser.name;
-        document.getElementById('profile-email-big').innerText = currentUser.email.toLowerCase(); // Email geralmente em minúsculas
+        document.getElementById('profile-email-big').innerText = currentUser.email.toLowerCase();
         const img = document.getElementById('profile-img-big');
         if(currentUser.avatar) { img.src=currentUser.avatar; img.style.display='block'; }
         else { img.style.display='none'; }
         
+        // Preencher Campos de Dados Pessoais
+        document.getElementById('prof-birth').value = currentUser.birthDate || '';
+        document.getElementById('prof-city').value = currentUser.city || '';
+        document.getElementById('prof-country').value = currentUser.country || '';
+        document.getElementById('prof-height').value = currentUser.height || '';
+        
+        // Renderiza UI do Peso
+        window.app.renderWeightUI();
+
+        // Garante estado inicial (Visualização)
+        window.app.toggleEditProfile(false);
+
+        // Histórico de Provas (Atualizado com Edição)
         const hList = document.getElementById('profile-history');
         hList.innerHTML = '';
-        (currentUser.races || []).forEach(r => {
+        (currentUser.races || []).forEach((r, i) => {
             const done = r.workouts.filter(w=>w.done).length;
             const total = r.workouts.length;
             const pct = total > 0 ? Math.round((done/total)*100) : 0;
-            hList.innerHTML += `<div style="margin-bottom:15px;"><div style="display:flex; justify-content:space-between; margin-bottom:5px;"><strong style="font-size:14px;">${r.name}</strong> <span style="font-size:12px; font-weight:600; color:var(--primary);">${pct}%</span></div><div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--primary);"></div></div></div>`;
+            // CORREÇÃO: Garante que usa a data do objeto atualizado
+            const dateStr = r.date ? new Date(r.date).toLocaleDateString() : 'Sem data';
+
+            hList.innerHTML += `
+            <div style="margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;">
+                    <div>
+                        <strong style="font-size:14px;">${r.name}</strong>
+                        <button onclick="window.app.openEditRaceDate(${i})" style="border:none; background:none; color:var(--text-sec); cursor:pointer; font-size:12px; margin-left:5px;"><i class="fa-solid fa-pencil"></i></button>
+                        <div style="font-size:11px; color:#888;">${dateStr}</div>
+                    </div>
+                    <span style="font-size:12px; font-weight:600; color:var(--primary);">${pct}%</span>
+                </div>
+                <div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
+                    <div style="width:${pct}%; height:100%; background:var(--primary);"></div>
+                </div>
+            </div>`;
         });
+    },
+
+    // --- NOVA FUNÇÃO PARA EDITAR DATA DA PROVA ---
+    openEditRaceDate: (index) => {
+        if (!currentUser || !currentUser.races || !currentUser.races[index]) return;
+        editingStudentRaceIndex = index;
+        const race = currentUser.races[index];
+        
+        document.getElementById('edit-race-date-input').value = race.date || '';
+        document.getElementById('modal-edit-date').classList.add('active');
+    },
+
+    saveRaceDate: async () => {
+        if (editingStudentRaceIndex === null || !currentUser) return;
+        
+        const newDate = document.getElementById('edit-race-date-input').value;
+        if (!newDate) return window.app.toast("Selecione uma data.");
+
+        const races = currentUser.races;
+        races[editingStudentRaceIndex].date = newDate;
+
+        window.app.toast("Atualizando data...");
+        try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { races });
+            window.app.toast("Data atualizada!");
+            document.getElementById('modal-edit-date').classList.remove('active');
+            
+            // ATUALIZAÇÃO CRÍTICA: Renderizar UI global para refletir mudança
+            window.app.renderHome(); // Atualiza a Home (barra de progresso e meta)
+            window.app.openProfile(); // Recarrega o perfil para mostrar nova data na lista
+        } catch (e) {
+            console.error(e);
+            window.app.toast("Erro ao salvar.");
+        }
+    },
+
+    toggleEditProfile: (isEditing) => {
+        // Seleciona inputs dentro do container de perfil
+        const inputs = document.querySelectorAll('#profile-form-container input');
+        inputs.forEach(inp => inp.disabled = !isEditing);
+        
+        // Alterna botões
+        const btnEdit = document.getElementById('btn-edit-profile');
+        const actionBtns = document.getElementById('profile-edit-actions');
+        
+        if (isEditing) {
+            btnEdit.style.display = 'none';
+            actionBtns.style.display = 'flex';
+        } else {
+            btnEdit.style.display = 'block';
+            actionBtns.style.display = 'none';
+        }
+    },
+
+    saveProfile: async () => {
+        if(!currentUser) return;
+        
+        const birthDate = document.getElementById('prof-birth').value;
+        const city = document.getElementById('prof-city').value;
+        const country = document.getElementById('prof-country').value;
+        const height = document.getElementById('prof-height').value;
+        
+        let updates = { birthDate, city, country, height };
+
+        window.app.toast("Salvando perfil...");
+        
+        try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), updates);
+            // Atualiza localmente
+            currentUser = { ...currentUser, ...updates };
+            window.app.toast("Perfil atualizado!");
+            window.app.toggleEditProfile(false);
+        } catch (e) {
+            console.error(e);
+            window.app.toast("Erro ao salvar.");
+        }
+    },
+
+    // --- NOVA LÓGICA DE PESO (CORRIGIDA) ---
+    renderWeightUI: () => {
+        if(!currentUser) return;
+        let history = currentUser.weightHistory || [];
+        
+        // Filtrar entradas inválidas (sem valor numérico)
+        history = history.filter(h => h.value !== undefined && h.value !== null && !isNaN(h.value));
+
+        // Ordena: mais recente primeiro
+        history.sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        const displayEl = document.getElementById('display-current-weight');
+        
+        // Verifica se existe valor valido
+        if (history.length > 0) {
+            const currentWeight = history[0].value;
+            displayEl.innerHTML = `${currentWeight} <span style="font-size: 16px; font-weight: 400; color: var(--text-sec);">kg</span>`;
+        } else {
+            // Mostra apenas traço, limpo
+            displayEl.innerHTML = '--';
+        }
+
+        const listContainer = document.getElementById('weight-history-list');
+        listContainer.innerHTML = '';
+        if(history.length === 0) {
+            listContainer.innerHTML = '<p style="text-align:center; color:#999; font-size:12px; margin-top:10px;">Nenhum registro.</p>';
+        } else {
+            history.forEach(h => {
+                const dateStr = new Date(h.date).toLocaleDateString();
+                listContainer.innerHTML += `
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #eee; font-size:14px; color:var(--text-main);">
+                    <span>${dateStr}</span>
+                    <strong>${h.value} kg</strong>
+                </div>`;
+            });
+        }
+    },
+
+    openWeightModal: () => {
+        document.getElementById('new-weight-input').value = '';
+        document.getElementById('modal-add-weight').classList.add('active');
+        document.getElementById('new-weight-input').focus();
+    },
+
+    saveNewWeight: async () => {
+        const val = parseFloat(document.getElementById('new-weight-input').value);
+        if(!val || isNaN(val)) return window.app.toast("Digite um peso válido.");
+
+        const newEntry = {
+            date: new Date().toISOString(),
+            value: val
+        };
+
+        // Adiciona ao histórico local (temporário para UI rápida) e ordena
+        let history = currentUser.weightHistory || [];
+        history.push(newEntry);
+        
+        try {
+            // Salva no DB (sobrescrevendo o array com a nova versão)
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { 
+                weightHistory: history 
+            });
+            
+            // Atualiza objeto local e UI
+            currentUser.weightHistory = history;
+            window.app.renderWeightUI();
+            
+            document.getElementById('modal-add-weight').classList.remove('active');
+            window.app.toast("Peso registrado!");
+        } catch(e) {
+            console.error(e);
+            window.app.toast("Erro ao salvar peso.");
+        }
     },
 
     closeProfile: () => window.app.screen('view-app'),
@@ -681,24 +871,70 @@ window.app = {
         `;
     },
 
-    finishWorkout: async (wTitle) => {
+    // --- NOVA LÓGICA DE FEEDBACK AO CONCLUIR ---
+    finishWorkout: (wTitle) => {
+        // Guarda titulo para confirmar depois
+        pendingFinishWorkoutTitle = wTitle;
+        selectedPainLevel = 0;
+        
+        // Reseta UI do Modal
+        document.getElementById('workout-feedback-text').value = '';
+        window.app.renderPainScale();
+        
+        document.getElementById('modal-finish-workout').classList.add('active');
+    },
+
+    renderPainScale: () => {
+        const container = document.getElementById('pain-scale-container');
+        container.innerHTML = '';
+        for(let i=1; i<=7; i++) {
+            const isActive = i === selectedPainLevel;
+            const bg = isActive ? 'var(--primary)' : '#FFF';
+            const color = isActive ? '#FFF' : 'var(--text-main)';
+            const border = isActive ? 'none' : '1px solid #CCC';
+            
+            container.innerHTML += `
+            <button onclick="window.app.setPainLevel(${i})" style="width:35px; height:35px; border-radius:50%; border:${border}; background:${bg}; color:${color}; font-weight:600; cursor:pointer;">${i}</button>
+            `;
+        }
+    },
+
+    setPainLevel: (lvl) => {
+        selectedPainLevel = lvl;
+        window.app.renderPainScale();
+    },
+
+    confirmFinishWorkout: async () => {
+        if (!pendingFinishWorkoutTitle) return;
+        const notes = document.getElementById('workout-feedback-text').value;
+        
+        if (selectedPainLevel === 0) return window.app.toast("Selecione o nível de dor.");
+
         const races = [...currentUser.races];
         const rIdx = races.length - 1;
-        // wTitle case sensitive now? Better keep flexible match or exact match from rendered logic
-        const wIdx = races[rIdx].workouts.findIndex(w => w.title === wTitle && !w.done);
+        const wIdx = races[rIdx].workouts.findIndex(w => w.title === pendingFinishWorkoutTitle && !w.done);
+        
         if(wIdx > -1) {
+            // Salva dados de conclusão E feedback
             races[rIdx].workouts[wIdx].done = true;
             races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
+            races[rIdx].workouts[wIdx].feedback = {
+                painLevel: selectedPainLevel,
+                notes: notes,
+                timestamp: Date.now()
+            };
+
             currentUser.races = races;
             
             // Atualiza UI
             window.app.renderHome(); 
-            // Se estiver na aba de treinos, atualiza ela também para refletir a mudança
             if(!document.getElementById('tab-workouts').classList.contains('hidden')) {
                 window.app.renderWorkoutsList();
             }
             
-            window.app.toast("Treino concluído!");
+            window.app.toast("Treino concluído! Bom descanso.");
+            document.getElementById('modal-finish-workout').classList.remove('active');
+            
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { races });
         }
     },
@@ -1050,15 +1286,28 @@ window.app = {
                                 const statusIcon = isDone ? '<i class="fa-solid fa-circle-check" style="color:var(--success)"></i>' : '<i class="fa-regular fa-circle" style="color:#ccc"></i>';
                                 const undoBtn = isDone ? `<button onclick="window.app.admToggleWorkoutStatus('${safeId}', ${rIdx}, ${wIdx}, false)" style="color:var(--text-sec); font-size:10px; border:1px solid #ddd; border-radius:4px; padding:2px 5px; cursor:pointer; margin-right:5px; background:#fff;">Desfazer</button>` : '';
                                 
+                                // INCLUSÃO: Exibir feedback de dor se existir
+                                let feedbackHtml = '';
+                                if(w.feedback && (w.feedback.painLevel || w.feedback.notes)) {
+                                    feedbackHtml = `
+                                    <div style="font-size:11px; color:var(--text-sec); background:#fff5eb; padding:6px; border-radius:6px; margin-top:5px; border-left:3px solid var(--primary);">
+                                        <div style="font-weight:700;">Nível de Dor: ${w.feedback.painLevel}/7</div>
+                                        <div style="margin-top:2px;">${w.feedback.notes || 'Sem observações.'}</div>
+                                    </div>`;
+                                }
+
                                 workoutsHtml += `
-                                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;">
-                                    <div style="display:flex; align-items:center; gap:8px;">
-                                        ${statusIcon}
-                                        <div style="display:flex; flex-direction:column;">
-                                            <span onclick="window.app.admShowWorkoutDetail('${safeId}', ${rIdx}, ${wIdx})" style="font-size:12px; font-weight:600; cursor:pointer; text-decoration:underline; color:var(--primary);">${wDate} ${w.title}</span>
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #eee; padding:8px 0;">
+                                    <div style="flex:1;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            ${statusIcon}
+                                            <div style="display:flex; flex-direction:column;">
+                                                <span onclick="window.app.admShowWorkoutDetail('${safeId}', ${rIdx}, ${wIdx})" style="font-size:12px; font-weight:600; cursor:pointer; text-decoration:underline; color:var(--primary);">${wDate} ${w.title}</span>
+                                            </div>
                                         </div>
+                                        ${feedbackHtml}
                                     </div>
-                                    <div style="display:flex; align-items:center;">
+                                    <div style="display:flex; align-items:center; margin-left:10px;">
                                         ${undoBtn}
                                         <button onclick="window.app.admDeleteWorkoutInline('${safeId}', ${rIdx}, ${wIdx})" style="color:var(--red); border:none; background:none; cursor:pointer;"><i class="fa-solid fa-times"></i></button>
                                     </div>
@@ -1461,7 +1710,7 @@ window.app = {
     admLoadNewsHistory: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
             const div = document.getElementById('adm-news-history'); div.innerHTML = '';
-            snap.forEach(d => { div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #CCC; display:flex; justify-content:space-between;"><span>${d.data().title}</span><button onclick="window.app.admDeleteNews('${d.id}')" style="color:red; border:none; background:none;">X</button></div>`; });
+            snap.forEach(d => { div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #CCC; display:flex; justify-content:space-between;"><span>${d.data().title}</span><button onclick=\"window.app.admDeleteNews('${d.id}')\" style=\"color:red; border:none; background:none;\">X</button></div>`; });
         });
     },
     
