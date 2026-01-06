@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -24,6 +23,13 @@
 
     <!-- CSS Externo -->
     <link rel="stylesheet" href="style.css?v=2">
+
+    <!-- CORREÇÃO DE OVERSCROLL (FIX DO FUNDO AZUL APARECENDO) -->
+    <style>
+        html, body {
+            overscroll-behavior: none;
+        }
+    </style>
 </head>
 <body>
 
@@ -149,7 +155,8 @@
 
     <!-- MODAIS E TELAS EXTRAS -->
     
-    <div id="view-profile" class="screen full-screen" style="overflow-y: auto; -webkit-overflow-scrolling: touch;background: white;">
+    <!-- ADICIONE background:white AQUI -->
+    <div id="view-profile" class="screen full-screen" style="overflow-y: auto; -webkit-overflow-scrolling: touch; background: white;">
         <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
             <button onclick="window.app.closeProfile()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main);"><i class="fa-solid fa-times"></i></button>
             <h3 style="margin:0;">Meu Perfil</h3>
