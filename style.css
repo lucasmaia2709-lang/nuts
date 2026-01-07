@@ -140,7 +140,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     
     padding-top: 5px; 
     /* Padding bottom usa env() para área segura do iPhone X+ */
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: 10px;
     padding-left: 10px;
     padding-right: 10px;
 
