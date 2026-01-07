@@ -13,44 +13,6 @@ const firebaseConfig = {
     appId: "1:790944551064:web:eec0a496c599a58cc040ed" 
 };
 
-const forceLayoutRecalculation = () => {
-    const applyFix = () => {
-        // Pega a altura real da janela visível em pixels
-        const height = window.innerHeight;
-        
-        // Força essa altura no body e html, travando o layout no tamanho exato
-        document.body.style.height = `${height}px`;
-        document.body.style.minHeight = `${height}px`;
-        document.documentElement.style.height = `${height}px`;
-
-        // Força um redesenho (repaint) da barra de navegação para ela ir pro lugar certo
-        const nav = document.querySelector('.nav-bar');
-        if (nav) {
-            nav.style.display = 'none';
-            nav.offsetHeight; // Força o navegador a ler a altura e recalcular
-            nav.style.display = 'flex';
-        }
-        
-        // Garante que o scroll esteja no topo
-        window.scrollTo(0, 0);
-    };
-
-    // Executa imediatamente e várias vezes nos primeiros milissegundos
-    // para garantir que pegue o momento exato que o navegador termina de carregar
-    applyFix();
-    setTimeout(applyFix, 50);
-    setTimeout(applyFix, 200);
-    setTimeout(applyFix, 500); 
-
-    // Mantém corrigido se algo mudar
-    window.addEventListener('resize', applyFix);
-    window.addEventListener('orientationchange', () => setTimeout(applyFix, 100));
-};
-
-// Dispara a correção tanto no carregamento do DOM quanto no Load total
-window.addEventListener('DOMContentLoaded', forceLayoutRecalculation);
-window.addEventListener('load', forceLayoutRecalculation);
-
 
 // INICIALIZAÇÃO
 const appInit = initializeApp(firebaseConfig);
