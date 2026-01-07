@@ -12,22 +12,15 @@
     --red: #e74c3c;
     --border: #edf2f7;
     --shadow: 0 8px 25px rgba(43, 76, 126, 0.08); 
-    --nav-height: 55px; /* <--- Reduzido ainda mais para 55px (Padrão mais fino) */
+    --nav-height: 48px; /* <--- AJUSTADO: Altura padrão iOS/Instagram */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* Adicionado html height 100% para garantir estabilidade no iOS PWA */
-html { height: 100%; }
-
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
     background-color: #9cafcc; color: var(--text-main); 
-    width: 100vw; 
-    /* MUDANÇA PWA: Usar 100% e fixed evita conflito com barra de status no boot do iOS */
-    height: 100%; 
-    position: fixed; 
-    overflow: hidden; 
+    width: 100vw; height: 100dvh; overflow: hidden; 
     display: flex; flex-direction: column; 
 }
 
@@ -57,14 +50,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 /* HEADER */
 .app-header { padding: 10px 20px; padding-top: max(15px, env(safe-area-inset-top)); display: flex; justify-content: space-between; align-items: center; background: #9cafcc; position: sticky; top: 0; z-index: 50; }
 
-#main-scroll { 
-    flex: 1; 
-    overflow-y: auto; 
-    overflow-x: hidden; 
-    /* Ajuste aqui também para garantir scroll até o fim */
-    padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 20px); 
-    -webkit-overflow-scrolling: touch; 
-}
+#main-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 20px); -webkit-overflow-scrolling: touch; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -121,39 +107,35 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .news-date { font-size: 11px; color: var(--text-sec); margin-bottom: 8px; font-weight: 700; }
 .news-title { font-size: 18px; font-weight: 700; margin: 0; line-height: 1.2; font-family: var(--font-logo); color: var(--text-main); }
 
-/* NAV BAR CORRIGIDA PWA */
+/* NAV BAR */
 .nav-bar { 
     position: fixed; 
     bottom: 0; 
     left: 0; 
     width: 100%; 
     
-    /* Auto height garante que o container cresça apenas o necessário */
-    height: auto; 
-    min-height: var(--nav-height); 
+    /* ALTURA: 48px + Espaço Seguro (Home Indicator) */
+    height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
     
     background: #9cafcc; 
     border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
-    align-items: flex-start; /* Importante: alinha ao topo para o padding de baixo empurrar a caixa e não os itens */
     
-    padding-top: 5px; 
-    /* Padding bottom usa env() para área segura do iPhone X+ */
-    padding-bottom: 10px;
-    padding-left: 10px;
-    padding-right: 10px;
+    /* ALINHAMENTO CORRIGIDO: Centraliza na área útil */
+    align-items: center; 
+    
+    /* Padding inferior garante que o ícone não desça para a área de swipe */
+    padding: 0 10px;
+    padding-bottom: env(safe-area-inset-bottom);
 
     z-index: 300; 
-    box-shadow: 0 -1px 0 rgba(255,255,255,0.1); 
-    
-    /* Garante transição suave se houver mudança de altura */
-    transition: padding-bottom 0.2s ease;
+    box-shadow: 0 -0.5px 0 rgba(255,255,255,0.2); /* Borda superior mais fina */
 }
 
 .nav-item { 
     flex: 1; 
-    height: var(--nav-height); /* Altura fixa dos botões */
+    height: var(--nav-height); /* O item ocupa exatamente a altura definida (48px) */
     display: flex; 
     flex-direction: column; 
     align-items: center; 
@@ -182,7 +164,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 }
 
 .hidden { display: none !important; }
-.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-main); color: #FFF; padding: 12px 24px; border-radius: 50px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 5000; pointer-events: none; text-align: center; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+.toast { position: fixed; bottom: 100px; /* Mantido conforme pedido */ left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-main); color: #FFF; padding: 12px 24px; border-radius: 50px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 5000; pointer-events: none; text-align: center; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
 .header-avatar { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #FFF; cursor: pointer; border: 2px solid var(--text-main); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text-main); box-shadow: var(--shadow); }
