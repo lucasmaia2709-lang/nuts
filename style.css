@@ -12,7 +12,7 @@
     --red: #e74c3c;
     --border: #edf2f7;
     --shadow: 0 8px 25px rgba(43, 76, 126, 0.08); 
-    --nav-height: 85px; 
+    --nav-height: 60px; /* <--- REDUZIDO DE 85px PARA 60px */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -59,7 +59,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .input { width: 100%; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background-color: #FFF; font-size: 16px; color: var(--text-main); outline: none; font-family: var(--font-main); transition: 0.2s; -webkit-appearance: none; box-shadow: var(--shadow); }
 .input:focus { border-color: var(--primary); }
 
-/* BotÃƒÂµes */
+/* Botões */
 .btn { width: 100%; padding: 18px; border-radius: var(--radius); border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: var(--font-main); transition: 0.2s; -webkit-user-select: none; letter-spacing: 0.5px; }
 .btn-primary { background-color: var(--primary); color: #FFF; box-shadow: 0 5px 15px rgba(255, 138, 65, 0.4); }
 .btn-primary:active { transform: scale(0.98); }
@@ -68,7 +68,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .btn-danger { background-color: #ffe6e6; color: var(--red); }
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
 
-/* CALENDÃƒÂRIO */
+/* CALENDÁRIO */
 .calendar-wrapper { padding: 20px 20px 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .calendar-title { font-weight: 400; font-size: 24px; text-transform: capitalize; color: var(--text-main); }
@@ -108,14 +108,55 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .news-title { font-size: 18px; font-weight: 700; margin: 0; line-height: 1.2; font-family: var(--font-logo); color: var(--text-main); }
 
 /* NAV BAR */
-.nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: auto; background: #9cafcc; border-radius: 25px 25px 0 0; display: flex; justify-content: space-around; align-items: center; padding: 12px 10px env(safe-area-inset-bottom); z-index: 300; box-shadow: 0 -5px 30px rgba(43, 76, 126, 0.08); }
-.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: none; border: none; color: #dce1e8; cursor: pointer; }
-.nav-item i { font-size: 24px; transition: 0.3s; }
-.nav-item.active { color: var(--text-main); }
-.nav-item.active i { transform: translateY(-2px); color: var(--text-main); }
+.nav-bar { 
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%; 
+    height: auto; 
+    background: #9cafcc; 
+    /* border-radius removido para parecer mais com uma barra de app nativo, se quiser manter arredondado use valores menores, ex: 15px 15px 0 0 */
+    border-radius: 0; 
+    display: flex; 
+    justify-content: space-around; 
+    align-items: center; 
+    /* Padding reduzido para compactar */
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); 
+    z-index: 300; 
+    box-shadow: 0 -5px 30px rgba(43, 76, 126, 0.08); 
+    border-top: 1px solid rgba(255,255,255,0.1); /* Linha sutil no topo para separar */
+}
+
+.nav-item { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 4px; 
+    background: none; 
+    border: none; 
+    color: rgba(255,255,255,0.6); /* Cor inativa mais sutil */
+    cursor: pointer; 
+    padding: 5px; /* Área de toque */
+}
+
+.nav-item i { 
+    font-size: 22px; /* Reduzido de 24px para 22px */
+    transition: 0.2s; 
+}
+
+.nav-item.active { 
+    color: #FFF; /* Branco puro quando ativo para contraste no azul */
+}
+
+.nav-item.active i { 
+    transform: none; /* Remove o pulo para cima, apps como Instagram não pulam, só mudam a cor/peso */
+    color: #FFF; 
+}
 
 .hidden { display: none !important; }
-.toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%) translateY(-50px); background: var(--text-main); color: #FFF; padding: 12px 24px; border-radius: 50px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 5000; pointer-events: none; text-align: center; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+.toast { position: fixed; bottom: 100px; /* Alterado de top para bottom conforme pedido anterior implícito */ left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-main); color: #FFF; padding: 12px 24px; border-radius: 50px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 5000; pointer-events: none; text-align: center; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
 .header-avatar { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #FFF; cursor: pointer; border: 2px solid var(--text-main); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text-main); box-shadow: var(--shadow); }
