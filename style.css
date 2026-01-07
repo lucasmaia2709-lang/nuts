@@ -122,7 +122,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     align-items: flex-start; /* Alinha itens no topo da barra */
     /* Padding modificado: apenas topo e laterais fixos, bottom é zero pois height já calcula safe area */
     padding: 8px 10px 0 10px; 
-    padding-bottom: env(safe-area-inset-bottom);
+
     z-index: 300; 
     box-shadow: 0 -1px 0 rgba(255,255,255,0.1); /* Borda superior sutil via shadow */
 }
