@@ -1,4 +1,4 @@
-root {
+:root {
     --bg: #f4f7f9;
     --primary: #ff8a41;
     --secondary: #9cafcc;
@@ -12,7 +12,7 @@ root {
     --red: #e74c3c;
     --border: #edf2f7;
     --shadow: 0 8px 25px rgba(43, 76, 126, 0.08); 
-    --nav-height: 50px; /* <--- Altura fixa do CONTEÚDO da barra (ícones) */
+    --nav-height: 55px; /* <--- Reduzido ainda mais para 55px (Padrão mais fino) */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -113,27 +113,23 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     bottom: 0; 
     left: 0; 
     width: 100%; 
-    height: var(--nav-height); /* Altura fixa base */
+    /* MUDANÇA CRUCIAL: height agora é fixo para conteúdo + padding-bottom da safe area */
+    height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
     background: #9cafcc; 
     border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
-    align-items: center; 
-    
-    /* Box-sizing content-box faz o padding ser ADICIONADO à altura, não incluído nela */
-    box-sizing: content-box; 
-    
-    /* Padding: Topo e laterais fixos, Bottom dinâmico */
-    padding: 5px 10px;
-    padding-bottom: env(safe-area-inset-bottom); /* Adiciona espaço extra apenas se houver notch */
-    
+    align-items: flex-start; /* Alinha itens no topo da barra */
+    /* Padding modificado: apenas topo e laterais fixos, bottom é zero pois height já calcula safe area */
+    padding: 8px 10px 0 10px; 
+    padding-bottom: env(safe-area-inset-bottom);
     z-index: 300; 
-    box-shadow: 0 -1px 0 rgba(255,255,255,0.1); 
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.1); /* Borda superior sutil via shadow */
 }
 
 .nav-item { 
     flex: 1; 
-    height: 100%; /* Ocupa toda a altura disponível da barra */
+    height: var(--nav-height); /* Garante que o item ocupe a altura útil da barra */
     display: flex; 
     flex-direction: column; 
     align-items: center; 
