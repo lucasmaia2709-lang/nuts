@@ -19,7 +19,12 @@
 
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
-    background-color: #9cafcc; color: var(--text-main); 
+    
+    /* CORREÇÃO: Fundo do body agora é a cor do App, não o azul do Login. */
+    /* Isso impede que o azul "vaze" no rodapé ou no overscroll */
+    background-color: var(--bg); 
+    
+    color: var(--text-main); 
     width: 100vw; height: 100dvh; overflow: hidden; 
     display: flex; flex-direction: column; 
 }
