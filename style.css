@@ -114,18 +114,19 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     left: 0; 
     width: 100%; 
     
-    /* ALTURA: 48px + Espaço Seguro (Home Indicator) */
-    height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
+    /* CORREÇÃO URGENTE: Removemos o height fixo com calc() */
+    /* Agora a altura é definida naturalmente pelo conteúdo (48px) + a área segura */
+    /* Isso evita o bug de ficar gigante no carregamento inicial */
     
     background: #9cafcc; 
     border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
     
-    /* ALINHAMENTO CORRIGIDO: Centraliza na área útil */
+    /* ALINHAMENTO */
     align-items: center; 
     
-    /* Padding inferior garante que o ícone não desça para a área de swipe */
+    /* Padding inferior garante o espaço da safe area */
     padding: 0 10px;
     padding-bottom: env(safe-area-inset-bottom);
 
