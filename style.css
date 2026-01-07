@@ -17,10 +17,17 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* Adicionado html height 100% para garantir estabilidade no iOS PWA */
+html { height: 100%; }
+
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
     background-color: #9cafcc; color: var(--text-main); 
-    width: 100vw; height: 100dvh; overflow: hidden; 
+    width: 100vw; 
+    /* MUDANÇA PWA: Usar 100% e fixed evita conflito com barra de status no boot do iOS */
+    height: 100%; 
+    position: fixed; 
+    overflow: hidden; 
     display: flex; flex-direction: column; 
 }
 
@@ -114,37 +121,39 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .news-date { font-size: 11px; color: var(--text-sec); margin-bottom: 8px; font-weight: 700; }
 .news-title { font-size: 18px; font-weight: 700; margin: 0; line-height: 1.2; font-family: var(--font-logo); color: var(--text-main); }
 
-/* NAV BAR CORRIGIDA */
+/* NAV BAR CORRIGIDA PWA */
 .nav-bar { 
     position: fixed; 
     bottom: 0; 
     left: 0; 
     width: 100%; 
     
-    /* CORREÇÃO CRÍTICA: Altura automática + Padding bottom seguro */
+    /* Auto height garante que o container cresça apenas o necessário */
     height: auto; 
-    min-height: var(--nav-height); /* Garante altura mínima visual */
+    min-height: var(--nav-height); 
     
     background: #9cafcc; 
     border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
-    align-items: flex-start; /* Alinha ícones no topo */
+    align-items: flex-start; /* Importante: alinha ao topo para o padding de baixo empurrar a caixa e não os itens */
     
-    /* Padding Top fixo para centralizar ícone na área visual, 
-       Padding Bottom usa ENV para empurrar conteúdo acima da barra home do iPhone */
     padding-top: 5px; 
+    /* Padding bottom usa env() para área segura do iPhone X+ */
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: 10px;
     padding-right: 10px;
 
     z-index: 300; 
     box-shadow: 0 -1px 0 rgba(255,255,255,0.1); 
+    
+    /* Garante transição suave se houver mudança de altura */
+    transition: padding-bottom 0.2s ease;
 }
 
 .nav-item { 
     flex: 1; 
-    height: var(--nav-height); /* A altura do botão continua fixa para alinhamento */
+    height: var(--nav-height); /* Altura fixa dos botões */
     display: flex; 
     flex-direction: column; 
     align-items: center; 
