@@ -18,10 +18,18 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body { 
-    margin: 0; padding: 0; font-family: var(--font-main); 
-    background-color: #9cafcc; color: var(--text-main); 
-    width: 100vw; height: 100dvh; overflow: hidden; 
-    display: flex; flex-direction: column; 
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-main); 
+    background-color: #9cafcc;
+    color: var(--text-main); 
+
+    width: 100vw;
+    height: 100svh; /* ← CORREÇÃO CRÍTICA */
+
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
 }
 
 h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--text-main); }
@@ -50,7 +58,19 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 /* HEADER */
 .app-header { padding: 10px 20px; padding-top: max(15px, env(safe-area-inset-top)); display: flex; justify-content: space-between; align-items: center; background: #9cafcc; position: sticky; top: 0; z-index: 50; }
 
-#main-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 20px); -webkit-overflow-scrolling: touch; }
+#main-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    padding-bottom: calc(
+        var(--nav-height) +
+        env(safe-area-inset-bottom) +
+        20px
+    );
+
+    -webkit-overflow-scrolling: touch;
+}
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -113,18 +133,19 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     bottom: 0; 
     left: 0; 
     width: 100%; 
-    /* MUDANÇA CRUCIAL: height agora é fixo para conteúdo + padding-bottom da safe area */
-    height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
+
+    height: var(--nav-height); /* ← altura real e fixa */
+
     background: #9cafcc; 
-    border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
-    align-items: flex-start; /* Alinha itens no topo da barra */
-    /* Padding modificado: apenas topo e laterais fixos, bottom é zero pois height já calcula safe area */
-    padding: 8px 10px 0 10px; 
-    padding-bottom: env(safe-area-inset-bottom);
+    align-items: center;
+
+    padding: 8px 10px;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
+
     z-index: 300; 
-    box-shadow: 0 -1px 0 rgba(255,255,255,0.1); /* Borda superior sutil via shadow */
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.1);
 }
 
 .nav-item { 
