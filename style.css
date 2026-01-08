@@ -12,19 +12,14 @@
     --red: #e74c3c;
     --border: #edf2f7;
     --shadow: 0 8px 25px rgba(43, 76, 126, 0.08); 
-    --nav-height: 48px; /* <--- AJUSTADO: Altura padrão iOS/Instagram */
+    --nav-height: 55px; /* <--- Reduzido ainda mais para 55px (PadrÃ£o mais fino) */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
-    
-    /* CORREÇÃO: Fundo do body agora é a cor do App, não o azul do Login. */
-    /* Isso impede que o azul "vaze" no rodapé ou no overscroll */
-    background-color: var(--bg); 
-    
-    color: var(--text-main); 
+    background-color: #9cafcc; color: var(--text-main); 
     width: 100vw; height: 100dvh; overflow: hidden; 
     display: flex; flex-direction: column; 
 }
@@ -64,7 +59,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .input { width: 100%; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background-color: #FFF; font-size: 16px; color: var(--text-main); outline: none; font-family: var(--font-main); transition: 0.2s; -webkit-appearance: none; box-shadow: var(--shadow); }
 .input:focus { border-color: var(--primary); }
 
-/* Botões */
+/* BotÃµes */
 .btn { width: 100%; padding: 18px; border-radius: var(--radius); border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: var(--font-main); transition: 0.2s; -webkit-user-select: none; letter-spacing: 0.5px; }
 .btn-primary { background-color: var(--primary); color: #FFF; box-shadow: 0 5px 15px rgba(255, 138, 65, 0.4); }
 .btn-primary:active { transform: scale(0.98); }
@@ -73,7 +68,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .btn-danger { background-color: #ffe6e6; color: var(--red); }
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
 
-/* CALENDÁRIO */
+/* CALENDÃRIO */
 .calendar-wrapper { padding: 20px 20px 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .calendar-title { font-weight: 400; font-size: 24px; text-transform: capitalize; color: var(--text-main); }
@@ -118,43 +113,33 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     bottom: 0; 
     left: 0; 
     width: 100%; 
-    
-    /* CORREÇÃO DEFINITIVA: Altura automática baseada no conteúdo fixo */
-    /* Isso impede que o navegador calcule errado a altura inicial */
-    height: auto;
-    
+    /* MUDANÃ‡A CRUCIAL: height agora Ã© fixo para conteÃºdo + padding-bottom da safe area */
+    height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
     background: #9cafcc; 
     border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
-    align-items: center; 
-    
-    /* Apenas safe area em baixo, sem padding extra vertical que possa somar altura incorretamente */
-    padding: 0 10px;
-    padding-bottom: env(safe-area-inset-bottom);
+    align-items: flex-start; /* Alinha itens no topo da barra */
+    /* Padding modificado: apenas topo e laterais fixos, bottom Ã© zero pois height jÃ¡ calcula safe area */
+    padding: 8px 10px 0 10px; 
 
     z-index: 300; 
-    box-shadow: 0 -0.5px 0 rgba(255,255,255,0.2); /* Borda superior mais fina */
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.1); /* Borda superior sutil via shadow */
 }
 
 .nav-item { 
     flex: 1; 
-    /* Altura travada no item (padrão touch targets). A barra vai obedecer isso instantaneamente. */
-    height: 48px; 
-    
+    height: var(--nav-height); /* Garante que o item ocupe a altura Ãºtil da barra */
     display: flex; 
     flex-direction: column; 
     align-items: center; 
     justify-content: center; 
+    gap: 0; 
     background: none; 
     border: none; 
     color: rgba(255,255,255,0.5); 
     cursor: pointer; 
-    
-    /* Zerar espaçamentos para evitar inflar a barra */
     padding: 0;
-    margin: 0;
-    
     transition: color 0.2s;
 }
 
