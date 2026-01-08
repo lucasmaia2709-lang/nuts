@@ -13,10 +13,13 @@ const firebaseConfig = {
     appId: "1:790944551064:web:eec0a496c599a58cc040ed" 
 };
 
+window.addEventListener('load', () => {
+  document.body.style.height = '100vh';
 
-// INICIALIZAÇÃO
-const appInit = initializeApp(firebaseConfig);
-const auth = getAuth(appInit);
+  requestAnimationFrame(() => {
+    document.body.style.height = '100dvh';
+  });
+});
 
 
 // INICIALIZAÇÃO
