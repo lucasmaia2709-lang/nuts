@@ -1074,7 +1074,7 @@ window.app = {
                         </div>
                         ${deleteBtn}
                     </div>
-                    ${imgUrl ? `<img src="${imgUrl}" style="width:100%; max-height:450px; object-fit:cover; display:block;">` : ''}
+                    ${imgUrl ? `<img src="${imgUrl}" loading="lazy" class="feed-img" onload="this.classList.add('loaded')">` : ''}
                     <div style="padding:15px;">
                         <div style="display:flex; gap:20px; margin-bottom:10px; align-items: center;">
                             <button onclick="window.app.toggleLike('${p.id}')" style="border:none; background:none; font-size:22px; cursor:pointer; ${likeColor} display:flex; align-items:center; gap:8px; padding:0;">
