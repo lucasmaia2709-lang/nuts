@@ -12,7 +12,7 @@
     --red: #e74c3c;
     --border: #edf2f7;
     --shadow: 0 8px 25px rgba(43, 76, 126, 0.08); 
-    --nav-height: 55px;
+    --nav-height: 55px; /* <--- Reduzido ainda mais para 55px (Padrão mais fino) */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -59,7 +59,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .input { width: 100%; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background-color: #FFF; font-size: 16px; color: var(--text-main); outline: none; font-family: var(--font-main); transition: 0.2s; -webkit-appearance: none; box-shadow: var(--shadow); }
 .input:focus { border-color: var(--primary); }
 
-/* BotÃµes */
+/* Botões */
 .btn { width: 100%; padding: 18px; border-radius: var(--radius); border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: var(--font-main); transition: 0.2s; -webkit-user-select: none; letter-spacing: 0.5px; }
 .btn-primary { background-color: var(--primary); color: #FFF; box-shadow: 0 5px 15px rgba(255, 138, 65, 0.4); }
 .btn-primary:active { transform: scale(0.98); }
@@ -68,7 +68,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .btn-danger { background-color: #ffe6e6; color: var(--red); }
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
 
-/* CALENDÃ RIO */
+/* CALENDÁRIO */
 .calendar-wrapper { padding: 20px 20px 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .calendar-title { font-weight: 400; font-size: 24px; text-transform: capitalize; color: var(--text-main); }
@@ -107,20 +107,33 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .news-date { font-size: 11px; color: var(--text-sec); margin-bottom: 8px; font-weight: 700; }
 .news-title { font-size: 18px; font-weight: 700; margin: 0; line-height: 1.2; font-family: var(--font-logo); color: var(--text-main); }
 
-/* NAV BAR */
+/* NAV BAR - CORREÇÃO PWA iOS */
 .nav-bar { 
     position: fixed; 
     bottom: 0; 
     left: 0; 
     width: 100%; 
-    height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
+    
+    /* Remove altura fixa calculada que causa erros no iOS */
+    height: auto;
+    
+    /* Usa padding para preencher a área segura inferior (Home Indicator) automaticamente */
+    padding-bottom: env(safe-area-inset-bottom);
+    
+    /* Mantém o espaçamento superior e lateral */
+    padding-top: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
+    
+    /* Garante uma altura mínima visual para a barra */
+    min-height: calc(var(--nav-height) + 10px); 
+
     background: #9cafcc; 
     border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
     align-items: flex-start; 
-    padding: 8px 10px 0 10px; 
-
+    
     z-index: 300; 
     box-shadow: 0 -1px 0 rgba(255,255,255,0.1); 
 }
