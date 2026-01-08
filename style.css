@@ -12,7 +12,7 @@
     --red: #e74c3c;
     --border: #edf2f7;
     --shadow: 0 8px 25px rgba(43, 76, 126, 0.08); 
-    --nav-height: 55px; /* <--- Reduzido ainda mais para 55px (PadrÃ£o mais fino) */
+    --nav-height: 55px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -68,7 +68,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .btn-danger { background-color: #ffe6e6; color: var(--red); }
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
 
-/* CALENDÃRIO */
+/* CALENDÃ RIO */
 .calendar-wrapper { padding: 20px 20px 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .calendar-title { font-weight: 400; font-size: 24px; text-transform: capitalize; color: var(--text-main); }
@@ -113,23 +113,21 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     bottom: 0; 
     left: 0; 
     width: 100%; 
-    /* MUDANÃ‡A CRUCIAL: height agora Ã© fixo para conteÃºdo + padding-bottom da safe area */
     height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
     background: #9cafcc; 
     border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
-    align-items: flex-start; /* Alinha itens no topo da barra */
-    /* Padding modificado: apenas topo e laterais fixos, bottom Ã© zero pois height jÃ¡ calcula safe area */
+    align-items: flex-start; 
     padding: 8px 10px 0 10px; 
 
     z-index: 300; 
-    box-shadow: 0 -1px 0 rgba(255,255,255,0.1); /* Borda superior sutil via shadow */
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.1); 
 }
 
 .nav-item { 
     flex: 1; 
-    height: var(--nav-height); /* Garante que o item ocupe a altura Ãºtil da barra */
+    height: var(--nav-height); 
     display: flex; 
     flex-direction: column; 
     align-items: center; 
@@ -158,7 +156,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 }
 
 .hidden { display: none !important; }
-.toast { position: fixed; bottom: 100px; /* Mantido conforme pedido */ left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-main); color: #FFF; padding: 12px 24px; border-radius: 50px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 5000; pointer-events: none; text-align: center; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-main); color: #FFF; padding: 12px 24px; border-radius: 50px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 5000; pointer-events: none; text-align: center; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
 .header-avatar { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #FFF; cursor: pointer; border: 2px solid var(--text-main); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text-main); box-shadow: var(--shadow); }
@@ -184,3 +182,18 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .adm-nested.open { display: block; animation: fadeIn 0.2s; }
 .adm-item-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 .adm-btn-small { padding: 6px 12px; font-size: 11px; border-radius: 8px; border: 1px solid #ddd; background: #FFF; cursor: pointer; font-weight: 600; color: var(--text-main); }
+
+/* --- SKELETON LOADING (NOVO) --- */
+.skeleton {
+    background: #eee;
+    background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
+    border-radius: 5px;
+    background-size: 200% 100%;
+    animation: 1.5s shine linear infinite;
+}
+@keyframes shine {
+    to { background-position-x: -200%; }
+}
+.skeleton-text { height: 16px; margin-bottom: 8px; width: 100%; }
+.skeleton-img { width: 100%; height: 200px; }
+.skeleton-avatar { width: 40px; height: 40px; border-radius: 50%; }
