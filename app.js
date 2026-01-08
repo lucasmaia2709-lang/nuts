@@ -1244,9 +1244,11 @@ window.app = {
     },
 
     closeAdmin: () => {
-        window.app.screen('view-landing');
-        
-        // CORREÇÃO: Restaura fundo azul ao sair do admin
+        if(currentUser) {
+            window.app.screen('view-app');
+        } else {
+            window.app.screen('view-landing');
+        }
         document.body.style.backgroundColor = '#9cafcc';
     },
 
