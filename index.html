@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -22,7 +22,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- CSS Externo -->
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
 
     <!-- CORREÇÃO DE OVERSCROLL (FIX DO FUNDO AZUL APARECENDO) -->
     <style>
@@ -100,6 +100,7 @@
         </div>
 
         <div id="main-scroll">
+            <!-- ABA HOME -->
             <div id="tab-home" class="tab-content">
                 <div class="calendar-wrapper">
                     <div class="calendar-header">
@@ -126,11 +127,47 @@
                 </div>
             </div>
 
+            <!-- ABA MEU PLANO -->
             <div id="tab-workouts" class="tab-content hidden" style="padding: 0 20px;">
                 <h2 style="margin: 20px 0; color:var(--text-main);">Meu Plano</h2>
                 <div id="workouts-list"></div>
             </div>
 
+            <!-- NOVA ABA SAÚDE -->
+            <div id="tab-health" class="tab-content hidden" style="padding: 0 20px;">
+                <h2 style="margin: 20px 0; color:var(--text-main);">Minha Saúde</h2>
+                
+                <!-- Card Meu Nutri -->
+                <div class="card" style="margin-bottom: 20px; opacity: 0.8;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <div style="width: 40px; height: 40px; background: #e0f2f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #009688;">
+                            <i class="fa-solid fa-carrot"></i>
+                        </div>
+                        <h3 style="margin:0; font-size: 18px;">Meu Nutri</h3>
+                    </div>
+                    <p style="font-size: 14px; color: var(--text-sec);">Acompanhamento nutricional em breve.</p>
+                </div>
+
+                <!-- Card Meu Fisio -->
+                <div class="card">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 40px; height: 40px; background: #e3f2fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary);">
+                                <i class="fa-solid fa-user-doctor"></i>
+                            </div>
+                            <h3 style="margin:0; font-size: 18px;">Meu Fisio</h3>
+                        </div>
+                        <!-- Badge Contador -->
+                        <span id="health-badge-counter" class="hidden" style="background: var(--red); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 700;">0</span>
+                    </div>
+                    
+                    <div id="health-pain-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <p style="text-align: center; color: #999; font-size: 13px; padding: 20px;">Nenhum registro de dor.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA COMUNIDADE -->
             <div id="tab-social" class="tab-content hidden" style="padding: 0 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin: 20px 0;">
                     <h2 style="margin:0; color:var(--text-main);">Comunidade</h2>
@@ -139,6 +176,7 @@
                 <div id="social-feed"></div>
             </div>
 
+            <!-- ABA NOVIDADES -->
             <div id="tab-news" class="tab-content hidden" style="padding: 0 20px;">
                 <h2 style="margin: 20px 0; color:var(--text-main);">Novidades</h2>
                 <div id="news-feed"></div>
@@ -146,16 +184,28 @@
         </div>
 
         <div class="nav-bar">
+            <!-- 1. Comunidade (Antes era Treinos) -->
             <button class="nav-item" onclick="window.app.nav('social')" data-tab="social"><i class="fa-solid fa-users"></i></button>
+
+            <!-- 2. Saúde -->
+            <button class="nav-item" onclick="window.app.nav('health')" data-tab="health" style="position: relative;">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span id="nav-badge-health" class="hidden" style="position: absolute; top: 5px; right: 25%; width: 8px; height: 8px; background: var(--red); border-radius: 50%; border: 1px solid white;"></span>
+            </button>
+            
+            <!-- 3. HOME (CENTRO) -->
             <button class="nav-item active" onclick="window.app.nav('home')" data-tab="home"><i class="fa-solid fa-house"></i></button>
+            
+            <!-- 4. Treinos (Antes era Comunidade) -->
             <button class="nav-item" onclick="window.app.nav('workouts')" data-tab="workouts"><i class="fa-solid fa-person-running"></i></button>
+            
+            <!-- 5. Novidades -->
             <button class="nav-item" onclick="window.app.nav('news')" data-tab="news"><i class="fa-solid fa-bullhorn"></i></button>
         </div>
     </div>
 
     <!-- MODAIS E TELAS EXTRAS -->
     
-    <!-- ADICIONE background:white AQUI -->
     <div id="view-profile" class="screen full-screen" style="overflow-y: auto; -webkit-overflow-scrolling: touch; background: #FFF;">
         <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
             <button onclick="window.app.closeProfile()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main);"><i class="fa-solid fa-times"></i></button>
@@ -171,7 +221,7 @@
             <h2 id="profile-name-big" style="margin:0; font-size:28px; color:var(--text-main);">NOME</h2>
             <p id="profile-email-big" style="color: var(--text-sec); font-size: 16px;">EMAIL</p>
             
-            <!-- ÁREA DE DADOS PESSOAIS (ATUALIZADA) -->
+            <!-- ÁREA DE DADOS PESSOAIS -->
             <div class="card" style="text-align: left; margin-top: 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h4 style="margin:0; color:var(--primary);">Dados Pessoais</h4>
@@ -203,12 +253,11 @@
                 </div>
             </div>
 
-            <!-- CARD EXCLUSIVO DE PESO (ATUALIZADO) -->
+            <!-- CARD EXCLUSIVO DE PESO -->
             <div class="card" style="text-align: left; margin-top: 20px; padding: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div>
                         <label class="label" style="font-size: 12px; color: var(--text-sec);">Peso Atual</label>
-                        <!-- Container sem KG hardcoded -->
                         <div id="display-current-weight" style="font-size: 32px; font-weight: 700; color: var(--text-main);">
                             --
                         </div>
@@ -221,7 +270,6 @@
                 <div style="border-top: 1px dashed #eee; padding-top: 15px;">
                     <label class="label" style="margin-bottom: 10px; display: block; font-size: 11px; opacity: 0.7;">HISTÓRICO</label>
                     <div id="weight-history-list" style="max-height: 150px; overflow-y: auto;">
-                        <!-- JS vai popular aqui -->
                     </div>
                 </div>
             </div>
@@ -281,7 +329,7 @@
         </div>
     </div>
 
-    <!-- MODAL EDITAR DATA PROVA (NOVO) -->
+    <!-- MODAL EDITAR DATA PROVA -->
     <div id="modal-edit-date" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Alterar Data da Prova</h3>
@@ -294,13 +342,12 @@
         </div>
     </div>
 
-    <!-- MODAL DE FEEDBACK AO CONCLUIR (NOVO) -->
+    <!-- MODAL DE FEEDBACK AO CONCLUIR -->
     <div id="modal-finish-workout" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Como foi o treino?</h3>
             <label class="label" style="margin-top:15px; margin-bottom:10px; display:block;">Nível de Dor (0 - 7)</label>
             <div id="pain-scale-container" style="display:flex; justify-content:center; gap: 5px; flex-wrap: wrap; margin-bottom:20px;">
-                <!-- JS vai popular os botões -->
             </div>
             
             <label class="label">O que doeu? / Observações:</label>
@@ -322,6 +369,22 @@
             <div style="display:flex; gap:10px;">
                 <button onclick="window.app.saveNewWeight()" class="btn btn-primary">Salvar</button>
                 <button onclick="document.getElementById('modal-add-weight').classList.remove('active')" class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RESPOSTA ADMIN FISIO (NOVO) -->
+    <div id="modal-admin-pain-response" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Orientação do Fisio</h3>
+            <div id="adm-pain-detail-view" style="margin-bottom: 20px; font-size: 14px; color: #555; background: #f9f9f9; padding: 10px; border-radius: 10px;">
+                <!-- JS preenche detalhes da dor -->
+            </div>
+            <label class="label">Resposta / Recomendação</label>
+            <textarea id="adm-pain-response-text" class="input" style="height:120px; resize:none; margin-bottom:20px;" placeholder="Ex: Aplique gelo e descanse por 2 dias..."></textarea>
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.admSendPainResponse()" class="btn btn-primary">Enviar</button>
+                <button onclick="document.getElementById('modal-admin-pain-response').classList.remove('active')" class="btn btn-outline">Cancelar</button>
             </div>
         </div>
     </div>
@@ -376,7 +439,6 @@
         </div>
     </div>
 
-    <!-- MODAL LISTA DE VÍDEOS DE FORTALECIMENTO (NOVO) -->
     <div id="modal-strength-videos" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Vídeos de Apoio</h3>
@@ -390,30 +452,23 @@
         </div>
     </div>
 
-    <!-- MODAL DE ADICIONAR OBJETIVO (ALUNO) -->
     <div id="modal-add-race" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Novo Objetivo</h3>
-        
-            
             <label class="label">Nome da Prova</label>
             <input id="new-race-name" class="input" placeholder="Ex: Maratona do Rio" style="margin-bottom:10px;">
-            
             <label class="label">Distância (KM)</label>
             <input id="new-race-dist" class="input" type="number" placeholder="Ex: 21" style="margin-bottom:10px;">
-            
             <label class="label">Tempo Estimado / Ritmo</label>
             <input id="new-race-est-time" class="input" type="text" placeholder="Ex: 2h 00m ou 5:30/km" style="margin-bottom:10px;">
-            
             <label class="label">Data da Prova</label>
             <input type="date" id="new-race-date" class="input" style="margin-bottom:20px;">
-            
             <button onclick="window.app.addStudentRace()" class="btn btn-primary">Gerar Plano & Salvar</button>
             <button onclick="document.getElementById('modal-add-race').classList.remove('active')" class="btn btn-text">Cancelar</button>
         </div>
     </div>
 
-    <!-- MODAL ADMIN ADD RACE (NOVO) -->
+    <!-- MODAL ADMIN ADD RACE -->
     <div id="modal-adm-add-race" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Adicionar Objetivo (Admin)</h3>
@@ -463,13 +518,11 @@
         </div>
     </div>
 
-    <!-- MODAL ADMIN VER DETALHES DO TREINO (NOVO) -->
     <div id="modal-adm-workout-detail" class="modal-overlay">
         <div class="modal-card">
             <h3 id="adm-workout-det-title" style="color:var(--text-main);">Título do Treino</h3>
             <p id="adm-workout-det-desc" style="color:var(--text-sec); white-space: pre-wrap; margin: 20px 0;">Descrição...</p>
             <div id="adm-workout-det-video-container" style="display:none; margin-bottom: 20px;">
-                <!-- Video Button will go here -->
             </div>
             <button onclick="document.getElementById('modal-adm-workout-detail').classList.remove('active')" class="btn btn-outline">Fechar</button>
         </div>
@@ -486,6 +539,13 @@
         
         <div class="admin-tabs-wrapper">
             <button onclick="window.app.admTab('users')" id="btn-adm-users" class="admin-tab-btn active">USUÁRIOS</button>
+            
+            <!-- Nova Aba Admin Fisio -->
+            <button onclick="window.app.admTab('physio')" id="btn-adm-physio" class="admin-tab-btn" style="position: relative;">
+                FISIO 
+                <span id="adm-physio-badge" class="hidden" style="position: absolute; top: 10px; right: 5px; width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span>
+            </button>
+            
             <button onclick="window.app.admTab('templates')" id="btn-adm-templates" class="admin-tab-btn">MODELOS</button>
             <button onclick="window.app.admTab('news')" id="btn-adm-news" class="admin-tab-btn">NOTÍCIAS</button>
             <button onclick="window.app.admTab('quotes')" id="btn-adm-quotes" class="admin-tab-btn">FRASES</button>
@@ -496,6 +556,13 @@
             <div id="adm-content-users" style="padding: 20px;">
                 <h3>USUÁRIOS</h3>
                 <div id="adm-users-list"></div>
+            </div>
+            
+            <!-- Conteúdo Admin Fisio -->
+            <div id="adm-content-physio" class="hidden" style="padding: 20px;">
+                <h3>RELATOS DE DOR</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Toque em um card para responder.</p>
+                <div id="adm-physio-list"></div>
             </div>
             
             <div id="adm-content-templates" class="hidden" style="padding: 20px;">
@@ -541,6 +608,6 @@
     </div>
 
     <!-- JS MODULE LINKADO -->
-    <script type="module" src="app.js?v=2"></script>
+    <script type="module" src="app.js?v=4"></script>
 </body>
 </html>
