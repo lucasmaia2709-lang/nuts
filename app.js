@@ -367,15 +367,21 @@ window.app = {
     // --- LÓGICA DE NOTIFICAÇÕES ---
     setupUserNotifications: (email) => {
         if(unsubscribeUserNotif) unsubscribeUserNotif();
-        // Escuta dores respondidas que ainda não foram lidas pelo usuário
+        // CORREÇÃO: Removidos filtros múltiplos para evitar erro de índice
+        // Filtra apenas por email e processa o resto em memória
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
-            where("email", "==", email), 
-            where("response", "!=", null),
-            where("readByUser", "==", false)
+            where("email", "==", email)
         );
 
         unsubscribeUserNotif = onSnapshot(q, (snapshot) => {
-            const count = snapshot.size;
+            let count = 0;
+            snapshot.forEach(d => {
+                const item = d.data();
+                if(item.response != null && item.readByUser === false) {
+                    count++;
+                }
+            });
+
             const badgeNav = document.getElementById('nav-badge-health');
             const badgeCard = document.getElementById('health-badge-counter');
             
@@ -420,10 +426,10 @@ window.app = {
         const list = document.getElementById('health-pain-list');
         list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
 
+        // CORREÇÃO: Removido orderBy("timestamp", "desc") e limit(20)
+        // Isso evita o erro "The query requires an index"
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
-            where("email", "==", currentUser.email),
-            orderBy("timestamp", "desc"),
-            limit(20)
+            where("email", "==", currentUser.email)
         );
 
         getDocs(q).then((snapshot) => {
@@ -432,9 +438,14 @@ window.app = {
                 return;
             }
 
+            // Ordenação e Limite em Memória (JS)
+            let painItems = [];
+            snapshot.forEach(d => painItems.push(d.data()));
+            painItems.sort((a,b) => b.timestamp - a.timestamp); // Mais recente primeiro
+            painItems = painItems.slice(0, 20); // Pega apenas os 20 primeiros
+
             list.innerHTML = '';
-            snapshot.forEach(d => {
-                const item = d.data();
+            painItems.forEach(item => {
                 const statusClass = item.responded ? 'answered' : 'pending';
                 const statusText = item.responded ? 'Respondido' : 'Pendente';
                 const dateStr = new Date(item.timestamp).toLocaleDateString();
@@ -468,15 +479,17 @@ window.app = {
 
     markPainAsReadByUser: async () => {
         if(!currentUser) return;
-        // Busca itens não lidos com resposta
+        // CORREÇÃO: Simplificada query para buscar apenas por email
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
-            where("email", "==", currentUser.email), 
-            where("readByUser", "==", false),
-            where("response", "!=", null)
+            where("email", "==", currentUser.email)
         );
         const snapshot = await getDocs(q);
         snapshot.forEach(async (d) => {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, d.id), { readByUser: true });
+            const data = d.data();
+            // Filtro em memória
+            if(data.readByUser === false && data.response != null) {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, d.id), { readByUser: true });
+            }
         });
     },
 
@@ -1422,22 +1435,28 @@ window.app = {
         const list = document.getElementById('adm-physio-list');
         list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
         
-        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), orderBy("timestamp", "desc"));
+        // CORREÇÃO: Removido orderBy da query
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN));
         
         onSnapshot(q, (snapshot) => {
             if(snapshot.empty) {
                 list.innerHTML = '<p style="text-align: center; color: #999;">Nenhum relato.</p>';
                 return;
             }
+            
+            // Ordenação em memória
+            let items = [];
+            snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
+            items.sort((a,b) => b.timestamp - a.timestamp);
+
             list.innerHTML = '';
-            snapshot.forEach(d => {
-                const item = d.data();
+            items.forEach(item => {
                 const unreadClass = !item.readByAdmin ? 'unread' : '';
                 const dateStr = new Date(item.timestamp).toLocaleDateString();
                 const safeNotes = window.app.escape(item.notes);
                 
                 // Dados para passar para o modal
-                const modalData = encodeURIComponent(JSON.stringify({...item, id: d.id}));
+                const modalData = encodeURIComponent(JSON.stringify(item));
 
                 list.innerHTML += `
                 <div class="adm-pain-card ${unreadClass}" onclick="window.app.admOpenPainDetail('${modalData}')">
