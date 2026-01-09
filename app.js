@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, getDocs, onSnapshot, updateDoc, deleteDoc, arrayUnion, arrayRemove, query, limit, startAfter, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, addDoc, getDoc, getDocs, onSnapshot, updateDoc, deleteDoc, arrayUnion, arrayRemove, query, limit, startAfter, orderBy, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- ÁREA DE CONFIGURAÇÃO ---
@@ -41,6 +41,7 @@ const C_NEWS = 'expliq_news_v9';
 const C_QUOTES = 'expliq_quotes_v9';
 const C_TEMPLATES = 'expliq_templates_v9';
 const C_VIDEOS = 'expliq_strength_videos_v9'; 
+const C_PAIN = 'expliq_pain_v9'; // NOVA COLEÇÃO DE DOR
 
 // !!! SEGURANÇA ADMIN !!!
 const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edgarzanin@outlook.com"]; 
@@ -48,7 +49,7 @@ const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edg
 let currentUser = null;
 let currentMonth = new Date();
 let selectedDayDate = null; 
-let allUsersCache = []; // Cache simplificado para usuários
+let allUsersCache = []; 
 
 // Variáveis temporárias
 let tempPostFile = null;
@@ -71,15 +72,22 @@ let allNews = [];
 let editingStudentRaceIndex = null;
 
 // Estado de Conclusão de Treino
-let pendingFinishWorkoutTitle = null; // Título do treino que está sendo concluído
-let selectedPainLevel = null; // Nível de dor selecionado
+let pendingFinishWorkoutTitle = null; 
+let selectedPainLevel = null; 
 
 // Variáveis de Paginação Admin
 let lastVisibleUser = null;
 let isLoadingUsers = false;
 
+// Estado Admin Fisio
+let currentPainId = null; // ID da dor sendo respondida
+
+// Listeners de Notificação
+let unsubscribeUserNotif = null;
+let unsubscribeAdminNotif = null;
+
 window.app = {
-    admUsersCache: {}, // Cache local para acesso rápido aos dados dos usuários no admin
+    admUsersCache: {}, 
 
     init: async () => {
         onAuthStateChanged(auth, (user) => {
@@ -87,19 +95,19 @@ window.app = {
                 window.app.loadUser(user.email);
             } else {
                 window.app.screen('view-landing');
+                if(unsubscribeUserNotif) unsubscribeUserNotif();
+                if(unsubscribeAdminNotif) unsubscribeAdminNotif();
             }
         });
         window.app.renderCalendar();
     },
     
-    // --- HAPTICS (Feedback Tátil) ---
     haptic: () => {
         if (navigator.vibrate) {
-            navigator.vibrate(50); // Vibração leve
+            navigator.vibrate(50); 
         }
     },
 
-    // --- FUNÇÃO AUXILIAR PARA CORRIGIR TEXTO EM CAIXA ALTA ---
     formatText: (text) => {
         if(!text) return '';
         if (text && text.toUpperCase() === text && /[a-zA-Z]/.test(text)) {
@@ -199,10 +207,13 @@ window.app = {
         document.getElementById('tab-'+tab).classList.remove('hidden');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+        
         if(tab === 'home') window.app.renderHome();
         if(tab === 'workouts') window.app.renderWorkoutsList();
         if(tab === 'social') window.app.loadFeed();
         if(tab === 'news') window.app.loadNews();
+        if(tab === 'health') window.app.loadHealthTab(); // NOVA ABA
+        
         window.app.haptic();
     },
 
@@ -293,14 +304,20 @@ window.app = {
             if(docSnap.exists()) {
                 currentUser = docSnap.data();
                 const btnAdmin = document.getElementById('btn-admin-access');
-                if(btnAdmin) btnAdmin.style.display = ADMIN_EMAILS.includes(currentUser.email) ? 'block' : 'none';
+                const isAdmin = ADMIN_EMAILS.includes(currentUser.email);
                 
-                // --- REMOVIDO LISTENER GLOBAL DO ADMIN PARA MELHORAR PERFORMANCE ---
-                // Agora o Admin carrega usuários por demanda na aba de Admin.
+                if(btnAdmin) btnAdmin.style.display = isAdmin ? 'block' : 'none';
+                
+                // NOTIFICAÇÕES (Badges)
+                window.app.setupUserNotifications(email);
+                if (isAdmin) window.app.setupAdminNotifications();
+                
+                // CARREGAR PROVAS DA COMUNIDADE (Para TODOS verem as bolinhas laranjas)
+                window.app.loadCommunityRaces();
 
                 if (document.getElementById('view-admin').classList.contains('active')) return;
                 
-                if(!currentUser.active && !ADMIN_EMAILS.includes(currentUser.email)) { 
+                if(!currentUser.active && !isAdmin) { 
                     window.app.screen('view-pending'); 
                     return; 
                 }
@@ -309,14 +326,164 @@ window.app = {
                 const htxt = document.getElementById('header-avatar-txt');
                 if(av) { himg.src=av; himg.style.display='block'; htxt.style.display='none'; }
                 else { himg.style.display='none'; htxt.style.display='block'; htxt.innerText=currentUser.name[0]; }
+                
                 window.app.screen('view-app');
-                window.app.nav('home');
+                
+                // CORREÇÃO: Carregar conteúdo completo da Home (incluindo News e Quotes) ao iniciar
+                const activeTabEl = document.querySelector('.nav-item.active');
+                if (activeTabEl && activeTabEl.dataset.tab === 'home') {
+                    window.app.renderHome();
+                } else if (!activeTabEl) {
+                    window.app.nav('home');
+                } else {
+                    // Caso o app inicie em outra aba (ex: recarregou na aba health)
+                    const tab = activeTabEl.dataset.tab;
+                    if(tab === 'workouts') window.app.renderWorkoutsList();
+                    if(tab === 'social') window.app.loadFeed();
+                    if(tab === 'news') window.app.loadNews();
+                    if(tab === 'health') window.app.loadHealthTab();
+                }
             }
         });
     },
 
+    // --- FUNÇÃO PARA CARREGAR PROVAS DE TODOS (COMUNIDADE) ---
+    loadCommunityRaces: async () => {
+        try {
+            // Busca simplificada para popular o cache de usuários e suas provas
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_USERS));
+            const snap = await getDocs(q);
+            const users = [];
+            snap.forEach(d => users.push(d.data()));
+            allUsersCache = users; // Atualiza variável global
+            window.app.renderCalendar(); // Redesenha o calendário com os novos dados
+        } catch (e) {
+            console.error("Erro ao carregar provas da comunidade:", e);
+        }
+    },
+
     logout: () => { signOut(auth).then(() => { currentUser = null; window.app.screen('view-landing'); }); },
     
+    // --- LÓGICA DE NOTIFICAÇÕES ---
+    setupUserNotifications: (email) => {
+        if(unsubscribeUserNotif) unsubscribeUserNotif();
+        // Escuta dores respondidas que ainda não foram lidas pelo usuário
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
+            where("email", "==", email), 
+            where("response", "!=", null),
+            where("readByUser", "==", false)
+        );
+
+        unsubscribeUserNotif = onSnapshot(q, (snapshot) => {
+            const count = snapshot.size;
+            const badgeNav = document.getElementById('nav-badge-health');
+            const badgeCard = document.getElementById('health-badge-counter');
+            
+            if(count > 0) {
+                if(badgeNav) badgeNav.classList.remove('hidden');
+                if(badgeCard) {
+                    badgeCard.innerText = count;
+                    badgeCard.classList.remove('hidden');
+                }
+            } else {
+                if(badgeNav) badgeNav.classList.add('hidden');
+                if(badgeCard) badgeCard.classList.add('hidden');
+            }
+        });
+    },
+
+    setupAdminNotifications: () => {
+        if(unsubscribeAdminNotif) unsubscribeAdminNotif();
+        // Escuta dores que ainda não foram lidas pelo admin
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
+            where("readByAdmin", "==", false)
+        );
+
+        unsubscribeAdminNotif = onSnapshot(q, (snapshot) => {
+            const count = snapshot.size;
+            const badge = document.getElementById('adm-physio-badge');
+            
+            if(count > 0) {
+                if(badge) {
+                    badge.innerText = count;
+                    badge.classList.remove('hidden');
+                }
+            } else {
+                if(badge) badge.classList.add('hidden');
+            }
+        });
+    },
+
+    // --- ABA SAÚDE (ALUNO) ---
+    loadHealthTab: () => {
+        if(!currentUser) return;
+        const list = document.getElementById('health-pain-list');
+        list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
+
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
+            where("email", "==", currentUser.email),
+            orderBy("timestamp", "desc"),
+            limit(20)
+        );
+
+        getDocs(q).then((snapshot) => {
+            if(snapshot.empty) {
+                list.innerHTML = '<p style="text-align: center; color: #999; font-size: 13px; padding: 20px;">Nenhum registro de dor.</p>';
+                return;
+            }
+
+            list.innerHTML = '';
+            snapshot.forEach(d => {
+                const item = d.data();
+                const statusClass = item.responded ? 'answered' : 'pending';
+                const statusText = item.responded ? 'Respondido' : 'Pendente';
+                const dateStr = new Date(item.timestamp).toLocaleDateString();
+
+                let responseHtml = '';
+                if(item.response) {
+                    responseHtml = `
+                    <div class="pain-response-box">
+                        <strong><i class="fa-solid fa-user-doctor"></i> Fisio Respondeu:</strong>
+                        ${item.response}
+                    </div>`;
+                }
+
+                list.innerHTML += `
+                <div class="pain-item ${statusClass}">
+                    <div class="pain-header">
+                        <span>${dateStr} - ${item.workoutTitle}</span>
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <p class="pain-desc">
+                        <strong>Nível ${item.painLevel}/7:</strong> ${item.notes}
+                    </p>
+                    ${responseHtml}
+                </div>`;
+            });
+            
+            // Limpa notificação ao visualizar a aba
+            window.app.markPainAsReadByUser();
+        });
+    },
+
+    markPainAsReadByUser: async () => {
+        if(!currentUser) return;
+        // Busca itens não lidos com resposta
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
+            where("email", "==", currentUser.email), 
+            where("readByUser", "==", false),
+            where("response", "!=", null)
+        );
+        const snapshot = await getDocs(q);
+        snapshot.forEach(async (d) => {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, d.id), { readByUser: true });
+        });
+    },
+
+    // ... (MANTÉM AS DEMAIS FUNÇÕES DO PERFIL, PESO, ETC...)
+    // AQUI COLOCAREMOS APENAS AS ATUALIZAÇÕES PARA NÃO REPETIR TUDO,
+    // MAS VOU INCLUIR CONFIRMFINISHWORKOUT POIS ELA MUDOU
+
     openProfile: () => {
         if(!currentUser) return;
         window.app.screen('view-profile');
@@ -363,33 +530,26 @@ window.app = {
         if(btnAddRace) {
             const todayStr = new Date().toISOString().split('T')[0];
             const hasActiveGoal = (currentUser.races || []).some(r => r.date >= todayStr);
-            
-            if (hasActiveGoal) {
-                btnAddRace.style.display = 'none';
-            } else {
-                btnAddRace.style.display = 'block';
-            }
+            if (hasActiveGoal) btnAddRace.style.display = 'none';
+            else btnAddRace.style.display = 'block';
         }
     },
-
+    
+    // ... funcoes auxiliares de perfil omitidas para brevidade, mantem iguais ...
     openEditRaceDate: (index) => {
         if (!currentUser || !currentUser.races || !currentUser.races[index]) return;
         editingStudentRaceIndex = index;
         const race = currentUser.races[index];
-        
         document.getElementById('edit-race-date-input').value = race.date || '';
         document.getElementById('modal-edit-date').classList.add('active');
     },
 
     saveRaceDate: async () => {
         if (editingStudentRaceIndex === null || !currentUser) return;
-        
         const newDate = document.getElementById('edit-race-date-input').value;
         if (!newDate) return window.app.toast("Selecione uma data.");
-
         const races = currentUser.races;
         races[editingStudentRaceIndex].date = newDate;
-
         window.app.toast("Atualizando data...");
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), { races });
@@ -407,10 +567,8 @@ window.app = {
     toggleEditProfile: (isEditing) => {
         const inputs = document.querySelectorAll('#profile-form-container input');
         inputs.forEach(inp => inp.disabled = !isEditing);
-        
         const btnEdit = document.getElementById('btn-edit-profile');
         const actionBtns = document.getElementById('profile-edit-actions');
-        
         if (isEditing) {
             btnEdit.style.display = 'none';
             actionBtns.style.display = 'flex';
@@ -422,16 +580,12 @@ window.app = {
 
     saveProfile: async () => {
         if(!currentUser) return;
-        
         const birthDate = document.getElementById('prof-birth').value;
         const city = document.getElementById('prof-city').value;
         const country = document.getElementById('prof-country').value;
         const height = document.getElementById('prof-height').value;
-        
         let updates = { birthDate, city, country, height };
-
         window.app.toast("Salvando perfil...");
-        
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentUser.email), updates);
             currentUser = { ...currentUser, ...updates };
@@ -523,20 +677,16 @@ window.app = {
             }
         }
     },
-    
+
+    // ... funcoes de modal de prova ...
     showAddRaceModal: () => document.getElementById('modal-add-race').classList.add('active'),
     
     addStudentRace: async () => {
         const name = document.getElementById('new-race-name').value;
         const distEl = document.getElementById('new-race-dist');
         const dist = distEl ? parseFloat(distEl.value) : 10; 
-        
         const timeEl = document.getElementById('new-race-est-time');
         const estTime = timeEl ? timeEl.value : "Não informado";
-        
-        const strengthVideoEl = document.getElementById('new-race-strength-video');
-        const strengthVideo = strengthVideoEl ? strengthVideoEl.value : "";
-
         const date = document.getElementById('new-race-date').value;
 
         if(!name || !date) return window.app.toast("Preencha o nome e data.");
@@ -565,7 +715,7 @@ window.app = {
                     estTime: estTime,
                     startDate: startDateStr,
                     raceDate: date,
-                    strengthVideo: strengthVideo 
+                    strengthVideo: "" 
                 })
             });
 
@@ -623,7 +773,9 @@ window.app = {
         }
     },
 
+    // ... calendarios e render home ...
     changeMonth: (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); window.app.renderCalendar(); },
+    
     renderCalendar: () => {
         if(!currentUser) return;
         const y = currentMonth.getFullYear();
@@ -670,15 +822,12 @@ window.app = {
             
             if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
 
-            // NOTA: Para admin, como agora paginamos, o calendário não mostra TODAS as provas de todos alunos.
-            // Apenas mostra dos que já foram carregados no cache (allUsersCache agora é window.app.admUsersCache convertido em array)
-            if (ADMIN_EMAILS.includes(currentUser.email)) {
-                // Convertendo objeto de cache em array para iterar
-                const loadedUsers = Object.values(window.app.admUsersCache);
+            // LÓGICA ATUALIZADA: Mostrar bolinha laranja para TODOS se houver prova de OUTRO aluno
+            if (allUsersCache && allUsersCache.length > 0) {
                 let hasStudentRace = false;
-                
-                loadedUsers.forEach(u => {
-                    if (u.races) {
+                allUsersCache.forEach(u => {
+                    // Exibir provas de outros (currentUser.email garante que não duplique para o próprio aluno)
+                    if (u.email !== currentUser.email && u.races) {
                         u.races.forEach(r => {
                             if (r.date === dateStr) {
                                 hasStudentRace = true;
@@ -687,7 +836,6 @@ window.app = {
                         });
                     }
                 });
-                
                 if (hasStudentRace) {
                     dotHtml += `<div class="cal-race-marker" title="Prova de aluno"></div>`;
                 }
@@ -750,14 +898,12 @@ window.app = {
 
     renderHome: () => { window.app.renderCalendar(); window.app.renderTodayCard(); window.app.loadQuote(); window.app.loadHomeNews(); },
     
+    // ... news e videos ...
     loadHomeNews: () => {
-        // Skeleton para noticias
         const container = document.getElementById('home-latest-news');
         container.innerHTML = `<h3 style="font-size: 16px; margin: 0 0 15px;">Última Novidade</h3><div class="skeleton" style="width:100%; height:200px; border-radius:12px;"></div>`;
-
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
             const news = []; snap.forEach(d => news.push({id: d.id, ...d.data()})); news.sort((a,b) => b.created - a.created);
-            
             if(news.length > 0) {
                 const n = news[0];
                 container.innerHTML = `
@@ -778,7 +924,6 @@ window.app = {
         const list = document.getElementById('strength-video-list');
         list.innerHTML = '<p style="text-align:center; color:#666;">Carregando...</p>';
         document.getElementById('modal-strength-videos').classList.add('active');
-
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
             list.innerHTML = '';
             if(snap.empty) {
@@ -891,6 +1036,7 @@ window.app = {
         window.app.renderPainScale();
     },
 
+    // --- CONFIRMAÇÃO DO TREINO COM REGISTRO DE DOR AUTOMÁTICO ---
     confirmFinishWorkout: async () => {
         if (!pendingFinishWorkoutTitle) return;
         const notes = document.getElementById('workout-feedback-text').value.trim();
@@ -906,12 +1052,27 @@ window.app = {
             races[rIdx].workouts[wIdx].done = true;
             races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
             
+            // Registra feedback na ficha do treino
             if (selectedPainLevel > 0 || notes) {
                 races[rIdx].workouts[wIdx].feedback = {
                     painLevel: selectedPainLevel,
                     notes: notes,
                     timestamp: Date.now()
                 };
+
+                // --- CRIA CARD NO FISIO AUTOMATICAMENTE ---
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), {
+                    email: currentUser.email,
+                    userName: currentUser.name,
+                    workoutTitle: pendingFinishWorkoutTitle,
+                    painLevel: selectedPainLevel,
+                    notes: notes,
+                    timestamp: Date.now(),
+                    readByAdmin: false,
+                    responded: false,
+                    response: null,
+                    readByUser: true
+                });
             }
 
             currentUser.races = races;
@@ -929,6 +1090,7 @@ window.app = {
         }
     },
 
+    // ... quote, play video, workouts list ... (MANTÉM)
     loadQuote: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s)=>{
             const quotes = [];
@@ -1016,7 +1178,6 @@ window.app = {
 
     loadFeed: () => {
         const feed = document.getElementById('social-feed');
-        // --- SKELETON LOADING ---
         feed.innerHTML = '';
         for(let i=0; i<3; i++) {
             feed.innerHTML += `
@@ -1104,7 +1265,7 @@ window.app = {
 
     toggleLike: async (postId) => {
         if(!currentUser) return;
-        window.app.haptic(); // HAPTIC
+        window.app.haptic(); 
         const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
         const postSnap = await getDoc(postRef);
         if(postSnap.exists()) {
@@ -1204,7 +1365,6 @@ window.app = {
     openNewsDetail: (id) => {
         const n = allNews.find(item => item.id === id);
         if(!n) return;
-        
         const imgContainer = document.getElementById('news-det-img-container');
         if(n.img) {
             imgContainer.style.backgroundImage = `url('${n.img}')`;
@@ -1212,34 +1372,26 @@ window.app = {
         } else {
             imgContainer.style.display = 'none';
         }
-        
         document.getElementById('news-det-date').innerText = new Date(n.created).toLocaleDateString();
         document.getElementById('news-det-title').innerText = window.app.formatText(n.title);
         document.getElementById('news-det-body').innerText = window.app.formatText(n.body);
-        
         document.querySelector('.nav-bar').style.display = 'none';
         const detailScreen = document.getElementById('view-news-detail');
         detailScreen.classList.add('active');
         detailScreen.style.overflowY = 'auto';
         detailScreen.scrollTop = 0;
-
-        // CORREÇÃO: Fundo branco ao abrir notícia para evitar faixa azul
         document.body.style.backgroundColor = '#FFF';
     },
 
     closeNewsDetail: () => {
         document.getElementById('view-news-detail').classList.remove('active');
         document.querySelector('.nav-bar').style.display = 'flex';
-
-        // CORREÇÃO: Restaura fundo azul ao fechar
         document.body.style.backgroundColor = '#9cafcc';
     },
 
     loadAdmin: () => { 
         document.getElementById('view-admin').classList.add('active'); 
         window.app.admTab('users'); 
-        
-        // CORREÇÃO: Fundo branco no admin para evitar faixa azul
         document.body.style.backgroundColor = '#FFF';
     },
 
@@ -1262,23 +1414,90 @@ window.app = {
         if(t === 'quotes') window.app.admLoadQuotes();
         if(t === 'templates') window.app.admLoadTemplates();
         if(t === 'videos') window.app.admLoadStrengthVideos();
+        if(t === 'physio') window.app.admLoadPhysio(); // NOVA ABA
     },
     
-    // --- LÓGICA DE PAGINAÇÃO DE USUÁRIOS (SUBSTITUI O ANTIGO admLoadUsers) ---
-    
+    // --- ADMIN FISIO ---
+    admLoadPhysio: () => {
+        const list = document.getElementById('adm-physio-list');
+        list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
+        
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), orderBy("timestamp", "desc"));
+        
+        onSnapshot(q, (snapshot) => {
+            if(snapshot.empty) {
+                list.innerHTML = '<p style="text-align: center; color: #999;">Nenhum relato.</p>';
+                return;
+            }
+            list.innerHTML = '';
+            snapshot.forEach(d => {
+                const item = d.data();
+                const unreadClass = !item.readByAdmin ? 'unread' : '';
+                const dateStr = new Date(item.timestamp).toLocaleDateString();
+                const safeNotes = window.app.escape(item.notes);
+                
+                // Dados para passar para o modal
+                const modalData = encodeURIComponent(JSON.stringify({...item, id: d.id}));
+
+                list.innerHTML += `
+                <div class="adm-pain-card ${unreadClass}" onclick="window.app.admOpenPainDetail('${modalData}')">
+                    <div class="adm-pain-info">
+                        <div class="adm-pain-user">${item.userName} <span style="font-weight:400; font-size:12px; color:#888;">- ${item.workoutTitle}</span></div>
+                        <div class="adm-pain-date">${dateStr}</div>
+                        <div class="adm-pain-msg"><strong>Dor ${item.painLevel}:</strong> ${item.notes}</div>
+                    </div>
+                    ${item.responded ? '<i class="fa-solid fa-check" style="color:var(--success);"></i>' : '<i class="fa-solid fa-envelope" style="color:#ddd;"></i>'}
+                </div>`;
+            });
+        });
+    },
+
+    admOpenPainDetail: async (dataString) => {
+        const data = JSON.parse(decodeURIComponent(dataString));
+        currentPainId = data.id;
+
+        const view = document.getElementById('adm-pain-detail-view');
+        view.innerHTML = `
+            <strong>Aluno:</strong> ${data.userName}<br>
+            <strong>Treino:</strong> ${data.workoutTitle}<br>
+            <strong>Data:</strong> ${new Date(data.timestamp).toLocaleDateString()}<br>
+            <strong>Nível de Dor:</strong> ${data.painLevel}/7<br>
+            <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #ccc;">${data.notes}</div>
+        `;
+        
+        document.getElementById('adm-pain-response-text').value = data.response || '';
+        document.getElementById('modal-admin-pain-response').classList.add('active');
+
+        // Marca como lido pelo admin ao abrir
+        if(!data.readByAdmin) {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, currentPainId), { readByAdmin: true });
+        }
+    },
+
+    admSendPainResponse: async () => {
+        const response = document.getElementById('adm-pain-response-text').value;
+        if(!response) return window.app.toast("Escreva uma resposta.");
+
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, currentPainId), {
+            response: response,
+            responseDate: Date.now(),
+            responded: true,
+            readByUser: false // Notifica o aluno
+        });
+
+        window.app.toast("Resposta enviada!");
+        document.getElementById('modal-admin-pain-response').classList.remove('active');
+    },
+
+    // --- CONTINUAÇÃO ADMIN USUÁRIOS... (mantem o que já existia) ---
     admLoadUsers: async () => {
         const list = document.getElementById('adm-users-list');
         list.innerHTML = ''; 
         lastVisibleUser = null; 
         window.app.admUsersCache = {}; 
-        
-        // Remove botão "carregar mais" antigo se existir
         const oldBtn = document.getElementById('btn-load-more-users');
         if(oldBtn) oldBtn.remove();
-        
         await window.app.admFetchNextUsers();
-        
-        // Adiciona botão "Carregar Mais" no final da lista
         const loadMoreBtn = document.createElement('button');
         loadMoreBtn.id = 'btn-load-more-users';
         loadMoreBtn.innerText = 'Carregar mais alunos';
@@ -1292,19 +1511,13 @@ window.app = {
     admFetchNextUsers: async () => {
         if (isLoadingUsers) return;
         isLoadingUsers = true;
-        
         const list = document.getElementById('adm-users-list');
-        
         try {
             let q;
             const usersRef = collection(db, 'artifacts', appId, 'public', 'data', C_USERS);
-            
-            // Ordenar por nome para ficar organizado e consistente
             if (lastVisibleUser) {
-                // Busca os próximos 20 após o último
                 q = query(usersRef, orderBy('name'), startAfter(lastVisibleUser), limit(20));
             } else {
-                // Busca os primeiros 20
                 q = query(usersRef, orderBy('name'), limit(20));
             }
 
@@ -1324,22 +1537,16 @@ window.app = {
                     btn.disabled = false;
                 }
             }
-
             lastVisibleUser = documentSnapshots.docs[documentSnapshots.docs.length - 1];
-
             let html = '';
             documentSnapshots.forEach(d => {
                 const u = d.data();
                 const docId = d.id;
                 const safeId = window.app.escape(docId);
                 window.app.admUsersCache[docId] = u; 
-                
-                // Helper function para gerar o HTML do card
                 html += window.app.createAdmUserCardHTML(u, docId, safeId);
             });
-
             list.insertAdjacentHTML('beforeend', html);
-
         } catch (error) {
             console.error("Erro ao carregar usuários:", error);
             window.app.toast("Erro ao listar alunos.");
@@ -1351,7 +1558,6 @@ window.app = {
     createAdmUserCardHTML: (u, docId, safeId) => {
         const isUserOpen = expandedUsers.has(docId) ? 'open' : ''; 
         const checked = u.active ? 'checked' : '';
-        
         let totalWorkouts = 0;
         let doneWorkouts = 0;
         if(u.races && u.races.length > 0) {
@@ -1369,7 +1575,6 @@ window.app = {
             u.races.forEach((r, rIdx) => {
                 const raceKey = `${docId}-${rIdx}`; 
                 const isRaceOpen = expandedRaces.has(raceKey) ? 'open' : '';
-                
                 let workoutsHtml = '';
                 if(r.workouts && r.workouts.length > 0) {
                     r.workouts.forEach((w, wIdx) => {
@@ -1378,11 +1583,9 @@ window.app = {
                             const dp = w.scheduledDate.split('-'); 
                             wDate = `<span style="font-size:10px; color:#666; background:#eee; padding:2px 5px; border-radius:4px;">${dp[2]}/${dp[1]}</span>`; 
                         }
-                        
                         const isDone = w.done;
                         const statusIcon = isDone ? '<i class="fa-solid fa-circle-check" style="color:var(--success)"></i>' : '<i class="fa-regular fa-circle" style="color:#ccc"></i>';
                         const undoBtn = isDone ? `<button onclick="window.app.admToggleWorkoutStatus('${safeId}', ${rIdx}, ${wIdx}, false)" style="color:var(--text-sec); font-size:10px; border:1px solid #ddd; border-radius:4px; padding:2px 5px; cursor:pointer; margin-right:5px; background:#fff;">Desfazer</button>` : '';
-                        
                         let feedbackHtml = '';
                         if(w.feedback && (w.feedback.painLevel !== undefined || w.feedback.notes)) {
                             feedbackHtml = `
@@ -1391,7 +1594,6 @@ window.app = {
                                 <div style="margin-top:2px;">${w.feedback.notes || 'Sem observações.'}</div>
                             </div>`;
                         }
-
                         workoutsHtml += `
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #eee; padding:8px 0;">
                             <div style="flex:1;">
@@ -1412,9 +1614,7 @@ window.app = {
                 } else { 
                     workoutsHtml = '<p style="font-size:11px; color:#999;">Sem treinos.</p>'; 
                 }
-                
                 workoutsHtml += `<div style="display:flex; gap:5px; margin-top:10px; justify-content:flex-end;"><button onclick="window.app.admAddWorkoutInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ Treino</button><button onclick="window.app.admImportTemplateInline('${safeId}', ${rIdx})" class="adm-btn-small" style="background:#f0f0f0;">+ Modelo</button></div>`;
-                
                 goalsHtml += `
                 <div class="adm-item-box">
                     <div class="adm-row-header" onclick="window.app.admToggleGoal('${raceKey}')">
@@ -1430,7 +1630,6 @@ window.app = {
         } else { 
             goalsHtml = '<p style="font-size:12px; color:#999; padding:10px;">Sem objetivos.</p>'; 
         }
-        
         return `
         <div class="card" style="padding:15px; margin-bottom:10px;">
             <div style="display:flex; align-items:center; gap:15px; padding-bottom:5px;">
@@ -1438,7 +1637,6 @@ window.app = {
                 <div style="flex:1; cursor:pointer;" onclick="window.app.admToggleUser('${safeId}')">
                     <span style="font-weight:700; font-size:16px;">${u.name}</span><br>
                     <span style="font-size:12px; color:#888;">${u.email}</span>
-                    
                     <div class="progress-container" style="height:6px; margin-top:8px; background:#eee;">
                         <div class="progress-bar colored" style="width:${globalPct}%;"></div>
                     </div>
@@ -1453,12 +1651,11 @@ window.app = {
         </div>`;
     },
 
-    // --- LÓGICA DE VÍDEOS ADMIN ---
+    // ... videos admin ...
     admAddStrengthVideo: async () => {
         const title = document.getElementById('adm-video-title').value;
         const link = document.getElementById('adm-video-link').value;
         if(!title || !link) return window.app.toast("Preencha título e link");
-        
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS)), { 
             title, link, created: Date.now() 
         });
@@ -1510,13 +1707,10 @@ window.app = {
     admShowWorkoutDetail: (userId, rIdx, wIdx) => {
         const user = window.app.admUsersCache[userId];
         if (!user || !user.races[rIdx] || !user.races[rIdx].workouts[wIdx]) return;
-
         const w = user.races[rIdx].workouts[wIdx];
-        
         document.getElementById('adm-workout-det-title').innerText = w.title;
         document.getElementById('adm-workout-det-desc').innerText = w.desc;
         const vidContainer = document.getElementById('adm-workout-det-video-container');
-        
         if (w.video) {
             const safeVideo = window.app.escape(w.video);
             vidContainer.style.display = 'block';
@@ -1524,7 +1718,6 @@ window.app = {
         } else {
             vidContainer.style.display = 'none';
         }
-        
         document.getElementById('modal-adm-workout-detail').classList.add('active');
     },
     
@@ -1592,25 +1785,19 @@ window.app = {
     
     admAddRaceInline: async (docId) => { 
         currentAdmUser = docId;
-        
         const tplSelect = document.getElementById('adm-race-template-select');
         tplSelect.innerHTML = '<option value="">Carregando...</option>';
-        
         document.getElementById('adm-race-name').value = '';
         document.getElementById('adm-race-date').value = '';
-        
         const tomorrow = new Date(); 
         tomorrow.setDate(tomorrow.getDate()+1);
         document.getElementById('adm-start-date').value = tomorrow.toISOString().split('T')[0];
-        
         document.getElementById('adm-race-method').value = 'ia';
         document.getElementById('adm-race-dist').value = '';
         document.getElementById('adm-race-time').value = '';
         document.getElementById('adm-race-video').value = '';
-        
         window.app.admToggleRaceMode();
         document.getElementById('modal-adm-add-race').classList.add('active');
-
         const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES));
         tplSelect.innerHTML = '<option value="">Selecione...</option>';
         querySnapshot.forEach((doc) => {
@@ -1650,10 +1837,8 @@ window.app = {
                 const dist = parseFloat(document.getElementById('adm-race-dist').value) || 0;
                 const time = document.getElementById('adm-race-time').value || "Não informado";
                 const video = document.getElementById('adm-race-video').value || "";
-
                 targetDistance = dist;
                 estimatedTime = time;
-
                 const response = await fetch(CF_WORKER_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1666,7 +1851,6 @@ window.app = {
                         strengthVideo: video
                     })
                 });
-
                 if (!response.ok) {
                     let errorDetails = "Erro desconhecido";
                     try {
@@ -1675,10 +1859,8 @@ window.app = {
                     } catch(e) { errorDetails = await response.text(); }
                     throw new Error(`Worker Error: ${errorDetails}`);
                 }
-
                 const aiWorkoutsRaw = await response.json();
                 if (!Array.isArray(aiWorkoutsRaw)) throw new Error("Formato inválido recebido da IA.");
-
                 newWorkouts = aiWorkoutsRaw.map(w => ({
                     title: w.title,
                     desc: w.desc,
@@ -1687,31 +1869,24 @@ window.app = {
                     scheduledDate: w.date,
                     type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run')
                 }));
-
             } else {
                 const tplId = document.getElementById('adm-race-template-select').value;
                 if (!tplId) throw new Error("Selecione um modelo.");
-
                 const tSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tplId));
                 if (!tSnap.exists()) throw new Error("Modelo não encontrado.");
-                
                 const tData = tSnap.data();
                 const startDate = new Date(startDateStr);
-                
                 newWorkouts = tData.workouts.map((w, index) => {
                     const date = new Date(startDate);
                     date.setDate(date.getDate() + index);
                     return { ...w, scheduledDate: date.toISOString().split('T')[0], done: false };
                 });
             }
-
             const userRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, currentAdmUser);
             const userSnap = await getDoc(userRef);
             if (!userSnap.exists()) throw new Error("Usuário não encontrado.");
-            
             const uData = userSnap.data();
             const races = uData.races || [];
-            
             races.push({ 
                 name, 
                 date: raceDate, 
@@ -1720,12 +1895,9 @@ window.app = {
                 workouts: newWorkouts, 
                 created: new Date().toISOString() 
             });
-
             await updateDoc(userRef, { races });
-            
             window.app.toast("Objetivo criado com sucesso!");
             document.getElementById('modal-adm-add-race').classList.remove('active');
-
         } catch (error) {
             console.error(error);
             window.app.toast("Erro: " + error.message);
