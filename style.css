@@ -59,7 +59,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .input { width: 100%; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background-color: #FFF; font-size: 16px; color: var(--text-main); outline: none; font-family: var(--font-main); transition: 0.2s; -webkit-appearance: none; box-shadow: var(--shadow); }
 .input:focus { border-color: var(--primary); }
 
-/* BotÃµes */
+/* Botões */
 .btn { width: 100%; padding: 18px; border-radius: var(--radius); border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: var(--font-main); transition: 0.2s; -webkit-user-select: none; letter-spacing: 0.5px; }
 .btn-primary { background-color: var(--primary); color: #FFF; box-shadow: 0 5px 15px rgba(255, 138, 65, 0.4); }
 .btn-primary:active { transform: scale(0.98); }
@@ -68,7 +68,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .btn-danger { background-color: #ffe6e6; color: var(--red); }
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
 
-/* CALENDÃ RIO */
+/* CALENDÁRIO */
 .calendar-wrapper { padding: 20px 20px 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .calendar-title { font-weight: 400; font-size: 24px; text-transform: capitalize; color: var(--text-main); }
@@ -211,4 +211,140 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 }
 .feed-img.loaded {
     opacity: 1;
+}
+
+/* --- SAÚDE & FISIO (NOVOS ESTILOS) --- */
+
+/* Lista de Dor (Aluno) */
+.pain-item {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-left: 4px solid #ccc;
+    position: relative;
+    transition: transform 0.2s;
+    margin-bottom: 12px;
+}
+
+.pain-item:active {
+    transform: scale(0.98);
+}
+
+.pain-item.pending {
+    border-left-color: var(--text-sec); /* Laranja se pendente */
+    background: #fffbf7;
+}
+
+.pain-item.answered {
+    border-left-color: var(--success); /* Verde se respondido */
+    background: #f0fff4;
+}
+
+.pain-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.pain-desc {
+    font-size: 14px;
+    color: var(--text-main);
+    margin: 0;
+    line-height: 1.5;
+    font-weight: 500;
+}
+
+.pain-response-box {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(0,0,0,0.1);
+    font-size: 13px;
+    color: var(--text-main);
+    background: rgba(255,255,255,0.5);
+}
+
+.pain-response-box strong {
+    color: var(--primary);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.status-badge {
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.pending {
+    background: #ffe0b2;
+    color: var(--text-sec);
+}
+
+.status-badge.answered {
+    background: #c8e6c9;
+    color: #2e7d32;
+}
+
+/* Lista de Dor (Admin) */
+.adm-pain-card {
+    background: #FFF;
+    border: 1px solid #EEE;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Faixa lateral para indicar não lido no admin */
+.adm-pain-card.unread::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: var(--red);
+}
+
+.adm-pain-info {
+    flex: 1;
+}
+
+.adm-pain-user {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 2px;
+}
+
+.adm-pain-date {
+    font-size: 11px;
+    color: #888;
+}
+
+.adm-pain-msg {
+    font-size: 13px;
+    color: #555;
+    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%;
 }
