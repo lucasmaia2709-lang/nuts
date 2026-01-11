@@ -236,7 +236,7 @@ window.app = {
         if(tab === 'workouts') window.app.renderWorkoutsList();
         if(tab === 'social') window.app.loadFeed();
         if(tab === 'news') window.app.loadNews();
-        if(tab === 'health') window.app.loadHealthTab(); // NOVA ABA
+        if(tab === 'health') window.app.loadHealthTab(); 
         
         window.app.haptic();
     },
@@ -353,14 +353,13 @@ window.app = {
                 
                 window.app.screen('view-app');
                 
-                // CORREÇÃO: Carregar conteúdo completo da Home (incluindo News e Quotes) ao iniciar
+                // Manter aba ativa correta ao recarregar
                 const activeTabEl = document.querySelector('.nav-item.active');
                 if (activeTabEl && activeTabEl.dataset.tab === 'home') {
                     window.app.renderHome();
                 } else if (!activeTabEl) {
                     window.app.nav('home');
                 } else {
-                    // Caso o app inicie em outra aba (ex: recarregou na aba health)
                     const tab = activeTabEl.dataset.tab;
                     if(tab === 'workouts') window.app.renderWorkoutsList();
                     if(tab === 'social') window.app.loadFeed();
@@ -374,13 +373,12 @@ window.app = {
     // --- FUNÇÃO PARA CARREGAR PROVAS DE TODOS (COMUNIDADE) ---
     loadCommunityRaces: async () => {
         try {
-            // Busca simplificada para popular o cache de usuários e suas provas
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_USERS));
             const snap = await getDocs(q);
             const users = [];
             snap.forEach(d => users.push(d.data()));
-            allUsersCache = users; // Atualiza variável global
-            window.app.renderCalendar(); // Redesenha o calendário com os novos dados
+            allUsersCache = users; 
+            window.app.renderCalendar(); 
         } catch (e) {
             console.error("Erro ao carregar provas da comunidade:", e);
         }
@@ -391,7 +389,6 @@ window.app = {
     // --- LÓGICA DE NOTIFICAÇÕES ---
     setupUserNotifications: (email) => {
         if(unsubscribeUserNotif) unsubscribeUserNotif();
-        // Filtra apenas por email e processa o resto em memória para evitar erro de índice
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
             where("email", "==", email)
         );
@@ -423,7 +420,6 @@ window.app = {
 
     setupAdminNotifications: () => {
         if(unsubscribeAdminNotif) unsubscribeAdminNotif();
-        // Escuta dores que ainda não foram lidas pelo admin
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
             where("readByAdmin", "==", false)
         );
@@ -443,13 +439,44 @@ window.app = {
         });
     },
 
-    // --- ABA SAÚDE (ALUNO) ---
+    // --- NOVAS FUNÇÕES DA ABA SAÚDE ---
+
     loadHealthTab: () => {
+        // Apenas garante que as notificações estão ativas.
+        // O conteúdo visual agora são apenas botões estáticos no HTML.
+        if(!currentUser) return;
+        window.app.setupUserNotifications(currentUser.email);
+    },
+
+    openHealthNutri: () => {
+        window.app.screen('view-health-nutri');
+        window.app.haptic();
+    },
+
+    openHealthMental: () => {
+        window.app.screen('view-health-mental');
+        window.app.haptic();
+    },
+
+    openHealthPhysio: () => {
+        window.app.screen('view-health-physio');
+        window.app.loadPhysioList();
+        window.app.markPainAsReadByUser();
+        window.app.haptic();
+    },
+
+    closeHealthSubView: () => {
+        // Volta para a tela principal e garante que estamos na aba Saúde
+        window.app.screen('view-app');
+        window.app.nav('health');
+        window.app.haptic();
+    },
+
+    loadPhysioList: () => {
         if(!currentUser) return;
         const list = document.getElementById('health-pain-list');
         list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
 
-        // Busca simplificada para evitar erro de índice
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
             where("email", "==", currentUser.email)
         );
@@ -460,11 +487,10 @@ window.app = {
                 return;
             }
 
-            // Ordenação e Limite em Memória (JS)
             let painItems = [];
             snapshot.forEach(d => painItems.push(d.data()));
-            painItems.sort((a,b) => b.timestamp - a.timestamp); // Mais recente primeiro
-            painItems = painItems.slice(0, 20); // Pega apenas os 20 primeiros
+            painItems.sort((a,b) => b.timestamp - a.timestamp); 
+            painItems = painItems.slice(0, 20); 
 
             list.innerHTML = '';
             painItems.forEach(item => {
@@ -493,22 +519,17 @@ window.app = {
                     ${responseHtml}
                 </div>`;
             });
-            
-            // Limpa notificação ao visualizar a aba
-            window.app.markPainAsReadByUser();
         });
     },
 
     markPainAsReadByUser: async () => {
         if(!currentUser) return;
-        // Busca apenas por email
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
             where("email", "==", currentUser.email)
         );
         const snapshot = await getDocs(q);
         snapshot.forEach(async (d) => {
             const data = d.data();
-            // Filtro em memória
             if(data.readByUser === false && data.response != null) {
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, d.id), { readByUser: true });
             }
@@ -516,8 +537,6 @@ window.app = {
     },
 
     // ... (MANTÉM AS DEMAIS FUNÇÕES DO PERFIL, PESO, ETC...)
-    // AQUI COLOCAREMOS APENAS AS ATUALIZAÇÕES PARA NÃO REPETIR TUDO,
-    // MAS VOU INCLUIR CONFIRMFINISHWORKOUT POIS ELA MUDOU
 
     openProfile: () => {
         if(!currentUser) return;
@@ -570,7 +589,6 @@ window.app = {
         }
     },
     
-    // ... funcoes auxiliares de perfil omitidas para brevidade, mantem iguais ...
     openEditRaceDate: (index) => {
         if (!currentUser || !currentUser.races || !currentUser.races[index]) return;
         editingStudentRaceIndex = index;
@@ -713,7 +731,6 @@ window.app = {
         }
     },
 
-    // ... funcoes de modal de prova ...
     showAddRaceModal: () => document.getElementById('modal-add-race').classList.add('active'),
     
     addStudentRace: async () => {
@@ -808,7 +825,6 @@ window.app = {
         }
     },
 
-    // ... calendarios e render home ...
     changeMonth: (dir) => { currentMonth.setMonth(currentMonth.getMonth() + dir); window.app.renderCalendar(); },
     
     renderCalendar: () => {
@@ -857,11 +873,9 @@ window.app = {
             
             if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
 
-            // LÓGICA ATUALIZADA: Mostrar bolinha laranja para TODOS se houver prova de OUTRO aluno
             if (allUsersCache && allUsersCache.length > 0) {
                 let hasStudentRace = false;
                 allUsersCache.forEach(u => {
-                    // Exibir provas de outros (currentUser.email garante que não duplique para o próprio aluno)
                     if (u.email !== currentUser.email && u.races) {
                         u.races.forEach(r => {
                             if (r.date === dateStr) {
@@ -933,7 +947,6 @@ window.app = {
 
     renderHome: () => { window.app.renderCalendar(); window.app.renderTodayCard(); window.app.loadQuote(); window.app.loadHomeNews(); },
     
-    // ... news e videos ...
     loadHomeNews: () => {
         const container = document.getElementById('home-latest-news');
         container.innerHTML = `<h3 style="font-size: 16px; margin: 0 0 15px;">Última Novidade</h3><div class="skeleton" style="width:100%; height:200px; border-radius:12px;"></div>`;
@@ -1071,7 +1084,6 @@ window.app = {
         window.app.renderPainScale();
     },
 
-    // --- CONFIRMAÇÃO DO TREINO COM REGISTRO DE DOR AUTOMÁTICO ---
     confirmFinishWorkout: async () => {
         if (!pendingFinishWorkoutTitle) return;
         const notes = document.getElementById('workout-feedback-text').value.trim();
@@ -1087,7 +1099,6 @@ window.app = {
             races[rIdx].workouts[wIdx].done = true;
             races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
             
-            // Registra feedback na ficha do treino
             if (selectedPainLevel > 0 || notes) {
                 races[rIdx].workouts[wIdx].feedback = {
                     painLevel: selectedPainLevel,
@@ -1095,7 +1106,6 @@ window.app = {
                     timestamp: Date.now()
                 };
 
-                // --- CRIA CARD NO FISIO AUTOMATICAMENTE ---
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), {
                     email: currentUser.email,
                     userName: currentUser.name,
@@ -1125,7 +1135,6 @@ window.app = {
         }
     },
 
-    // ... quote, play video, workouts list ... (MANTÉM)
     loadQuote: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s)=>{
             const quotes = [];
@@ -1449,15 +1458,13 @@ window.app = {
         if(t === 'quotes') window.app.admLoadQuotes();
         if(t === 'templates') window.app.admLoadTemplates();
         if(t === 'videos') window.app.admLoadStrengthVideos();
-        if(t === 'physio') window.app.admLoadPhysio(); // NOVA ABA
+        if(t === 'physio') window.app.admLoadPhysio(); 
     },
     
-    // --- ADMIN FISIO ---
     admLoadPhysio: () => {
         const list = document.getElementById('adm-physio-list');
         list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
         
-        // CORREÇÃO: Removido orderBy da query
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN));
         
         onSnapshot(q, (snapshot) => {
@@ -1466,7 +1473,6 @@ window.app = {
                 return;
             }
             
-            // Ordenação em memória
             let items = [];
             snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
             items.sort((a,b) => b.timestamp - a.timestamp);
@@ -1477,7 +1483,6 @@ window.app = {
                 const dateStr = new Date(item.timestamp).toLocaleDateString();
                 const safeNotes = window.app.escape(item.notes);
                 
-                // Dados para passar para o modal
                 const modalData = encodeURIComponent(JSON.stringify(item));
 
                 list.innerHTML += `
@@ -1509,7 +1514,6 @@ window.app = {
         document.getElementById('adm-pain-response-text').value = data.response || '';
         document.getElementById('modal-admin-pain-response').classList.add('active');
 
-        // Marca como lido pelo admin ao abrir
         if(!data.readByAdmin) {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, currentPainId), { readByAdmin: true });
         }
@@ -1523,14 +1527,13 @@ window.app = {
             response: response,
             responseDate: Date.now(),
             responded: true,
-            readByUser: false // Notifica o aluno
+            readByUser: false 
         });
 
         window.app.toast("Resposta enviada!");
         document.getElementById('modal-admin-pain-response').classList.remove('active');
     },
 
-    // --- CONTINUAÇÃO ADMIN USUÁRIOS... (mantem o que já existia) ---
     admLoadUsers: async () => {
         const list = document.getElementById('adm-users-list');
         list.innerHTML = ''; 
@@ -1692,7 +1695,6 @@ window.app = {
         </div>`;
     },
 
-    // ... videos admin ...
     admAddStrengthVideo: async () => {
         const title = document.getElementById('adm-video-title').value;
         const link = document.getElementById('adm-video-link').value;
