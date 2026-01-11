@@ -118,65 +118,89 @@ window.app = {
     
     compressImage: (file) => {
         return new Promise((resolve) => {
-            if (!file.type.startsWith('image/')) {
+            if (!file || !file.type.startsWith('image/')) {
                 resolve(file);
                 return;
             }
-            const maxWidth = 1080; 
-            const quality = 0.7;   
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target.result;
-                img.onload = () => {
-                    let width = img.width;
-                    let height = img.height;
-                    if (width > maxWidth) {
-                        height = Math.round(height * (maxWidth / width));
-                        width = maxWidth;
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob((blob) => {
-                        if (!blob) { resolve(file); return; }
-                        const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                            type: 'image/jpeg',
-                            lastModified: Date.now(),
-                        });
-                        resolve(newFile);
-                    }, 'image/jpeg', quality);
+            try {
+                const maxWidth = 1080; 
+                const quality = 0.7;   
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > maxWidth) {
+                            height = Math.round(height * (maxWidth / width));
+                            width = maxWidth;
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        canvas.toBlob((blob) => {
+                            if (!blob) { resolve(file); return; } // Fallback para original se blob falhar
+                            const newFile = new File([blob], "image.jpg", {
+                                type: 'image/jpeg',
+                                lastModified: Date.now(),
+                            });
+                            resolve(newFile);
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = () => resolve(file); // Fallback
                 };
-                img.onerror = () => resolve(file);
-            };
-            reader.onerror = () => resolve(file);
+                reader.onerror = () => resolve(file); // Fallback
+            } catch (e) {
+                console.warn("Erro na compressão:", e);
+                resolve(file); // Fallback final
+            }
         });
     },
 
     uploadImage: async (file, folderName) => {
         if (!file) return null;
         try {
-            window.app.toast("Otimizando imagem...");
-            const compressedFile = await window.app.compressImage(file);
+            window.app.toast("Processando imagem...");
+            
+            // Tenta comprimir, se der erro usa o original
+            let fileToUpload = file;
+            try {
+                fileToUpload = await window.app.compressImage(file);
+            } catch (e) {
+                console.warn("Compressão falhou, usando original", e);
+            }
             
             window.app.toast("Enviando...");
-            const fileName = `${Date.now()}_${compressedFile.name}`;
             
-            let path = `${folderName}/${fileName}`;
-            if (currentUser) {
-                path = `${folderName}/${currentUser.email}/${fileName}`;
+            // NOME SEGURO: Apenas timestamp para evitar caracteres especiais
+            // e conflitos de caminho no Storage
+            const ext = 'jpg';
+            const safeName = `${Date.now()}_${Math.floor(Math.random()*1000)}.${ext}`;
+            
+            let path = `${folderName}/${safeName}`;
+            if (currentUser && currentUser.email) {
+                path = `${folderName}/${currentUser.email}/${safeName}`;
             }
 
             const storageRef = ref(storage, path);
-            const snapshot = await uploadBytes(storageRef, compressedFile);
+            const snapshot = await uploadBytes(storageRef, fileToUpload);
             const downloadURL = await getDownloadURL(snapshot.ref);
             return downloadURL;
         } catch (error) {
             console.error("Erro no Upload:", error);
-            window.app.toast("Erro ao enviar imagem.");
+            
+            // Diagnóstico de erro para o usuário
+            let msg = "Erro ao enviar imagem.";
+            if(error.code === 'storage/unauthorized') msg = "Sem permissão para enviar.";
+            if(error.code === 'storage/quota-exceeded') msg = "Cota de armazenamento cheia (tente amanhã).";
+            if(error.code === 'storage/retry-limit-exceeded') msg = "Internet instável. Tente novamente.";
+            if(error.code === 'storage/invalid-argument') msg = "Arquivo inválido.";
+
+            window.app.toast(msg); 
             return null;
         }
     },
@@ -367,8 +391,7 @@ window.app = {
     // --- LÓGICA DE NOTIFICAÇÕES ---
     setupUserNotifications: (email) => {
         if(unsubscribeUserNotif) unsubscribeUserNotif();
-        // CORREÇÃO: Removidos filtros múltiplos para evitar erro de índice
-        // Filtra apenas por email e processa o resto em memória
+        // Filtra apenas por email e processa o resto em memória para evitar erro de índice
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
             where("email", "==", email)
         );
@@ -426,8 +449,7 @@ window.app = {
         const list = document.getElementById('health-pain-list');
         list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
 
-        // CORREÇÃO: Removido orderBy("timestamp", "desc") e limit(20)
-        // Isso evita o erro "The query requires an index"
+        // Busca simplificada para evitar erro de índice
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
             where("email", "==", currentUser.email)
         );
@@ -479,7 +501,7 @@ window.app = {
 
     markPainAsReadByUser: async () => {
         if(!currentUser) return;
-        // CORREÇÃO: Simplificada query para buscar apenas por email
+        // Busca apenas por email
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
             where("email", "==", currentUser.email)
         );
