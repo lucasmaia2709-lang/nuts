@@ -41,7 +41,7 @@ const C_NEWS = 'expliq_news_v9';
 const C_QUOTES = 'expliq_quotes_v9';
 const C_TEMPLATES = 'expliq_templates_v9';
 const C_VIDEOS = 'expliq_strength_videos_v9'; 
-const C_PAIN = 'expliq_pain_v9'; // NOVA COLEÇÃO DE DOR
+const C_PAIN = 'expliq_pain_v9'; 
 
 // !!! SEGURANÇA ADMIN !!!
 const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edgarzanin@outlook.com"]; 
@@ -80,11 +80,12 @@ let lastVisibleUser = null;
 let isLoadingUsers = false;
 
 // Estado Admin Fisio
-let currentPainId = null; // ID da dor sendo respondida
+let currentPainId = null; 
 
 // Listeners de Notificação
 let unsubscribeUserNotif = null;
 let unsubscribeAdminNotif = null;
+let unsubscribeFeed = null; // Variável para controlar o listener do feed
 
 window.app = {
     admUsersCache: {}, 
@@ -97,6 +98,7 @@ window.app = {
                 window.app.screen('view-landing');
                 if(unsubscribeUserNotif) unsubscribeUserNotif();
                 if(unsubscribeAdminNotif) unsubscribeAdminNotif();
+                if(unsubscribeFeed) unsubscribeFeed();
             }
         });
         window.app.renderCalendar();
@@ -124,7 +126,7 @@ window.app = {
             }
             try {
                 const maxWidth = 1080; 
-                const quality = 0.7;   
+                const quality = 0.9;   
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
@@ -143,7 +145,7 @@ window.app = {
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         canvas.toBlob((blob) => {
-                            if (!blob) { resolve(file); return; } // Fallback para original se blob falhar
+                            if (!blob) { resolve(file); return; } 
                             const newFile = new File([blob], "image.jpg", {
                                 type: 'image/jpeg',
                                 lastModified: Date.now(),
@@ -151,12 +153,12 @@ window.app = {
                             resolve(newFile);
                         }, 'image/jpeg', quality);
                     };
-                    img.onerror = () => resolve(file); // Fallback
+                    img.onerror = () => resolve(file); 
                 };
-                reader.onerror = () => resolve(file); // Fallback
+                reader.onerror = () => resolve(file); 
             } catch (e) {
                 console.warn("Erro na compressão:", e);
-                resolve(file); // Fallback final
+                resolve(file); 
             }
         });
     },
@@ -166,7 +168,6 @@ window.app = {
         try {
             window.app.toast("Processando imagem...");
             
-            // Tenta comprimir, se der erro usa o original
             let fileToUpload = file;
             try {
                 fileToUpload = await window.app.compressImage(file);
@@ -176,8 +177,6 @@ window.app = {
             
             window.app.toast("Enviando...");
             
-            // NOME SEGURO: Apenas timestamp para evitar caracteres especiais
-            // e conflitos de caminho no Storage
             const ext = 'jpg';
             const safeName = `${Date.now()}_${Math.floor(Math.random()*1000)}.${ext}`;
             
@@ -193,7 +192,6 @@ window.app = {
         } catch (error) {
             console.error("Erro no Upload:", error);
             
-            // Diagnóstico de erro para o usuário
             let msg = "Erro ao enviar imagem.";
             if(error.code === 'storage/unauthorized') msg = "Sem permissão para enviar.";
             if(error.code === 'storage/quota-exceeded') msg = "Cota de armazenamento cheia (tente amanhã).";
@@ -336,7 +334,7 @@ window.app = {
                 window.app.setupUserNotifications(email);
                 if (isAdmin) window.app.setupAdminNotifications();
                 
-                // CARREGAR PROVAS DA COMUNIDADE (Para TODOS verem as bolinhas laranjas)
+                // CARREGAR PROVAS DA COMUNIDADE
                 window.app.loadCommunityRaces();
 
                 if (document.getElementById('view-admin').classList.contains('active')) return;
@@ -370,7 +368,6 @@ window.app = {
         });
     },
 
-    // --- FUNÇÃO PARA CARREGAR PROVAS DE TODOS (COMUNIDADE) ---
     loadCommunityRaces: async () => {
         try {
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_USERS));
@@ -386,7 +383,6 @@ window.app = {
 
     logout: () => { signOut(auth).then(() => { currentUser = null; window.app.screen('view-landing'); }); },
     
-    // --- LÓGICA DE NOTIFICAÇÕES ---
     setupUserNotifications: (email) => {
         if(unsubscribeUserNotif) unsubscribeUserNotif();
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
@@ -442,8 +438,6 @@ window.app = {
     // --- NOVAS FUNÇÕES DA ABA SAÚDE ---
 
     loadHealthTab: () => {
-        // Apenas garante que as notificações estão ativas.
-        // O conteúdo visual agora são apenas botões estáticos no HTML.
         if(!currentUser) return;
         window.app.setupUserNotifications(currentUser.email);
     },
@@ -466,7 +460,6 @@ window.app = {
     },
 
     closeHealthSubView: () => {
-        // Volta para a tela principal e garante que estamos na aba Saúde
         window.app.screen('view-app');
         window.app.nav('health');
         window.app.haptic();
@@ -535,8 +528,6 @@ window.app = {
             }
         });
     },
-
-    // ... (MANTÉM AS DEMAIS FUNÇÕES DO PERFIL, PESO, ETC...)
 
     openProfile: () => {
         if(!currentUser) return;
@@ -1220,91 +1211,158 @@ window.app = {
         });
     },
 
+    // --- REFINAMENTO DO FEED (SEM PISCAR) ---
     loadFeed: () => {
         const feed = document.getElementById('social-feed');
-        feed.innerHTML = '';
-        for(let i=0; i<3; i++) {
-            feed.innerHTML += `
-            <div class="card" style="padding:15px;">
-                <div style="display:flex; align-items:center; gap:12px; margin-bottom:15px;">
-                    <div class="skeleton skeleton-avatar"></div>
-                    <div style="flex:1;">
-                        <div class="skeleton skeleton-text" style="width:50%"></div>
-                        <div class="skeleton skeleton-text" style="width:30%"></div>
-                    </div>
-                </div>
-                <div class="skeleton skeleton-img" style="border-radius:12px;"></div>
-            </div>`;
-        }
+        if(unsubscribeFeed) unsubscribeFeed();
 
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), (snap) => {
-            feed.innerHTML = '';
-            const posts = [];
-            snap.forEach(d => posts.push({id:d.id, ...d.data()}));
-            posts.sort((a,b) => b.created - a.created);
-            
-            posts.forEach(p => {
-                const imgUrl = p.img || p.image; 
-                const isOwner = currentUser && p.email === currentUser.email;
-                const isAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email);
-                
-                let deleteBtn = '';
-                if (isOwner || isAdmin) {
-                    deleteBtn = `<button onclick="window.app.deletePost('${p.id}')" style="border:none; background:none; color:var(--red); font-size:14px; margin-left:auto;"><i class="fa-solid fa-trash"></i></button>`;
+        // Ordenar no Firestore para docChanges funcionar previsivelmente
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), orderBy('created', 'desc'), limit(50));
+
+        unsubscribeFeed = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                const p = { id: change.doc.id, ...change.doc.data() };
+                const postElId = `post-${p.id}`;
+
+                if (change.type === "added") {
+                    // Criar HTML do novo card
+                    const html = window.app.createPostCardHTML(p);
+                    const div = document.createElement('div');
+                    div.innerHTML = html;
+                    const newNode = div.firstElementChild; // Pega o .card
+
+                    // Inserção inteligente: 
+                    // Se for o primeiro load ou um post novo (topo), append ou insertBefore.
+                    // Como ordenamos DESC, novos aparecem no índice 0.
+                    if (change.newIndex === 0 && feed.firstChild) {
+                        feed.insertBefore(newNode, feed.firstChild);
+                    } else if (change.newIndex < feed.children.length) {
+                         const nextSibling = feed.children[change.newIndex];
+                         feed.insertBefore(newNode, nextSibling);
+                    } else {
+                        feed.appendChild(newNode);
+                    }
                 }
 
-                const likes = p.likes || [];
-                const isLiked = currentUser && likes.includes(currentUser.email);
-                const likeIcon = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-                const likeColor = isLiked ? 'color:var(--red);' : 'color:var(--text-main);';
+                if (change.type === "modified") {
+                    const card = document.getElementById(postElId);
+                    if (card) {
+                        // ATUALIZAÇÃO PONTUAL (SEM PISCAR)
+                        window.app.updatePostCardDOM(card, p);
+                    }
+                }
 
-                const comments = p.comments || [];
-                let commentsHtml = '';
-                comments.forEach((c, idx) => {
-                    const canDelComm = (currentUser && c.email === currentUser.email) || isAdmin;
-                    commentsHtml += `
-                    <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:flex-start;">
-                        <span><strong style="color:var(--text-main);">${c.userName}</strong> <span style="color:#555;">${c.text}</span></span>
-                        ${canDelComm ? `<button onclick="window.app.deleteComment('${p.id}', ${idx})" style="border:none; background:none; color:#ccc; font-size:10px; cursor:pointer;">✕</button>` : ''}
-                    </div>`;
-                });
+                if (change.type === "removed") {
+                    const card = document.getElementById(postElId);
+                    if(card) card.remove();
+                }
+            });
+            
+            // Caso especial: se vazio
+            if(snapshot.empty) {
+                feed.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">Seja o primeiro a postar!</p>';
+            }
+        });
+    },
 
-                feed.innerHTML += `
-                <div class="card" style="padding:0; overflow:hidden; margin-bottom:25px;">
-                    <div style="padding:15px; display:flex; align-items:center; gap:12px;">
-                        <div style="width:35px; height:35px; border-radius:50%; background:#EEE; overflow:hidden;">${p.avatar ? `<img src="${p.avatar}" style="width:100%;height:100%;">` : ''}</div>
-                        <div>
-                            <strong style="font-size:14px; display:block; color:var(--text-main);">${p.userName}</strong>
-                            <span style="font-size:11px; color:var(--text-sec);">${new Date(p.created).toLocaleDateString()}</span>
-                        </div>
-                        ${deleteBtn}
-                    </div>
-                    ${imgUrl ? `<img src="${imgUrl}" loading="lazy" class="feed-img" onload="this.classList.add('loaded')">` : ''}
-                    <div style="padding:15px;">
-                        <div style="display:flex; gap:20px; margin-bottom:10px; align-items: center;">
-                            <button onclick="window.app.toggleLike('${p.id}')" style="border:none; background:none; font-size:22px; cursor:pointer; ${likeColor} display:flex; align-items:center; gap:8px; padding:0;">
-                                <i class="${likeIcon}"></i>
-                                <span style="font-size:15px; font-weight:600; color:var(--text-main);">${likes.length}</span>
-                            </button>
-                            <button onclick="document.getElementById('comment-input-${p.id}').focus()" style="border:none; background:none; font-size:22px; cursor:pointer; color:var(--text-main); display:flex; align-items:center; gap:8px; padding:0;">
-                                <i class="fa-regular fa-comment"></i>
-                                <span style="font-size:15px; font-weight:600; color:var(--text-main);">${comments.length}</span>
-                            </button>
-                        </div>
-                        <p style="margin:0 0 10px 0; font-size:14px; line-height:1.5; color:var(--text-main);">
-                            <strong style="margin-right:5px;">${p.userName}</strong>${p.text}
-                        </p>
-                        <div style="margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
-                            ${commentsHtml}
-                        </div>
-                        <div style="display:flex; margin-top:10px; gap:10px;">
-                            <input id="comment-input-${p.id}" type="text" placeholder="Adicione um comentário..." style="flex:1; border:none; outline:none; font-size:13px; background:transparent;">
-                            <button onclick="window.app.submitComment('${p.id}')" style="border:none; background:none; color:var(--primary); font-weight:600; font-size:13px; cursor:pointer;">Publicar</button>
-                        </div>
-                    </div>
+    createPostCardHTML: (p) => {
+        const imgUrl = p.img || p.image; 
+        const isOwner = currentUser && p.email === currentUser.email;
+        const isAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email);
+        
+        let deleteBtn = '';
+        if (isOwner || isAdmin) {
+            deleteBtn = `<button onclick="window.app.deletePost('${p.id}')" style="border:none; background:none; color:var(--red); font-size:14px; margin-left:auto;"><i class="fa-solid fa-trash"></i></button>`;
+        }
+
+        const likes = p.likes || [];
+        const isLiked = currentUser && likes.includes(currentUser.email);
+        const likeIcon = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+        const likeColor = isLiked ? 'color:var(--red);' : 'color:var(--text-main);';
+
+        const comments = p.comments || [];
+        let commentsHtml = '';
+        comments.forEach((c, idx) => {
+            const canDelComm = (currentUser && c.email === currentUser.email) || isAdmin;
+            commentsHtml += `
+            <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:flex-start;">
+                <span><strong style="color:var(--text-main);">${c.userName}</strong> <span style="color:#555;">${c.text}</span></span>
+                ${canDelComm ? `<button onclick="window.app.deleteComment('${p.id}', ${idx})" style="border:none; background:none; color:#ccc; font-size:10px; cursor:pointer;">✕</button>` : ''}
+            </div>`;
+        });
+
+        // Adicionei ID ao card container e classes específicas nos elementos dinâmicos
+        return `
+        <div id="post-${p.id}" class="card" style="padding:0; overflow:hidden; margin-bottom:25px;">
+            <div style="padding:15px; display:flex; align-items:center; gap:12px;">
+                <div style="width:35px; height:35px; border-radius:50%; background:#EEE; overflow:hidden;">${p.avatar ? `<img src="${p.avatar}" style="width:100%;height:100%;">` : ''}</div>
+                <div>
+                    <strong style="font-size:14px; display:block; color:var(--text-main);">${p.userName}</strong>
+                    <span style="font-size:11px; color:var(--text-sec);">${new Date(p.created).toLocaleDateString()}</span>
+                </div>
+                ${deleteBtn}
+            </div>
+            ${imgUrl ? `<img src="${imgUrl}" loading="lazy" class="feed-img" onload="this.classList.add('loaded')">` : ''}
+            <div style="padding:15px;">
+                <div style="display:flex; gap:20px; margin-bottom:10px; align-items: center;">
+                    <button onclick="window.app.toggleLike('${p.id}')" class="btn-like-action" style="border:none; background:none; font-size:22px; cursor:pointer; ${likeColor} display:flex; align-items:center; gap:8px; padding:0;">
+                        <i class="${likeIcon} icon-like-target"></i>
+                        <span class="count-like-target" style="font-size:15px; font-weight:600; color:var(--text-main);">${likes.length}</span>
+                    </button>
+                    <button onclick="document.getElementById('comment-input-${p.id}').focus()" style="border:none; background:none; font-size:22px; cursor:pointer; color:var(--text-main); display:flex; align-items:center; gap:8px; padding:0;">
+                        <i class="fa-regular fa-comment"></i>
+                        <span class="count-comment-target" style="font-size:15px; font-weight:600; color:var(--text-main);">${comments.length}</span>
+                    </button>
+                </div>
+                <p style="margin:0 0 10px 0; font-size:14px; line-height:1.5; color:var(--text-main);">
+                    <strong style="margin-right:5px;">${p.userName}</strong>${p.text}
+                </p>
+                <div class="comments-container" style="margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+                    ${commentsHtml}
+                </div>
+                <div style="display:flex; margin-top:10px; gap:10px;">
+                    <input id="comment-input-${p.id}" type="text" placeholder="Adicione um comentário..." style="flex:1; border:none; outline:none; font-size:13px; background:transparent;">
+                    <button onclick="window.app.submitComment('${p.id}')" style="border:none; background:none; color:var(--primary); font-weight:600; font-size:13px; cursor:pointer;">Publicar</button>
+                </div>
+            </div>
+        </div>`;
+    },
+
+    updatePostCardDOM: (card, p) => {
+        const likes = p.likes || [];
+        const isLiked = currentUser && likes.includes(currentUser.email);
+        const comments = p.comments || [];
+        const isAdmin = currentUser && ADMIN_EMAILS.includes(currentUser.email);
+
+        // 1. Atualiza Botão de Like (Ícone e Cor)
+        const btnLike = card.querySelector('.btn-like-action');
+        const iconLike = card.querySelector('.icon-like-target');
+        const countLike = card.querySelector('.count-like-target');
+
+        if(btnLike) btnLike.style.color = isLiked ? 'var(--red)' : 'var(--text-main)';
+        if(iconLike) {
+            iconLike.className = isLiked ? 'fa-solid fa-heart icon-like-target' : 'fa-regular fa-heart icon-like-target';
+        }
+        if(countLike) countLike.innerText = likes.length;
+
+        // 2. Atualiza Contador de Comentários
+        const countComm = card.querySelector('.count-comment-target');
+        if(countComm) countComm.innerText = comments.length;
+
+        // 3. Atualiza Lista de Comentários (apenas texto, leve)
+        const commContainer = card.querySelector('.comments-container');
+        if(commContainer) {
+            let commentsHtml = '';
+            comments.forEach((c, idx) => {
+                const canDelComm = (currentUser && c.email === currentUser.email) || isAdmin;
+                commentsHtml += `
+                <div style="font-size:13px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:flex-start;">
+                    <span><strong style="color:var(--text-main);">${c.userName}</strong> <span style="color:#555;">${c.text}</span></span>
+                    ${canDelComm ? `<button onclick="window.app.deleteComment('${p.id}', ${idx})" style="border:none; background:none; color:#ccc; font-size:10px; cursor:pointer;">✕</button>` : ''}
                 </div>`;
             });
-        });
+            commContainer.innerHTML = commentsHtml;
+        }
     },
 
     toggleLike: async (postId) => {
