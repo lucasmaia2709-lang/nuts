@@ -34,5 +34,8 @@ export const C_TEMPLATES = 'expliq_templates_v9';
 export const C_VIDEOS = 'expliq_strength_videos_v9'; 
 export const C_PAIN = 'expliq_pain_v9'; 
 
+// NOVA COLEÇÃO DE OTIMIZAÇÃO (Solução 1)
+export const C_PUBLIC_RACES = 'expliq_public_races_v9';
+
 // !!! SEGURANÇA ADMIN !!!
 export const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edgarzanin@outlook.com"];
