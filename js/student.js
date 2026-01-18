@@ -165,10 +165,19 @@ export const student = {
             );
             const snapshot = await getDocs(q);
             const batch = writeBatch(db);
-            snapshot.forEach(d => batch.delete(d.ref));
-            await batch.commit();
+            let count = 0;
+            snapshot.forEach(d => {
+                batch.delete(d.ref);
+                count++;
+            });
             
-            window.app.toast("Prova removida!");
+            if (count > 0) {
+                await batch.commit();
+                window.app.toast(count > 1 ? `${count} cópias removidas!` : "Prova removida!");
+            } else {
+                window.app.toast("Nenhum registro encontrado.");
+            }
+            
             document.getElementById('modal-day-detail').classList.remove('active');
             // O listener onSnapshot no auth.js atualizará o calendário automaticamente
         } catch(e) {
