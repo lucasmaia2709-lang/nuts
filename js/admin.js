@@ -1,5 +1,5 @@
-import { doc, getDoc, updateDoc, setDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, getDocs, startAfter } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { db, appId, C_USERS, C_NEWS, C_TEMPLATES, C_VIDEOS, C_PAIN, C_QUOTES, CF_WORKER_URL } from "./config.js";
+import { doc, getDoc, updateDoc, setDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, getDocs, startAfter, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { db, appId, C_USERS, C_NEWS, C_TEMPLATES, C_VIDEOS, C_PAIN, C_QUOTES, C_PUBLIC_RACES, CF_WORKER_URL } from "./config.js";
 import { state } from "./state.js";
 
 export const admin = {
@@ -508,7 +508,20 @@ export const admin = {
                 workouts: newWorkouts, 
                 created: new Date().toISOString() 
             });
+            
+            // 1. Atualiza documento do aluno
             await updateDoc(userRef, { races });
+
+            // 2. OTIMIZAÇÃO SOLUÇÃO 1: Cria registro leve na coleção pública
+            // Precisamos do nome do aluno (uData.name)
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
+                date: raceDate,
+                raceName: name,
+                studentName: uData.name,
+                studentEmail: state.currentAdmUser,
+                created: Date.now()
+            });
+
             window.app.toast("Objetivo criado com sucesso!");
             document.getElementById('modal-adm-add-race').classList.remove('active');
         } catch (error) {
