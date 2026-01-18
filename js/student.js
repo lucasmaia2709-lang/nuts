@@ -22,12 +22,14 @@ export const student = {
         const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
         const workouts = activeRace ? activeRace.workouts : [];
         const notes = state.currentUser.notes || {};
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toLocaleDateString('en-CA'); // 'en-CA' garante formato YYYY-MM-DD local
 
         for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div class="cal-cell other-month"></div>`; }
         for(let d=1; d<=daysInMonth; d++) {
-            const dateObj = new Date(y, m, d);
-            const dateStr = dateObj.toISOString().split('T')[0];
+            // CORREÇÃO DE DATA: Construir a string manualmente evita bugs de timezone do toISOString()
+            // Formato YYYY-MM-DD
+            const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            
             const isToday = dateStr === todayStr;
             let cellClass = 'cal-cell';
             if(isToday) cellClass += ' today';
@@ -58,6 +60,7 @@ export const student = {
                 let hasStudentRace = false;
                 state.communityRacesCache.forEach(race => {
                     // race agora é um objeto leve: { date, raceName, studentName, studentEmail }
+                    // Garante que não mostra a própria prova como "comunidade"
                     if (race.studentEmail !== state.currentUser.email && race.date === dateStr) {
                         hasStudentRace = true;
                         modalData.studentRaces.push({ studentName: race.studentName, raceName: race.raceName });
