@@ -6,12 +6,29 @@ import { student } from "./js/student.js";
 import { social } from "./js/social.js";
 import { admin } from "./js/admin.js";
 
-// Ajuste para altura em mobile
+// --- FIX iOS VIEWPORT HEIGHT ---
+// Função crucial para corrigir o bug de altura do Safari/PWA e App Nativo
+const fixViewportHeight = () => {
+    // Pega a altura real da janela (inner height)
+    const vh = window.innerHeight;
+    // Define na variável CSS --app-height
+    document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    // Força a altura no body também
+    document.body.style.height = `${vh}px`;
+};
+
+// Executa o fix no carregamento
 window.addEventListener('load', () => {
-  document.body.style.height = '100vh';
-  requestAnimationFrame(() => {
-    document.body.style.height = '100dvh';
-  });
+  fixViewportHeight();
+  // RequestAnimationFrame garante que rode após o layout inicial
+  requestAnimationFrame(fixViewportHeight);
+});
+
+// Executa o fix sempre que a tela girar ou redimensionar (teclado abrir, etc)
+window.addEventListener('resize', () => {
+    fixViewportHeight();
+    // Um pequeno delay ajuda em dispositivos lentos
+    setTimeout(fixViewportHeight, 100);
 });
 
 // A "cola" que faz o HTML antigo funcionar com os novos módulos
