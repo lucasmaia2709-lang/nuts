@@ -1,5 +1,5 @@
 import { doc, updateDoc, addDoc, getDocs, query, collection, onSnapshot, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { db, appId, C_USERS, C_PAIN, C_QUOTES, C_NEWS, C_VIDEOS, CF_WORKER_URL } from "./config.js";
+import { db, appId, C_USERS, C_PAIN, C_QUOTES, C_NEWS, C_VIDEOS, C_PUBLIC_RACES, CF_WORKER_URL } from "./config.js";
 import { state } from "./state.js";
 
 // Lógica de Calendário, Treinos, Perfil e Saúde
@@ -53,16 +53,14 @@ export const student = {
             
             if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
 
-            if (state.allUsersCache && state.allUsersCache.length > 0) {
+            // --- OTIMIZAÇÃO SOLUÇÃO 1: Renderiza bolinhas usando o cache leve ---
+            if (state.communityRacesCache && state.communityRacesCache.length > 0) {
                 let hasStudentRace = false;
-                state.allUsersCache.forEach(u => {
-                    if (u.email !== state.currentUser.email && u.races) {
-                        u.races.forEach(r => {
-                            if (r.date === dateStr) {
-                                hasStudentRace = true;
-                                modalData.studentRaces.push({ studentName: u.name, raceName: r.name });
-                            }
-                        });
+                state.communityRacesCache.forEach(race => {
+                    // race agora é um objeto leve: { date, raceName, studentName, studentEmail }
+                    if (race.studentEmail !== state.currentUser.email && race.date === dateStr) {
+                        hasStudentRace = true;
+                        modalData.studentRaces.push({ studentName: race.studentName, raceName: race.raceName });
                     }
                 });
                 if (hasStudentRace) {
@@ -657,8 +655,26 @@ export const student = {
                 created: new Date().toISOString() 
             });
 
+            // 1. Atualiza documento do aluno (pesado)
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
             
+            // 2. OTIMIZAÇÃO SOLUÇÃO 1: Cria registro leve na coleção pública
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
+                date: date,
+                raceName: name,
+                studentName: state.currentUser.name,
+                studentEmail: state.currentUser.email,
+                created: Date.now()
+            });
+
+            // Atualiza cache local para aparecer no calendário imediatamente
+            state.communityRacesCache.push({
+                date: date,
+                raceName: name,
+                studentName: state.currentUser.name,
+                studentEmail: state.currentUser.email
+            });
+
             document.getElementById('modal-add-race').classList.remove('active');
             window.app.toast('Planilha criada com sucesso!');
             window.app.openProfile();
