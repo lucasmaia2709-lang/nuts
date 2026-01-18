@@ -1,4 +1,4 @@
-import { doc, updateDoc, addDoc, getDocs, query, collection, onSnapshot, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, addDoc, getDocs, query, collection, onSnapshot, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { db, appId, C_USERS, C_PAIN, C_QUOTES, C_NEWS, C_VIDEOS, C_PUBLIC_RACES, CF_WORKER_URL } from "./config.js";
 import { state } from "./state.js";
 
@@ -22,14 +22,11 @@ export const student = {
         const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
         const workouts = activeRace ? activeRace.workouts : [];
         const notes = state.currentUser.notes || {};
-        const todayStr = new Date().toLocaleDateString('en-CA'); // 'en-CA' garante formato YYYY-MM-DD local
+        const todayStr = new Date().toLocaleDateString('en-CA'); // Formato YYYY-MM-DD local
 
         for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div class="cal-cell other-month"></div>`; }
         for(let d=1; d<=daysInMonth; d++) {
-            // CORREÇÃO DE DATA: Construir a string manualmente evita bugs de timezone do toISOString()
-            // Formato YYYY-MM-DD
             const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            
             const isToday = dateStr === todayStr;
             let cellClass = 'cal-cell';
             if(isToday) cellClass += ' today';
@@ -55,12 +52,10 @@ export const student = {
             
             if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
 
-            // --- OTIMIZAÇÃO SOLUÇÃO 1: Renderiza bolinhas usando o cache leve ---
+            // Renderiza bolinhas usando o cache leve
             if (state.communityRacesCache && state.communityRacesCache.length > 0) {
                 let hasStudentRace = false;
                 state.communityRacesCache.forEach(race => {
-                    // race agora é um objeto leve: { date, raceName, studentName, studentEmail }
-                    // Garante que não mostra a própria prova como "comunidade"
                     if (race.studentEmail !== state.currentUser.email && race.date === dateStr) {
                         hasStudentRace = true;
                         modalData.studentRaces.push({ studentName: race.studentName, raceName: race.raceName });
@@ -449,11 +444,44 @@ export const student = {
         if (state.editingStudentRaceIndex === null || !state.currentUser) return;
         const newDate = document.getElementById('edit-race-date-input').value;
         if (!newDate) return window.app.toast("Selecione uma data.");
+        
         const races = state.currentUser.races;
-        races[state.editingStudentRaceIndex].date = newDate;
+        const raceToUpdate = races[state.editingStudentRaceIndex];
+        const raceName = raceToUpdate.name;
+        
+        raceToUpdate.date = newDate;
+        
         window.app.toast("Atualizando data...");
         try {
+            // 1. Atualiza no perfil do Usuário
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
+            
+            // 2. Atualiza na coleção Pública (para sincronizar o calendário)
+            const q = query(
+                collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), 
+                where("studentEmail", "==", state.currentUser.email),
+                where("raceName", "==", raceName)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                const batch = writeBatch(db);
+                querySnapshot.forEach((docSnap) => {
+                    batch.update(docSnap.ref, { date: newDate });
+                });
+                await batch.commit();
+            } else {
+                // Se não achou (ex: prova antiga criada antes da otimização), cria agora
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
+                    date: newDate,
+                    raceName: raceName,
+                    studentName: state.currentUser.name,
+                    studentEmail: state.currentUser.email,
+                    created: Date.now()
+                });
+            }
+
             window.app.toast("Data atualizada!");
             document.getElementById('modal-edit-date').classList.remove('active');
             window.app.renderHome(); 
