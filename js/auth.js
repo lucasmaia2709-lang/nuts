@@ -113,10 +113,13 @@ export const authLogic = {
     loadCommunityRaces: () => {
         // CORREÇÃO: Usar onSnapshot para garantir que novas provas apareçam imediatamente
         // sem precisar recarregar a página.
+        // Adicionei LOGS para você verificar no console
+        console.log("Iniciando escuta de provas públicas...");
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
         onSnapshot(q, (snap) => {
             const races = [];
             snap.forEach(d => races.push(d.data()));
+            console.log("Provas públicas recebidas:", races.length, races);
             state.communityRacesCache = races;
             // Força re-renderizar o calendário para mostrar as bolinhas novas
             window.app.renderCalendar(); 
