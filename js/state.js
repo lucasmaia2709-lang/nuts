@@ -3,7 +3,10 @@ export const state = {
     currentUser: null,
     currentMonth: new Date(),
     selectedDayDate: null, 
-    allUsersCache: [], 
+    
+    // CACHE OTIMIZADO (Solução 1)
+    // Antes era allUsersCache (pesado), agora é communityRacesCache (leve)
+    communityRacesCache: [], 
 
     // Variáveis temporárias de upload
     tempPostFile: null,
