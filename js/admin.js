@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc, setDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, getDocs, startAfter, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, updateDoc, setDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, getDocs, startAfter, addDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { db, appId, C_USERS, C_NEWS, C_TEMPLATES, C_VIDEOS, C_PAIN, C_QUOTES, C_PUBLIC_RACES, CF_WORKER_URL } from "./config.js";
 import { state } from "./state.js";
 
@@ -31,6 +31,71 @@ export const admin = {
         if(t === 'physio') window.app.admLoadPhysio(); 
     },
     
+    // --- NOVO: FERRAMENTA DE SINCRONIZAÇÃO ---
+    admSyncPublicRaces: async () => {
+        if(!confirm("Isso vai apagar e recriar toda a lista de provas públicas baseada nos alunos atuais. Continuar?")) return;
+        
+        const btn = document.getElementById('btn-sync-races');
+        if(btn) { btn.disabled = true; btn.innerText = "Sincronizando..."; }
+        window.app.toast("Iniciando sincronização...");
+
+        try {
+            // 1. Apagar coleção pública atual (para evitar duplicatas)
+            // Nota: Em produção massiva, deletar coleção inteira via client é lento, mas para 100 users ok.
+            const pubQ = query(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
+            const pubSnap = await getDocs(pubQ);
+            
+            // Batch delete (limite 500 ops por batch)
+            const batch = writeBatch(db);
+            let opCount = 0;
+            
+            pubSnap.forEach(d => {
+                batch.delete(d.ref);
+                opCount++;
+            });
+            
+            if(opCount > 0) await batch.commit();
+            console.log("Limpeza concluída.");
+
+            // 2. Ler todos os usuários
+            const usersQ = query(collection(db, 'artifacts', appId, 'public', 'data', C_USERS));
+            const usersSnap = await getDocs(usersQ);
+            
+            const newBatch = writeBatch(db);
+            let addCount = 0;
+
+            usersSnap.forEach(docSnap => {
+                const u = docSnap.data();
+                if (u.races && u.races.length > 0) {
+                    u.races.forEach(r => {
+                        // Só adiciona provas futuras ou recentes para não poluir
+                        // Mas para garantir, vamos adicionar todas com data válida
+                        if (r.date) {
+                            const ref = doc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
+                            newBatch.set(ref, {
+                                date: r.date,
+                                raceName: r.name,
+                                studentName: u.name,
+                                studentEmail: u.email, // Importante: usar o email do objeto, não o ID se possível
+                                created: Date.now()
+                            });
+                            addCount++;
+                        }
+                    });
+                }
+            });
+
+            if(addCount > 0) await newBatch.commit();
+
+            window.app.toast(`Sincronização finalizada! ${addCount} provas indexadas.`);
+        } catch (error) {
+            console.error(error);
+            window.app.toast("Erro na sincronização: " + error.message);
+        } finally {
+            if(btn) { btn.disabled = false; btn.innerText = "Sincronizar Provas da Comunidade"; }
+        }
+    },
+
     admLoadPhysio: () => {
         const list = document.getElementById('adm-physio-list');
         list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
@@ -111,6 +176,19 @@ export const admin = {
         state.admUsersCache = {}; 
         const oldBtn = document.getElementById('btn-load-more-users');
         if(oldBtn) oldBtn.remove();
+        
+        // Botão de Sync
+        const syncBtn = document.createElement('button');
+        syncBtn.id = 'btn-sync-races';
+        syncBtn.innerText = 'Sincronizar Provas da Comunidade';
+        syncBtn.className = 'btn btn-outline';
+        syncBtn.style.marginBottom = '20px';
+        syncBtn.style.width = '100%';
+        syncBtn.style.borderColor = 'var(--text-sec)';
+        syncBtn.style.color = 'var(--text-sec)';
+        syncBtn.onclick = window.app.admSyncPublicRaces;
+        document.getElementById('adm-content-users').appendChild(syncBtn);
+
         await window.app.admFetchNextUsers();
         const loadMoreBtn = document.createElement('button');
         loadMoreBtn.id = 'btn-load-more-users';
