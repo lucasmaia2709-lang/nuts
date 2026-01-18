@@ -129,13 +129,15 @@ export const student = {
                 const border = isMe ? 'var(--primary)' : '#eee';
                 
                 // Verifica se pode apagar (Dono ou Admin)
+                // Se for Admin, pode apagar QUALQUER prova (inclusive as órfãs)
                 let deleteBtn = '';
                 if (isMe || isAdmin || race.studentEmail === state.currentUser.email) {
                     // Escapar strings para o onclick
                     const sEmail = window.app.escape(race.studentEmail);
                     const rName = window.app.escape(race.raceName);
                     const rDate = window.app.escape(race.date);
-                    deleteBtn = `<button onclick="window.app.deletePublicRaceEntry('${sEmail}', '${rName}', '${rDate}')" style="border:none; background:none; color:var(--red); cursor:pointer; float:right; font-size:14px;"><i class="fa-solid fa-trash"></i></button>`;
+                    // Passamos true no último parâmetro para indicar "forçar exclusão" se for admin
+                    deleteBtn = `<button onclick="window.app.deletePublicRaceEntry('${sEmail}', '${rName}', '${rDate}', true)" style="border:none; background:none; color:var(--red); cursor:pointer; float:right; font-size:14px;"><i class="fa-solid fa-trash"></i></button>`;
                 }
 
                 content += `<div style="background:${bg}; border:1px solid ${border}; padding:10px; border-radius:8px; margin-bottom:5px; font-size:13px;">
@@ -153,16 +155,30 @@ export const student = {
         modal.classList.add('active');
     },
 
-    deletePublicRaceEntry: async (studentEmail, raceName, raceDate) => {
-        if(!confirm("Remover esta prova do calendário público? (Isso não apaga do perfil do aluno)")) return;
+    deletePublicRaceEntry: async (studentEmail, raceName, raceDate, force = false) => {
+        let msg = "Remover esta prova do calendário público?";
+        if (force) msg += " (Como Admin, você pode apagar registros órfãos).";
+        
+        if(!confirm(msg)) return;
         window.app.toast("Apagando...");
         try {
-            const q = query(
-                collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
-                where("studentEmail", "==", studentEmail),
-                where("raceName", "==", raceName),
-                where("date", "==", raceDate)
-            );
+            // Se o studentEmail estiver undefined ou vazio (provas muito antigas ou bugadas), tentamos buscar só por nome e data se for Admin
+            let q;
+            if ((!studentEmail || studentEmail === 'undefined') && force) {
+                 q = query(
+                    collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
+                    where("raceName", "==", raceName),
+                    where("date", "==", raceDate)
+                );
+            } else {
+                q = query(
+                    collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
+                    where("studentEmail", "==", studentEmail),
+                    where("raceName", "==", raceName),
+                    where("date", "==", raceDate)
+                );
+            }
+
             const snapshot = await getDocs(q);
             const batch = writeBatch(db);
             let count = 0;
@@ -175,7 +191,30 @@ export const student = {
                 await batch.commit();
                 window.app.toast(count > 1 ? `${count} cópias removidas!` : "Prova removida!");
             } else {
-                window.app.toast("Nenhum registro encontrado.");
+                // Tenta uma busca mais genérica se for admin e falhou a busca exata
+                if (force && count === 0) {
+                     window.app.toast("Tentando busca forçada...");
+                     const qForce = query(
+                        collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
+                        where("date", "==", raceDate),
+                        where("raceName", "==", raceName)
+                    );
+                    const snapForce = await getDocs(qForce);
+                    const batchForce = writeBatch(db);
+                    let countForce = 0;
+                    snapForce.forEach(d => {
+                        batchForce.delete(d.ref);
+                        countForce++;
+                    });
+                    if (countForce > 0) {
+                        await batchForce.commit();
+                        window.app.toast(`${countForce} registros órfãos removidos!`);
+                    } else {
+                        window.app.toast("Nenhum registro encontrado.");
+                    }
+                } else {
+                    window.app.toast("Nenhum registro encontrado.");
+                }
             }
             
             document.getElementById('modal-day-detail').classList.remove('active');
