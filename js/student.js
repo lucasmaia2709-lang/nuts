@@ -32,19 +32,18 @@ export const student = {
             let cellClass = 'cal-cell';
             if(isToday) cellClass += ' today';
             let dotHtml = '';
-            let workoutData = null;
             
             const scheduled = workouts.find(w => w.scheduledDate === dateStr);
             const doneHere = workouts.find(w => w.done && w.completedAt === dateStr);
-            
-            // Verificação da PRÓPRIA prova (Data Alvo)
             const isMyRaceDay = activeRace && activeRace.date === dateStr;
             
+            // Inicializa modalData sempre com array vazio para garantir estrutura
             let modalData = { studentRaces: [] }; 
 
             if (scheduled) {
                  cellClass += ' has-workout'; 
                  dotHtml += `<div class="cal-dot"></div>`;
+                 // Ao mesclar dados do treino, mantemos studentRaces limpo para popular abaixo
                  modalData = { ...scheduled, studentRaces: [] }; 
                  if(scheduled.done) cellClass += ' done';
             }
@@ -56,18 +55,21 @@ export const student = {
             
             if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
 
-            // Marcador da DATA DA PROVA do próprio aluno (Correção para aparecer ao alterar data)
+            // Marcador da MINHA PROVA
             if (isMyRaceDay) {
                 dotHtml += `<div class="cal-race-marker" style="background:var(--text-sec); border:1px solid #fff; z-index:2;" title="Minha Prova"></div>`;
             }
 
-            // Renderiza bolinhas usando o cache leve
+            // PROVAS DA COMUNIDADE (Correção de exibição)
             if (state.communityRacesCache && state.communityRacesCache.length > 0) {
                 let hasStudentRace = false;
                 state.communityRacesCache.forEach(race => {
                     if (race.studentEmail !== state.currentUser.email && race.date === dateStr) {
                         hasStudentRace = true;
-                        modalData.studentRaces.push({ studentName: race.studentName, raceName: race.raceName });
+                        // Garante fallback para evitar "undefined"
+                        const sName = race.studentName || 'Aluno'; 
+                        const rName = race.raceName || 'Prova';
+                        modalData.studentRaces.push({ studentName: sName, raceName: rName });
                     }
                 });
                 if (hasStudentRace) {
@@ -79,6 +81,7 @@ export const student = {
             el.className = cellClass;
             el.innerText = d;
             el.innerHTML += dotHtml;
+            // Deep copy seguro para o onclick
             const dataToPass = JSON.parse(JSON.stringify(modalData));
             el.onclick = () => window.app.openDayDetail(dateStr, dataToPass);
             grid.appendChild(el);
@@ -101,6 +104,7 @@ export const student = {
             content += `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`; 
         }
 
+        // Renderiza lista de provas de outros alunos
         if (workoutData && workoutData.studentRaces && workoutData.studentRaces.length > 0) {
             content += `<div style="margin-top:15px;">
                 <h4 style="font-size:14px; color:var(--primary); margin-bottom:10px;">Provas de Alunos:</h4>`;
@@ -210,7 +214,6 @@ export const student = {
         const doneW = activeRace.workouts.filter(w => w.done).length;
         const pct = totalW > 0 ? (doneW / totalW) * 100 : 0;
         
-        // CORREÇÃO: Formatação manual da data para evitar erro de fuso horário (-1 dia / +1 dia)
         let raceDateDisplay = 'Sem Data';
         if(activeRace.date) {
             const p = activeRace.date.split('-');
@@ -256,7 +259,6 @@ export const student = {
             cardHtml = `<div class="card" style="text-align:center; color:var(--success); padding:40px;"><i class="fa-solid fa-circle-check" style="font-size:48px; margin-bottom:15px;"></i><br><strong style="font-size:18px;">Todos os treinos concluídos!</strong></div>`;
         }
         
-        // Usa raceDateDisplay corrigido aqui
         container.innerHTML = cardHtml + `
             <div style="margin-top:20px; font-size:12px; display:flex; justify-content:space-between; color:var(--text-sec); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;"><span>${doneW}/${totalW} Treinos</span> <span>Meta: ${raceDateDisplay}</span></div>
             <div class="progress-container"><div class="progress-bar" style="width:${pct}%"></div></div>
@@ -490,11 +492,11 @@ export const student = {
                 });
                 await batch.commit();
             } else {
-                // Se não achou (ex: prova antiga criada antes da otimização), cria agora
+                // Se não achou, cria agora garantindo que o nome está correto
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
                     date: newDate,
                     raceName: raceName,
-                    studentName: state.currentUser.name,
+                    studentName: state.currentUser.name || 'Aluno',
                     studentEmail: state.currentUser.email,
                     created: Date.now()
                 });
@@ -503,7 +505,7 @@ export const student = {
             window.app.toast("Data atualizada!");
             document.getElementById('modal-edit-date').classList.remove('active');
             
-            // ATUALIZAÇÃO CRÍTICA: Força atualização visual imediata de todos os componentes
+            // Força atualização visual imediata de todos os componentes
             window.app.renderHome(); 
             window.app.renderCalendar(); 
             window.app.openProfile(); 
