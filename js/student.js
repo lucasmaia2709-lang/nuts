@@ -1,4 +1,4 @@
-import { doc, updateDoc, addDoc, getDocs, query, collection, onSnapshot, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, updateDoc, addDoc, getDocs, query, collection, onSnapshot, where, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { db, appId, C_USERS, C_PAIN, C_QUOTES, C_NEWS, C_VIDEOS, C_PUBLIC_RACES, CF_WORKER_URL } from "./config.js";
 import { state } from "./state.js";
 
@@ -58,6 +58,8 @@ export const student = {
             // Marcador da MINHA PROVA
             if (isMyRaceDay) {
                 dotHtml += `<div class="cal-race-marker" style="background:var(--text-sec); border:1px solid #fff; z-index:2;" title="Minha Prova"></div>`;
+                // Adiciona a própria prova ao modalData para aparecer no detalhe do dia
+                modalData.studentRaces.push({ studentName: "Você", raceName: activeRace.name });
             }
 
             // PROVAS DA COMUNIDADE (Correção de exibição)
@@ -104,12 +106,16 @@ export const student = {
             content += `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`; 
         }
 
-        // Renderiza lista de provas de outros alunos
+        // Renderiza lista de provas de outros alunos E a própria prova se houver
         if (workoutData && workoutData.studentRaces && workoutData.studentRaces.length > 0) {
             content += `<div style="margin-top:15px;">
-                <h4 style="font-size:14px; color:var(--primary); margin-bottom:10px;">Provas de Alunos:</h4>`;
+                <h4 style="font-size:14px; color:var(--primary); margin-bottom:10px;">Provas Marcadas:</h4>`;
             workoutData.studentRaces.forEach(race => {
-                content += `<div style="background:#fff; border:1px solid #eee; padding:10px; border-radius:8px; margin-bottom:5px; font-size:13px;">
+                const isMe = race.studentName === 'Você';
+                const bg = isMe ? '#fff3e0' : '#fff'; // Destaque laranja claro se for minha prova
+                const border = isMe ? 'var(--primary)' : '#eee';
+                
+                content += `<div style="background:${bg}; border:1px solid ${border}; padding:10px; border-radius:8px; margin-bottom:5px; font-size:13px;">
                     <strong>${race.studentName}</strong><br>
                     <span style="color:#666;">${race.raceName}</span>
                 </div>`;
@@ -469,14 +475,18 @@ export const student = {
         const raceToUpdate = races[state.editingStudentRaceIndex];
         const raceName = raceToUpdate.name;
         
+        // Guarda a data antiga para poder apagar da coleção pública
+        const oldDate = raceToUpdate.date;
+        
+        // Atualiza a data no objeto local
         raceToUpdate.date = newDate;
         
         window.app.toast("Atualizando data...");
         try {
-            // 1. Atualiza no perfil do Usuário
+            // 1. Atualiza no perfil do Usuário (Documento Completo)
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
             
-            // 2. Atualiza na coleção Pública (para sincronizar o calendário)
+            // 2. Sincronização com Coleção Pública (para calendário)
             const q = query(
                 collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), 
                 where("studentEmail", "==", state.currentUser.email),
@@ -484,22 +494,30 @@ export const student = {
             );
             
             const querySnapshot = await getDocs(q);
-            
+            const batch = writeBatch(db);
+            let hasChanges = false;
+
+            // Se encontrar a prova antiga, apaga ela
             if (!querySnapshot.empty) {
-                const batch = writeBatch(db);
                 querySnapshot.forEach((docSnap) => {
-                    batch.update(docSnap.ref, { date: newDate });
+                    batch.delete(docSnap.ref); // Deleta o registro antigo
                 });
+                hasChanges = true;
+            }
+
+            // Cria um NOVO registro com a NOVA data
+            const newRaceRef = doc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
+            batch.set(newRaceRef, {
+                date: newDate,
+                raceName: raceName,
+                studentName: state.currentUser.name || 'Aluno',
+                studentEmail: state.currentUser.email,
+                created: Date.now()
+            });
+            hasChanges = true;
+
+            if (hasChanges) {
                 await batch.commit();
-            } else {
-                // Se não achou, cria agora garantindo que o nome está correto
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
-                    date: newDate,
-                    raceName: raceName,
-                    studentName: state.currentUser.name || 'Aluno',
-                    studentEmail: state.currentUser.email,
-                    created: Date.now()
-                });
             }
 
             window.app.toast("Data atualizada!");
@@ -511,7 +529,7 @@ export const student = {
             window.app.openProfile(); 
             window.app.haptic();
         } catch (e) {
-            console.error(e);
+            console.error("Erro ao salvar data:", e);
             window.app.toast("Erro ao salvar.");
         }
     },
