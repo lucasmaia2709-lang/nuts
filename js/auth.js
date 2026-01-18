@@ -1,6 +1,6 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, setDoc, getDoc, getDocs, onSnapshot, query, collection, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { auth, db, appId, C_USERS, ADMIN_EMAILS, C_PAIN } from "./config.js";
+import { auth, db, appId, C_USERS, ADMIN_EMAILS, C_PAIN, C_PUBLIC_RACES } from "./config.js";
 import { state } from "./state.js";
 
 export const authLogic = {
@@ -76,7 +76,7 @@ export const authLogic = {
                 window.app.setupUserNotifications(email);
                 if (isAdmin) window.app.setupAdminNotifications();
                 
-                // CARREGAR PROVAS DA COMUNIDADE
+                // CARREGAR PROVAS DA COMUNIDADE (Otimizado)
                 window.app.loadCommunityRaces();
 
                 if (document.getElementById('view-admin').classList.contains('active')) return;
@@ -93,7 +93,7 @@ export const authLogic = {
                 
                 window.app.screen('view-app');
                 
-                // Manter aba ativa correta ao recarregar
+                // Manter aba ativa
                 const activeTabEl = document.querySelector('.nav-item.active');
                 if (activeTabEl && activeTabEl.dataset.tab === 'home') {
                     window.app.renderHome();
@@ -110,13 +110,14 @@ export const authLogic = {
         });
     },
 
+    // --- OTIMIZAÇÃO SOLUÇÃO 1: Carrega apenas a coleção leve de provas ---
     loadCommunityRaces: async () => {
         try {
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_USERS));
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
             const snap = await getDocs(q);
-            const users = [];
-            snap.forEach(d => users.push(d.data()));
-            state.allUsersCache = users; 
+            const races = [];
+            snap.forEach(d => races.push(d.data()));
+            state.communityRacesCache = races; // Armazena no cache leve
             window.app.renderCalendar(); 
         } catch (e) {
             console.error("Erro ao carregar provas da comunidade:", e);
