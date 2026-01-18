@@ -76,7 +76,7 @@ export const authLogic = {
                 window.app.setupUserNotifications(email);
                 if (isAdmin) window.app.setupAdminNotifications();
                 
-                // CARREGAR PROVAS DA COMUNIDADE (Otimizado)
+                // CARREGAR PROVAS DA COMUNIDADE (Agora em tempo real)
                 window.app.loadCommunityRaces();
 
                 if (document.getElementById('view-admin').classList.contains('active')) return;
@@ -110,18 +110,19 @@ export const authLogic = {
         });
     },
 
-    // --- OTIMIZAÇÃO SOLUÇÃO 1: Carrega apenas a coleção leve de provas ---
-    loadCommunityRaces: async () => {
-        try {
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
-            const snap = await getDocs(q);
+    loadCommunityRaces: () => {
+        // CORREÇÃO: Usar onSnapshot para garantir que novas provas apareçam imediatamente
+        // sem precisar recarregar a página.
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
+        onSnapshot(q, (snap) => {
             const races = [];
             snap.forEach(d => races.push(d.data()));
-            state.communityRacesCache = races; // Armazena no cache leve
+            state.communityRacesCache = races;
+            // Força re-renderizar o calendário para mostrar as bolinhas novas
             window.app.renderCalendar(); 
-        } catch (e) {
-            console.error("Erro ao carregar provas da comunidade:", e);
-        }
+        }, (error) => {
+            console.error("Erro ao ler provas públicas:", error);
+        });
     },
 
     logout: () => { signOut(auth).then(() => { state.currentUser = null; window.app.screen('view-landing'); }); },
