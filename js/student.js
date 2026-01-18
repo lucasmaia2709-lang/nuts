@@ -1,5 +1,5 @@
 import { doc, updateDoc, addDoc, getDocs, query, collection, onSnapshot, where, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { db, appId, C_USERS, C_PAIN, C_QUOTES, C_NEWS, C_VIDEOS, C_PUBLIC_RACES, CF_WORKER_URL } from "./config.js";
+import { db, appId, C_USERS, C_PAIN, C_QUOTES, C_NEWS, C_VIDEOS, C_PUBLIC_RACES, CF_WORKER_URL, ADMIN_EMAILS } from "./config.js";
 import { state } from "./state.js";
 
 // Lógica de Calendário, Treinos, Perfil e Saúde
@@ -59,7 +59,12 @@ export const student = {
             if (isMyRaceDay) {
                 dotHtml += `<div class="cal-race-marker" style="background:var(--text-sec); border:1px solid #fff; z-index:2;" title="Minha Prova"></div>`;
                 // Adiciona a própria prova ao modalData para aparecer no detalhe do dia
-                modalData.studentRaces.push({ studentName: "Você", raceName: activeRace.name });
+                modalData.studentRaces.push({ 
+                    studentName: "Você", 
+                    raceName: activeRace.name,
+                    studentEmail: state.currentUser.email,
+                    date: dateStr 
+                });
             }
 
             // PROVAS DA COMUNIDADE (Correção de exibição)
@@ -71,7 +76,12 @@ export const student = {
                         // Garante fallback para evitar "undefined"
                         const sName = race.studentName || 'Aluno'; 
                         const rName = race.raceName || 'Prova';
-                        modalData.studentRaces.push({ studentName: sName, raceName: rName });
+                        modalData.studentRaces.push({ 
+                            studentName: sName, 
+                            raceName: rName,
+                            studentEmail: race.studentEmail,
+                            date: dateStr 
+                        });
                     }
                 });
                 if (hasStudentRace) {
@@ -110,12 +120,26 @@ export const student = {
         if (workoutData && workoutData.studentRaces && workoutData.studentRaces.length > 0) {
             content += `<div style="margin-top:15px;">
                 <h4 style="font-size:14px; color:var(--primary); margin-bottom:10px;">Provas Marcadas:</h4>`;
+            
+            const isAdmin = ADMIN_EMAILS.includes(state.currentUser.email);
+
             workoutData.studentRaces.forEach(race => {
                 const isMe = race.studentName === 'Você';
                 const bg = isMe ? '#fff3e0' : '#fff'; // Destaque laranja claro se for minha prova
                 const border = isMe ? 'var(--primary)' : '#eee';
                 
+                // Verifica se pode apagar (Dono ou Admin)
+                let deleteBtn = '';
+                if (isMe || isAdmin || race.studentEmail === state.currentUser.email) {
+                    // Escapar strings para o onclick
+                    const sEmail = window.app.escape(race.studentEmail);
+                    const rName = window.app.escape(race.raceName);
+                    const rDate = window.app.escape(race.date);
+                    deleteBtn = `<button onclick="window.app.deletePublicRaceEntry('${sEmail}', '${rName}', '${rDate}')" style="border:none; background:none; color:var(--red); cursor:pointer; float:right; font-size:14px;"><i class="fa-solid fa-trash"></i></button>`;
+                }
+
                 content += `<div style="background:${bg}; border:1px solid ${border}; padding:10px; border-radius:8px; margin-bottom:5px; font-size:13px;">
+                    ${deleteBtn}
                     <strong>${race.studentName}</strong><br>
                     <span style="color:#666;">${race.raceName}</span>
                 </div>`;
@@ -127,6 +151,30 @@ export const student = {
         const notes = state.currentUser.notes || {};
         document.getElementById('day-det-note').value = notes[dateStr] || '';
         modal.classList.add('active');
+    },
+
+    deletePublicRaceEntry: async (studentEmail, raceName, raceDate) => {
+        if(!confirm("Remover esta prova do calendário público? (Isso não apaga do perfil do aluno)")) return;
+        window.app.toast("Apagando...");
+        try {
+            const q = query(
+                collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
+                where("studentEmail", "==", studentEmail),
+                where("raceName", "==", raceName),
+                where("date", "==", raceDate)
+            );
+            const snapshot = await getDocs(q);
+            const batch = writeBatch(db);
+            snapshot.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            
+            window.app.toast("Prova removida!");
+            document.getElementById('modal-day-detail').classList.remove('active');
+            // O listener onSnapshot no auth.js atualizará o calendário automaticamente
+        } catch(e) {
+            console.error(e);
+            window.app.toast("Erro ao apagar.");
+        }
     },
 
     saveDayNote: async () => {
@@ -731,15 +779,29 @@ export const student = {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
             
             // 2. OTIMIZAÇÃO SOLUÇÃO 1: Cria registro leve na coleção pública
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
+            // Previne duplicação: apaga provas anteriores com mesmo nome/email
+            const qDup = query(
+                collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
+                where("studentEmail", "==", state.currentUser.email),
+                where("raceName", "==", name)
+            );
+            const snapDup = await getDocs(qDup);
+            const batch = writeBatch(db);
+            snapDup.forEach(doc => batch.delete(doc.ref)); // Remove duplicatas antigas
+
+            const newRaceRef = doc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
+            batch.set(newRaceRef, {
                 date: date,
                 raceName: name,
                 studentName: state.currentUser.name,
                 studentEmail: state.currentUser.email,
                 created: Date.now()
             });
+            await batch.commit();
 
             // Atualiza cache local para aparecer no calendário imediatamente
+            // Remove antigos do cache se existirem
+            state.communityRacesCache = state.communityRacesCache.filter(r => !(r.studentEmail === state.currentUser.email && r.raceName === name));
             state.communityRacesCache.push({
                 date: date,
                 raceName: name,
