@@ -1,0 +1,17 @@
+{
+  "appId": "com.werenuts.app",
+  "appName": "WE'RE NUTS",
+  "webDir": ".", 
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#9cafcc",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP"
+    }
+  }
+}
