@@ -895,10 +895,23 @@ export const admin = {
                         strengthVideo: video
                     })
                 });
-                if (!response.ok) throw new Error("Erro na IA");
+                if (!response.ok) {
+                    let errorDetails = "Erro desconhecido";
+                    try {
+                        const errorJson = await response.json();
+                        errorDetails = errorJson.error || JSON.stringify(errorJson);
+                    } catch(e) { errorDetails = await response.text(); }
+                    throw new Error(`Worker Error: ${errorDetails}`);
+                }
                 const aiWorkoutsRaw = await response.json();
+                if (!Array.isArray(aiWorkoutsRaw)) throw new Error("Formato inválido recebido da IA.");
                 newWorkouts = aiWorkoutsRaw.map(w => ({
-                    title: w.title, desc: w.desc, video: w.video || "", done: false, scheduledDate: w.date, type: w.type || 'run'
+                    title: w.title,
+                    desc: w.desc,
+                    video: w.video || "",
+                    done: false,
+                    scheduledDate: w.date,
+                    type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run')
                 }));
             } else {
                 const tplId = document.getElementById('adm-race-template-select').value;
@@ -918,11 +931,23 @@ export const admin = {
             if (!userSnap.exists()) throw new Error("Usuário não encontrado.");
             const uData = userSnap.data();
             const races = uData.races || [];
-            races.push({ name, date: raceDate, targetDistance, estimatedTime, workouts: newWorkouts, created: new Date().toISOString() });
+            races.push({ 
+                name, 
+                date: raceDate, 
+                targetDistance, 
+                estimatedTime,
+                workouts: newWorkouts, 
+                created: new Date().toISOString() 
+            });
             
             await updateDoc(userRef, { races });
+
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
-                date: raceDate, raceName: name, studentName: uData.name, studentEmail: state.currentAdmUser, created: Date.now()
+                date: raceDate,
+                raceName: name,
+                studentName: uData.name,
+                studentEmail: state.currentAdmUser,
+                created: Date.now()
             });
 
             window.app.toast("Objetivo criado com sucesso!");
@@ -931,6 +956,7 @@ export const admin = {
             if(document.getElementById('view-dashboard').classList.contains('active')) {
                 window.app.dashReloadData();
             }
+
         } catch (error) {
             console.error(error);
             window.app.toast("Erro: " + error.message);
