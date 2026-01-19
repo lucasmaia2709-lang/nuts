@@ -3,6 +3,7 @@ import { db, appId, C_USERS, C_NEWS, C_TEMPLATES, C_VIDEOS, C_PAIN, C_QUOTES, C_
 import { state } from "./state.js";
 
 export const admin = {
+    // --- NAVEGAÇÃO BÁSICA ---
     loadAdmin: () => { 
         document.getElementById('view-admin').classList.add('active'); 
         window.app.admTab('users'); 
@@ -18,7 +19,9 @@ export const admin = {
         document.body.style.backgroundColor = '#9cafcc';
     },
 
-    // --- LÓGICA DE DASHBOARD (DESKTOP) ---
+    // ============================================================
+    //  DASHBOARD DESKTOP (NOVO)
+    // ============================================================
     allDashboardUsers: [], 
 
     openDashboard: async () => {
@@ -26,15 +29,17 @@ export const admin = {
         await window.app.dashReloadData();
     },
 
+    closeDashboard: () => {
+        window.app.loadAdmin();
+    },
+
     dashReloadData: async () => {
-        // Carrega dados
         const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_USERS));
         const snap = await getDocs(q);
         
         const users = [];
         snap.forEach(d => users.push({ id: d.id, ...d.data() }));
         
-        // Processa
         admin.allDashboardUsers = users.map(u => {
             const lastWorkout = admin.getLastWorkoutDate(u);
             const daysInactive = admin.calculateDaysInactive(lastWorkout);
@@ -48,11 +53,11 @@ export const admin = {
                 ...u,
                 lastWorkoutDate: lastWorkout,
                 daysInactive: daysInactive,
-                status: status // 'pending', 'active', 'risk'
+                status: status 
             };
         });
 
-        // Ordena: Pendentes > Risco > Ativos
+        // Ordenação: Pendentes > Risco > Ativos
         admin.allDashboardUsers.sort((a,b) => {
              if (a.status === 'pending' && b.status !== 'pending') return -1;
              if (b.status === 'pending' && a.status !== 'pending') return 1;
@@ -61,43 +66,33 @@ export const admin = {
              return b.daysInactive - a.daysInactive;
         });
 
-        // Se estiver vendo detalhes de alguém, recarrega os detalhes
         const detailContainer = document.getElementById('dash-tab-student-detail');
         if (!detailContainer.classList.contains('hidden') && state.currentAdmUser) {
              window.app.openDashStudentDetail(state.currentAdmUser);
         } else {
-             // Se não, atualiza tabela geral
              admin.renderDashboardMetrics();
              admin.dashApplyFilters();
         }
-    },
-
-    closeDashboard: () => {
-        admin.loadAdmin();
     },
 
     dashTab: (tab) => {
         if(tab === 'overview') {
             document.getElementById('dash-tab-students').classList.remove('hidden');
             document.getElementById('dash-tab-student-detail').classList.add('hidden');
-            state.currentAdmUser = null; // Limpa seleção
+            state.currentAdmUser = null; 
             admin.dashApplyFilters();
         }
     },
 
-    // --- SISTEMA DE FILTROS UNIFICADO ---
     dashApplyFilters: () => {
         const term = document.getElementById('dash-search').value.toLowerCase();
-        // Verifica se o elemento existe antes de pegar o valor
         const statusFilterEl = document.getElementById('dash-filter-status');
         const statusFilter = statusFilterEl ? statusFilterEl.value : 'all';
-        
         const startStr = document.getElementById('dash-date-start').value;
         const endStr = document.getElementById('dash-date-end').value;
 
         let filtered = admin.allDashboardUsers;
 
-        // 1. Filtro de Texto
         if (term) {
             filtered = filtered.filter(u => 
                 u.name.toLowerCase().includes(term) || 
@@ -105,12 +100,10 @@ export const admin = {
             );
         }
 
-        // 2. Filtro de Status
         if (statusFilter !== 'all') {
             filtered = filtered.filter(u => u.status === statusFilter);
         }
 
-        // 3. Filtro de Data (Treinou no período)
         if (startStr && endStr) {
             const start = new Date(startStr + 'T00:00:00');
             const end = new Date(endStr + 'T23:59:59');
@@ -131,7 +124,6 @@ export const admin = {
         admin.renderDashboardMetrics(); 
     },
 
-    // Funções de atalho para o HTML chamar
     dashSearch: () => admin.dashApplyFilters(),
     dashFilterStatus: () => admin.dashApplyFilters(),
     dashFilterByDate: () => admin.dashApplyFilters(),
@@ -141,7 +133,6 @@ export const admin = {
         const risk = admin.allDashboardUsers.filter(u => u.status === 'risk').length;
         const activeToday = admin.allDashboardUsers.filter(u => u.daysInactive === 0).length;
 
-        // Atualiza UI
         if(document.getElementById('dash-total-students')) document.getElementById('dash-total-students').innerText = total;
         if(document.getElementById('dash-risk-students')) document.getElementById('dash-risk-students').innerText = risk;
         if(document.getElementById('dash-active-today')) document.getElementById('dash-active-today').innerText = activeToday;
@@ -162,10 +153,8 @@ export const admin = {
             const daysStr = u.daysInactive === 999 ? '-' : `${u.daysInactive} dias`;
             const currentRace = (u.races && u.races.length > 0) ? u.races[u.races.length-1].name : 'Sem Plano';
 
-            // Botão de ação principal
             let actionBtn = `<button onclick="window.app.openDashStudentDetail('${window.app.escape(u.id)}')" style="border:1px solid #ddd; background:white; padding:5px 10px; border-radius:5px; cursor:pointer; color:var(--primary); font-weight:600;">Ver Detalhes</button>`;
             
-            // Se pendente, mostra botão de Aprovar direto na tabela
             if(u.status === 'pending') {
                 actionBtn = `
                 <button onclick="window.app.admToggleStatus('${window.app.escape(u.id)}', true)" style="border:none; background:var(--success); padding:6px 12px; border-radius:5px; cursor:pointer; color:white; font-weight:600; margin-right:5px;">Aprovar</button>
@@ -187,11 +176,8 @@ export const admin = {
         });
     },
 
-    // --- DETALHES DO ALUNO (COM AÇÕES) ---
     openDashStudentDetail: async (userId) => {
-        // Atualiza estado global para saber quem está sendo editado
         state.currentAdmUser = userId;
-
         const u = admin.allDashboardUsers.find(user => user.id === userId);
         if (!u) return;
 
@@ -250,7 +236,7 @@ export const admin = {
                         </div>`;
                     });
                 } else {
-                    workoutsHtml = '<div style="padding:20px; color:#999; text-align:center;">Sem treinosneste objetivo.</div>';
+                    workoutsHtml = '<div style="padding:20px; color:#999; text-align:center;">Sem treinos neste objetivo.</div>';
                 }
 
                 racesHtml += `
@@ -308,7 +294,6 @@ export const admin = {
         const weight = (u.weightHistory && u.weightHistory.length > 0) ? u.weightHistory[u.weightHistory.length-1].value + 'kg' : '--';
         const joined = u.created ? new Date(u.created).toLocaleDateString() : '--';
         
-        // Botão de Aprovar só aparece se pendente
         let approveBtn = '';
         if(u.status === 'pending') {
             approveBtn = `<button onclick="window.app.admToggleStatus('${u.id}', true)" class="btn-primary" style="background:var(--success); color:white; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; font-weight:700; box-shadow:0 4px 10px rgba(46, 204, 113, 0.3);"><i class="fa-solid fa-check"></i> Aprovar Acesso</button>`;
@@ -371,7 +356,6 @@ export const admin = {
         `;
     },
 
-    // --- Helpers de Cálculo ---
     getLastWorkoutDate: (u) => {
         if (!u.races || u.races.length === 0) return null;
         let lastDate = null;
@@ -411,254 +395,28 @@ export const admin = {
         if(content) content.classList.toggle('open');
     },
 
-    // --- FUNÇÕES DE ADMINISTRAÇÃO REUTILIZADAS (Com Refresh para Dashboard) ---
+    // ============================================================
+    //  ADMIN MOBILE / LEGADO (ABAS, NOTÍCIAS, FISIO, ETC)
+    // ============================================================
 
-    admToggleStatus: async (docId, status) => { 
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status }); 
-        window.app.toast(status ? "Aluno Aprovado" : "Aluno Bloqueado");
-        if(document.getElementById('view-dashboard').classList.contains('active')) {
-            window.app.dashReloadData();
-        }
+    admTab: (t) => {
+        document.querySelectorAll('[id^="adm-content"]').forEach(e=>e.classList.add('hidden'));
+        const tabContent = document.getElementById('adm-content-'+t);
+        if(tabContent) tabContent.classList.remove('hidden');
+        
+        document.querySelectorAll('.admin-tab-btn').forEach(b=>b.classList.remove('active'));
+        const btn = document.getElementById('btn-adm-'+t);
+        if(btn) btn.classList.add('active');
+
+        if(t === 'users') window.app.admLoadUsers();
+        if(t === 'news') window.app.admLoadNewsHistory();
+        if(t === 'quotes') window.app.admLoadQuotes();
+        if(t === 'templates') window.app.admLoadTemplates();
+        if(t === 'videos') window.app.admLoadStrengthVideos();
+        if(t === 'physio') window.app.admLoadPhysio(); 
     },
 
-    admDelRaceInline: async (docId, rIdx) => { 
-        window.app.showConfirm("Apagar objetivo?", async () => { 
-            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); 
-            const u = snap.data(); 
-            u.races.splice(rIdx, 1); 
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); 
-            if(document.getElementById('view-dashboard').classList.contains('active')) {
-                window.app.dashReloadData();
-            }
-        }); 
-    },
-
-    admConfirmAddRace: async () => {
-        const name = document.getElementById('adm-race-name').value;
-        const raceDate = document.getElementById('adm-race-date').value;
-        const startDateStr = document.getElementById('adm-start-date').value;
-        const method = document.getElementById('adm-race-method').value;
-
-        if (!name || !raceDate || !startDateStr) return window.app.toast("Preencha Nome e Datas.");
-
-        let newWorkouts = [];
-        let targetDistance = 0;
-        let estimatedTime = "Não informado";
-
-        const btn = document.querySelector('#modal-adm-add-race button.btn-primary');
-        if(btn) { btn.disabled = true; btn.innerText = "Processando..."; }
-
-        try {
-            if (method === 'ia') {
-                const dist = parseFloat(document.getElementById('adm-race-dist').value) || 0;
-                const time = document.getElementById('adm-race-time').value || "Não informado";
-                const video = document.getElementById('adm-race-video').value || "";
-                targetDistance = dist;
-                estimatedTime = time;
-                const response = await fetch(CF_WORKER_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        dist: dist,
-                        estTime: time,
-                        startDate: startDateStr,
-                        raceDate: raceDate,
-                        strengthVideo: video
-                    })
-                });
-                if (!response.ok) {
-                    let errorDetails = "Erro desconhecido";
-                    try {
-                        const errorJson = await response.json();
-                        errorDetails = errorJson.error || JSON.stringify(errorJson);
-                    } catch(e) { errorDetails = await response.text(); }
-                    throw new Error(`Worker Error: ${errorDetails}`);
-                }
-                const aiWorkoutsRaw = await response.json();
-                if (!Array.isArray(aiWorkoutsRaw)) throw new Error("Formato inválido recebido da IA.");
-                newWorkouts = aiWorkoutsRaw.map(w => ({
-                    title: w.title,
-                    desc: w.desc,
-                    video: w.video || "",
-                    done: false,
-                    scheduledDate: w.date,
-                    type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run')
-                }));
-            } else {
-                const tplId = document.getElementById('adm-race-template-select').value;
-                if (!tplId) throw new Error("Selecione um modelo.");
-                const tSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tplId));
-                if (!tSnap.exists()) throw new Error("Modelo não encontrado.");
-                const tData = tSnap.data();
-                const startDate = new Date(startDateStr);
-                newWorkouts = tData.workouts.map((w, index) => {
-                    const date = new Date(startDate);
-                    date.setDate(date.getDate() + index);
-                    return { ...w, scheduledDate: date.toISOString().split('T')[0], done: false };
-                });
-            }
-            const userRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentAdmUser);
-            const userSnap = await getDoc(userRef);
-            if (!userSnap.exists()) throw new Error("Usuário não encontrado.");
-            const uData = userSnap.data();
-            const races = uData.races || [];
-            races.push({ 
-                name, 
-                date: raceDate, 
-                targetDistance, 
-                estimatedTime,
-                workouts: newWorkouts, 
-                created: new Date().toISOString() 
-            });
-            
-            await updateDoc(userRef, { races });
-
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
-                date: raceDate,
-                raceName: name,
-                studentName: uData.name,
-                studentEmail: state.currentAdmUser,
-                created: Date.now()
-            });
-
-            window.app.toast("Objetivo criado com sucesso!");
-            document.getElementById('modal-adm-add-race').classList.remove('active');
-            
-            if(document.getElementById('view-dashboard').classList.contains('active')) {
-                window.app.dashReloadData();
-            }
-
-        } catch (error) {
-            console.error(error);
-            window.app.toast("Erro: " + error.message);
-        } finally {
-            if(btn) { btn.disabled = false; btn.innerText = "Criar"; }
-        }
-    },
-
-    admAddRaceInline: async (docId) => { 
-        state.currentAdmUser = docId;
-        const tplSelect = document.getElementById('adm-race-template-select');
-        tplSelect.innerHTML = '<option value="">Carregando...</option>';
-        document.getElementById('adm-race-name').value = '';
-        document.getElementById('adm-race-date').value = '';
-        const tomorrow = new Date(); 
-        tomorrow.setDate(tomorrow.getDate()+1);
-        document.getElementById('adm-start-date').value = tomorrow.toISOString().split('T')[0];
-        document.getElementById('adm-race-method').value = 'ia';
-        document.getElementById('adm-race-dist').value = '';
-        document.getElementById('adm-race-time').value = '';
-        document.getElementById('adm-race-video').value = '';
-        window.app.admToggleRaceMode();
-        document.getElementById('modal-adm-add-race').classList.add('active');
-        const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES));
-        tplSelect.innerHTML = '<option value="">Selecione...</option>';
-        querySnapshot.forEach((doc) => {
-            const t = doc.data();
-            tplSelect.innerHTML += `<option value="${doc.id}">${t.name} (${t.workouts.length} treinos)</option>`;
-        });
-    },
-
-    admToggleRaceMode: () => {
-        const mode = document.getElementById('adm-race-method').value;
-        if (mode === 'ia') {
-            document.getElementById('adm-race-ia-fields').classList.remove('hidden');
-            document.getElementById('adm-race-tpl-fields').classList.add('hidden');
-        } else {
-            document.getElementById('adm-race-ia-fields').classList.add('hidden');
-            document.getElementById('adm-race-tpl-fields').classList.remove('hidden');
-        }
-    },
-
-    admDeleteUserQuick: async (docId) => { window.app.showConfirm(`Apagar permanentemente?`, async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); }); },
-    
-    admLoadTemplates: () => {
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES), (snap) => {
-            const list = document.getElementById('adm-templates-list'); list.innerHTML = '';
-            let html = '';
-            snap.forEach(d => {
-                const t = d.data(); const tId = d.id; const isTplOpen = state.expandedTemplates.has(tId) ? 'open' : '';
-                let workoutsHtml = '';
-                if(t.workouts && t.workouts.length > 0) {
-                    t.workouts.forEach((w, wIdx) => {
-                        workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;"><div style="flex:1;"><span style="font-size:13px; font-weight:600;">${w.title}</span><br><small>${w.desc}</small></div><div style="display:flex; gap:5px;"><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, -1)"><i class="fa-solid fa-arrow-up"></i></button><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, 1)"><i class="fa-solid fa-arrow-down"></i></button><button onclick="window.app.admEditWorkoutFromTemplate('${tId}', ${wIdx})"><i class="fa-solid fa-pencil"></i></button><button onclick="window.app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:red">X</button></div></div>`;
-                    });
-                } else { workoutsHtml = '<small>Sem treinos.</small>'; }
-                html += `<div class="card" style="padding:10px; margin-bottom:10px;"><div class="adm-row-header" onclick="window.app.admToggleTemplate('${tId}')"><span>${t.name}</span><i class="fa-solid fa-chevron-down"></i></div><div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">${workoutsHtml}<div style="display:flex; justify-content:space-between; margin-top:10px;"><button onclick="window.app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small">+ Treino</button><button onclick="window.app.admDelTemplate('${tId}')" style="color:red; font-size:11px; border:none; background:none;">Excluir Modelo</button></div></div></div>`;
-            });
-            list.innerHTML = html;
-        });
-    },
-
-    admToggleTemplate: (tId) => { if(state.expandedTemplates.has(tId)) state.expandedTemplates.delete(tId); else state.expandedTemplates.add(tId); const el = document.getElementById(`tpl-content-${tId}`); if(el) el.classList.toggle('open'); },
-    admAddTemplateInline: async () => { window.app.showPrompt("Nome do Modelo:", async (name) => { if(!name) return; await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES)), { name, workouts: [] }); }); },
-    admAddWorkoutToTemplateInline: (tId) => { state.isEditingTemplate = true; state.currentTemplateId = tId; state.editingWorkoutIndex = null; document.getElementById('modal-add-single-workout').classList.add('active'); },
-    admEditWorkoutFromTemplate: async (tId, wIdx) => { state.isEditingTemplate = true; state.currentTemplateId = tId; state.editingWorkoutIndex = wIdx; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const w = snap.data().workouts[wIdx]; document.getElementById('new-w-title').value = w.title; document.getElementById('new-w-desc').value = w.desc; document.getElementById('new-w-video').value = w.video || ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
-    admMoveWorkout: async (tId, wIdx, direction) => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); const workouts = t.workouts; const newIdx = wIdx + direction; if (newIdx < 0 || newIdx >= workouts.length) return; const temp = workouts[wIdx]; workouts[wIdx] = workouts[newIdx]; workouts[newIdx] = temp; await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts }); },
-    admDeleteWorkoutFromTemplate: async (tId, wIdx) => { if(!confirm("Remover?")) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); t.workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts: t.workouts }); },
-    admDelTemplate: async (id) => { window.app.showConfirm("Apagar modelo?", async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, id))); },
-
-    previewNewsImg: (input) => { 
-        if(input.files && input.files[0]) {
-            state.tempNewsFile = input.files[0];
-            const url = URL.createObjectURL(state.tempNewsFile);
-            const img = document.getElementById('news-preview'); 
-            img.src = url; 
-            img.style.display = 'block'; 
-        }
-    },
-
-    postNews: async () => {
-        const title = document.getElementById('news-title').value; 
-        const body = document.getElementById('news-body').value;
-        if(!title || !body) return window.app.toast('Preencha tudo');
-        document.getElementById('btn-post-news').disabled = true;
-        let imgUrl = null;
-        if(state.tempNewsFile) imgUrl = await window.app.uploadImage(state.tempNewsFile, 'news');
-        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS)), { 
-            title, body, img: imgUrl, created: Date.now() 
-        });
-        document.getElementById('news-title').value = ''; 
-        document.getElementById('news-body').value = ''; 
-        state.tempNewsFile = null; 
-        document.getElementById('news-preview').style.display = 'none'; 
-        document.getElementById('btn-post-news').disabled = false;
-        window.app.toast("Notícia publicada!");
-        window.app.admTab('news');
-    },
-
-    admLoadNewsHistory: () => {
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
-            const div = document.getElementById('adm-news-history'); div.innerHTML = '';
-            snap.forEach(d => { div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #CCC; display:flex; justify-content:space-between;"><span>${d.data().title}</span><button onclick=\"window.app.admDeleteNews('${d.id}')\" style=\"color:red; border:none; background:none;\">X</button></div>`; });
-        });
-    },
-    
-    admDeleteNews: async (id) => { 
-        if(confirm("Apagar notícia?")) { 
-            const refDoc = doc(db, 'artifacts', appId, 'public', 'data', C_NEWS, id);
-            const snap = await getDoc(refDoc);
-            if(snap.exists() && snap.data().img) await window.app.deleteFile(snap.data().img);
-            await deleteDoc(refDoc);
-        } 
-    },
-
-    postQuote: async () => {
-        const text = document.getElementById('adm-quote-text').value; if(!text) return;
-        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES)), { text, created: Date.now() });
-        document.getElementById('adm-quote-text').value = '';
-    },
-
-    admLoadQuotes: () => {
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s) => {
-            const l = document.getElementById('adm-quotes-list'); l.innerHTML = '';
-            s.forEach(d=>{ l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">"${d.data().text}" <button onclick="window.app.admDelQuote('${d.id}')" style="color:red;float:right;border:none;">X</button></div>` });
-        });
-    },
-
-    admDelQuote: async (id) => { window.app.showConfirm('Apagar frase?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id))); },
-
+    // --- ABA USUÁRIOS (MOBILE) ---
     admLoadUsers: async () => {
         const list = document.getElementById('adm-users-list');
         list.innerHTML = ''; 
@@ -666,7 +424,9 @@ export const admin = {
         state.admUsersCache = {}; 
         const oldBtn = document.getElementById('btn-load-more-users');
         if(oldBtn) oldBtn.remove();
+        
         await window.app.admFetchNextUsers();
+        
         const loadMoreBtn = document.createElement('button');
         loadMoreBtn.id = 'btn-load-more-users';
         loadMoreBtn.innerText = 'Carregar mais alunos';
@@ -694,17 +454,11 @@ export const admin = {
             const btn = document.getElementById('btn-load-more-users');
 
             if (documentSnapshots.empty) {
-                if(btn) {
-                    btn.innerText = "Fim da lista";
-                    btn.disabled = true;
-                }
+                if(btn) { btn.innerText = "Fim da lista"; btn.disabled = true; }
                 state.isLoadingUsers = false;
                 return;
             } else {
-                if(btn) {
-                    btn.innerText = "Carregar mais alunos";
-                    btn.disabled = false;
-                }
+                if(btn) { btn.innerText = "Carregar mais alunos"; btn.disabled = false; }
             }
             state.lastVisibleUser = documentSnapshots.docs[documentSnapshots.docs.length - 1];
             let html = '';
@@ -820,6 +574,126 @@ export const admin = {
         </div>`;
     },
 
+    // --- ABA NEWS ---
+    admLoadNewsHistory: () => {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
+            const div = document.getElementById('adm-news-history'); 
+            if(div) {
+                div.innerHTML = '';
+                snap.forEach(d => { div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #CCC; display:flex; justify-content:space-between;"><span>${d.data().title}</span><button onclick=\"window.app.admDeleteNews('${d.id}')\" style=\"color:red; border:none; background:none;\">X</button></div>`; });
+            }
+        });
+    },
+    
+    postNews: async () => {
+        const title = document.getElementById('news-title').value; 
+        const body = document.getElementById('news-body').value;
+        if(!title || !body) return window.app.toast('Preencha tudo');
+        document.getElementById('btn-post-news').disabled = true;
+        let imgUrl = null;
+        if(state.tempNewsFile) imgUrl = await window.app.uploadImage(state.tempNewsFile, 'news');
+        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS)), { 
+            title, body, img: imgUrl, created: Date.now() 
+        });
+        document.getElementById('news-title').value = ''; 
+        document.getElementById('news-body').value = ''; 
+        state.tempNewsFile = null; 
+        document.getElementById('news-preview').style.display = 'none'; 
+        document.getElementById('btn-post-news').disabled = false;
+        window.app.toast("Notícia publicada!");
+        window.app.admTab('news');
+    },
+
+    previewNewsImg: (input) => { 
+        if(input.files && input.files[0]) {
+            state.tempNewsFile = input.files[0];
+            const url = URL.createObjectURL(state.tempNewsFile);
+            const img = document.getElementById('news-preview'); 
+            img.src = url; 
+            img.style.display = 'block'; 
+        }
+    },
+
+    admDeleteNews: async (id) => { 
+        if(confirm("Apagar notícia?")) { 
+            const refDoc = doc(db, 'artifacts', appId, 'public', 'data', C_NEWS, id);
+            const snap = await getDoc(refDoc);
+            if(snap.exists() && snap.data().img) await window.app.deleteFile(snap.data().img);
+            await deleteDoc(refDoc);
+        } 
+    },
+
+    // --- ABA QUOTES ---
+    admLoadQuotes: () => {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s) => {
+            const l = document.getElementById('adm-quotes-list'); 
+            if(l) {
+                l.innerHTML = '';
+                s.forEach(d=>{ l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">"${d.data().text}" <button onclick="window.app.admDelQuote('${d.id}')" style="color:red;float:right;border:none;">X</button></div>` });
+            }
+        });
+    },
+
+    postQuote: async () => {
+        const text = document.getElementById('adm-quote-text').value; if(!text) return;
+        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES)), { text, created: Date.now() });
+        document.getElementById('adm-quote-text').value = '';
+    },
+
+    admDelQuote: async (id) => { window.app.showConfirm('Apagar frase?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id))); },
+
+    // --- ABA TEMPLATES ---
+    admLoadTemplates: () => {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES), (snap) => {
+            const list = document.getElementById('adm-templates-list'); 
+            if(list) {
+                list.innerHTML = '';
+                let html = '';
+                snap.forEach(d => {
+                    const t = d.data(); const tId = d.id; const isTplOpen = state.expandedTemplates.has(tId) ? 'open' : '';
+                    let workoutsHtml = '';
+                    if(t.workouts && t.workouts.length > 0) {
+                        t.workouts.forEach((w, wIdx) => {
+                            workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;"><div style="flex:1;"><span style="font-size:13px; font-weight:600;">${w.title}</span><br><small>${w.desc}</small></div><div style="display:flex; gap:5px;"><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, -1)"><i class="fa-solid fa-arrow-up"></i></button><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, 1)"><i class="fa-solid fa-arrow-down"></i></button><button onclick="window.app.admEditWorkoutFromTemplate('${tId}', ${wIdx})"><i class="fa-solid fa-pencil"></i></button><button onclick="window.app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:red">X</button></div></div>`;
+                        });
+                    } else { workoutsHtml = '<small>Sem treinos.</small>'; }
+                    html += `<div class="card" style="padding:10px; margin-bottom:10px;"><div class="adm-row-header" onclick="window.app.admToggleTemplate('${tId}')"><span>${t.name}</span><i class="fa-solid fa-chevron-down"></i></div><div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">${workoutsHtml}<div style="display:flex; justify-content:space-between; margin-top:10px;"><button onclick="window.app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small">+ Treino</button><button onclick="window.app.admDelTemplate('${tId}')" style="color:red; font-size:11px; border:none; background:none;">Excluir Modelo</button></div></div></div>`;
+                });
+                list.innerHTML = html;
+            }
+        });
+    },
+
+    admToggleTemplate: (tId) => { if(state.expandedTemplates.has(tId)) state.expandedTemplates.delete(tId); else state.expandedTemplates.add(tId); const el = document.getElementById(`tpl-content-${tId}`); if(el) el.classList.toggle('open'); },
+    admAddTemplateInline: async () => { window.app.showPrompt("Nome do Modelo:", async (name) => { if(!name) return; await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES)), { name, workouts: [] }); }); },
+    admAddWorkoutToTemplateInline: (tId) => { state.isEditingTemplate = true; state.currentTemplateId = tId; state.editingWorkoutIndex = null; document.getElementById('modal-add-single-workout').classList.add('active'); },
+    admEditWorkoutFromTemplate: async (tId, wIdx) => { state.isEditingTemplate = true; state.currentTemplateId = tId; state.editingWorkoutIndex = wIdx; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const w = snap.data().workouts[wIdx]; document.getElementById('new-w-title').value = w.title; document.getElementById('new-w-desc').value = w.desc; document.getElementById('new-w-video').value = w.video || ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
+    admMoveWorkout: async (tId, wIdx, direction) => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); const workouts = t.workouts; const newIdx = wIdx + direction; if (newIdx < 0 || newIdx >= workouts.length) return; const temp = workouts[wIdx]; workouts[wIdx] = workouts[newIdx]; workouts[newIdx] = temp; await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts }); },
+    admDeleteWorkoutFromTemplate: async (tId, wIdx) => { if(!confirm("Remover?")) return; const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId)); const t = snap.data(); t.workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tId), { workouts: t.workouts }); },
+    admDelTemplate: async (id) => { window.app.showConfirm("Apagar modelo?", async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, id))); },
+
+    // --- ABA VÍDEOS ---
+    admLoadStrengthVideos: () => {
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
+            const list = document.getElementById('adm-videos-list');
+            if(list) {
+                list.innerHTML = '';
+                snap.forEach(d => {
+                    const v = d.data();
+                    const safeLink = window.app.escape(v.link);
+                    list.innerHTML += `
+                    <div style="background:#fff; border-bottom:1px solid #eee; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong>${v.title}</strong><br>
+                            <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary);">Ver Vídeo</a>
+                        </div>
+                        <button onclick="window.app.admDeleteStrengthVideo('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer;">X</button>
+                    </div>`;
+                });
+            }
+        });
+    },
+
     admAddStrengthVideo: async () => {
         const title = document.getElementById('adm-video-title').value;
         const link = document.getElementById('adm-video-link').value;
@@ -832,87 +706,247 @@ export const admin = {
         document.getElementById('adm-video-link').value = '';
     },
 
-    admLoadStrengthVideos: () => {
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
-            const list = document.getElementById('adm-videos-list');
-            list.innerHTML = '';
-            snap.forEach(d => {
-                const v = d.data();
-                const safeLink = window.app.escape(v.link);
-                list.innerHTML += `
-                <div style="background:#fff; border-bottom:1px solid #eee; padding:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <strong>${v.title}</strong><br>
-                        <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary);">Ver Vídeo</a>
-                    </div>
-                    <button onclick="window.app.admDeleteStrengthVideo('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer;">X</button>
-                </div>`;
-            });
-        });
-    },
-
     admDeleteStrengthVideo: async (id) => {
         if(confirm("Apagar vídeo?")) {
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_VIDEOS, id));
         }
     },
 
-    admToggleWorkoutStatus: async (docId, rIdx, wIdx, status) => {
-        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
-        if(snap.exists()) {
-            const u = snap.data();
-            if(u.races && u.races[rIdx] && u.races[rIdx].workouts && u.races[rIdx].workouts[wIdx]) {
-                u.races[rIdx].workouts[wIdx].done = status;
-                if(!status) {
-                    delete u.races[rIdx].workouts[wIdx].completedAt;
-                }
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races });
-                window.app.toast(status ? "Treino concluído manualmente" : "Treino reativado!");
+    // --- ABA FISIO ---
+    admLoadPhysio: () => {
+        const list = document.getElementById('adm-physio-list');
+        if(!list) return;
+        list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
+        
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN));
+        
+        onSnapshot(q, (snapshot) => {
+            if(snapshot.empty) {
+                list.innerHTML = '<p style="text-align: center; color: #999;">Nenhum relato.</p>';
+                return;
             }
+            
+            let items = [];
+            snapshot.forEach(d => items.push({ id: d.id, ...d.data() }));
+            items.sort((a,b) => b.timestamp - a.timestamp);
+
+            list.innerHTML = '';
+            items.forEach(item => {
+                const unreadClass = !item.readByAdmin ? 'unread' : '';
+                const dateStr = new Date(item.timestamp).toLocaleDateString();
+                const modalData = encodeURIComponent(JSON.stringify(item));
+
+                list.innerHTML += `
+                <div class="adm-pain-card ${unreadClass}" onclick="window.app.admOpenPainDetail('${modalData}')">
+                    <div class="adm-pain-info">
+                        <div class="adm-pain-user">${item.userName} <span style="font-weight:400; font-size:12px; color:#888;">- ${item.workoutTitle}</span></div>
+                        <div class="adm-pain-date">${dateStr}</div>
+                        <div class="adm-pain-msg"><strong>Dor ${item.painLevel}:</strong> ${item.notes}</div>
+                    </div>
+                    ${item.responded ? '<i class="fa-solid fa-check" style="color:var(--success);"></i>' : '<i class="fa-solid fa-envelope" style="color:#ddd;"></i>'}
+                </div>`;
+            });
+        });
+    },
+
+    admOpenPainDetail: async (dataString) => {
+        const data = JSON.parse(decodeURIComponent(dataString));
+        state.currentPainId = data.id;
+
+        const view = document.getElementById('adm-pain-detail-view');
+        view.innerHTML = `
+            <strong>Aluno:</strong> ${data.userName}<br>
+            <strong>Treino:</strong> ${data.workoutTitle}<br>
+            <strong>Data:</strong> ${new Date(data.timestamp).toLocaleDateString()}<br>
+            <strong>Nível de Dor:</strong> ${data.painLevel}/7<br>
+            <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #ccc;">${data.notes}</div>
+        `;
+        
+        document.getElementById('adm-pain-response-text').value = data.response || '';
+        document.getElementById('modal-admin-pain-response').classList.add('active');
+
+        if(!data.readByAdmin) {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, state.currentPainId), { readByAdmin: true });
         }
     },
 
-    admShowWorkoutDetail: (userId, rIdx, wIdx) => {
-        const user = state.admUsersCache[userId];
-        if (!user || !user.races[rIdx] || !user.races[rIdx].workouts[wIdx]) return;
-        const w = user.races[rIdx].workouts[wIdx];
-        document.getElementById('adm-workout-det-title').innerText = w.title;
-        document.getElementById('adm-workout-det-desc').innerText = w.desc;
-        const vidContainer = document.getElementById('adm-workout-det-video-container');
-        if (w.video) {
-            const safeVideo = window.app.escape(w.video);
-            vidContainer.style.display = 'block';
-            vidContainer.innerHTML = `<button onclick="window.app.playVideo('${safeVideo}')" class="btn btn-primary" style="font-size:14px;"><i class="fa-solid fa-play"></i> Ver Vídeo</button>`;
-        } else {
-            vidContainer.style.display = 'none';
-        }
-        document.getElementById('modal-adm-workout-detail').classList.add('active');
+    admSendPainResponse: async () => {
+        const response = document.getElementById('adm-pain-response-text').value;
+        if(!response) return window.app.toast("Escreva uma resposta.");
+
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, state.currentPainId), {
+            response: response,
+            responseDate: Date.now(),
+            responded: true,
+            readByUser: false 
+        });
+
+        window.app.toast("Resposta enviada!");
+        document.getElementById('modal-admin-pain-response').classList.remove('active');
     },
-    
-    admToggleUser: (docId) => { if(state.expandedUsers.has(docId)) state.expandedUsers.delete(docId); else state.expandedUsers.add(docId); const el = document.getElementById(`user-content-${docId}`); if(el) el.classList.toggle('open'); },
-    admToggleGoal: (key) => { if(state.expandedRaces.has(key)) state.expandedRaces.delete(key); else state.expandedRaces.add(key); const el = document.getElementById(`goal-content-${key}`); if(el) el.classList.toggle('open'); },
-    admAddWorkoutInline: (docId, rIdx) => { state.currentAdmUser = docId; state.currentAdmRaceIdx = rIdx; state.isEditingTemplate = false; state.editingWorkoutIndex = null; document.getElementById('modal-workout-title').innerText = "Novo Treino"; document.getElementById('new-w-title').value = ''; document.getElementById('new-w-desc').value = ''; document.getElementById('new-w-video').value = ''; document.getElementById('modal-add-single-workout').classList.add('active'); },
-    
-    saveSingleWorkout: async () => {
-        const title = document.getElementById('new-w-title').value;
-        const desc = document.getElementById('new-w-desc').value;
-        const video = document.getElementById('new-w-video').value;
-        if(!title) return window.app.toast('Título obrigatório');
-        if (state.isEditingTemplate) {
-            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, state.currentTemplateId));
-            const t = snap.data();
-            if (state.editingWorkoutIndex !== null) t.workouts[state.editingWorkoutIndex] = { title, desc, video, done: false }; 
-            else t.workouts.push({ title, desc, video, done: false });
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, state.currentTemplateId), { workouts: t.workouts });
-        } else {
-            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentAdmUser));
-            const u = snap.data();
-            if (!u.races[state.currentAdmRaceIdx].workouts) u.races[state.currentAdmRaceIdx].workouts = [];
-            u.races[state.currentAdmRaceIdx].workouts.push({title, desc, video, done:false});
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentAdmUser), { races: u.races });
+
+    // --- FUNÇÕES COMPARTILHADAS (DASHBOARD & MOBILE) ---
+
+    // Toggle Status (Aprovar/Bloquear)
+    admToggleStatus: async (docId, status) => { 
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status }); 
+        window.app.toast(status ? "Aluno Aprovado" : "Aluno Bloqueado");
+        // Atualiza Dashboard se estiver nele
+        if(document.getElementById('view-dashboard').classList.contains('active')) {
+            window.app.dashReloadData();
         }
-        document.getElementById('modal-add-single-workout').classList.remove('active');
-        window.app.toast("Salvo com sucesso!");
+    },
+
+    // Deletar Aluno
+    admDeleteUserQuick: async (docId) => { 
+        window.app.showConfirm(`Apagar permanentemente?`, async () => { 
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); 
+            // Atualiza Dashboard se estiver nele
+            if(document.getElementById('view-dashboard').classList.contains('active')) {
+                window.app.dashReloadData();
+            } else {
+                // Se estiver no mobile, recarrega lista
+                const btn = document.getElementById('btn-load-more-users');
+                if(btn) btn.click();
+            }
+        }); 
+    },
+
+    // Deletar Objetivo (Race)
+    admDelRaceInline: async (docId, rIdx) => { 
+        window.app.showConfirm("Apagar objetivo?", async () => { 
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); 
+            const u = snap.data(); 
+            u.races.splice(rIdx, 1); 
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); 
+            if(document.getElementById('view-dashboard').classList.contains('active')) {
+                window.app.dashReloadData();
+            }
+        }); 
+    },
+
+    // Adicionar Objetivo (Inicia Modal)
+    admAddRaceInline: async (docId) => { 
+        state.currentAdmUser = docId;
+        const tplSelect = document.getElementById('adm-race-template-select');
+        tplSelect.innerHTML = '<option value="">Carregando...</option>';
+        document.getElementById('adm-race-name').value = '';
+        document.getElementById('adm-race-date').value = '';
+        const tomorrow = new Date(); 
+        tomorrow.setDate(tomorrow.getDate()+1);
+        document.getElementById('adm-start-date').value = tomorrow.toISOString().split('T')[0];
+        document.getElementById('adm-race-method').value = 'ia';
+        document.getElementById('adm-race-dist').value = '';
+        document.getElementById('adm-race-time').value = '';
+        document.getElementById('adm-race-video').value = '';
+        window.app.admToggleRaceMode();
+        document.getElementById('modal-adm-add-race').classList.add('active');
+        const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES));
+        tplSelect.innerHTML = '<option value="">Selecione...</option>';
+        querySnapshot.forEach((doc) => {
+            const t = doc.data();
+            tplSelect.innerHTML += `<option value="${doc.id}">${t.name} (${t.workouts.length} treinos)</option>`;
+        });
+    },
+
+    admToggleRaceMode: () => {
+        const mode = document.getElementById('adm-race-method').value;
+        if (mode === 'ia') {
+            document.getElementById('adm-race-ia-fields').classList.remove('hidden');
+            document.getElementById('adm-race-tpl-fields').classList.add('hidden');
+        } else {
+            document.getElementById('adm-race-ia-fields').classList.add('hidden');
+            document.getElementById('adm-race-tpl-fields').classList.remove('hidden');
+        }
+    },
+
+    // Confirmar criação do objetivo
+    admConfirmAddRace: async () => {
+        const name = document.getElementById('adm-race-name').value;
+        const raceDate = document.getElementById('adm-race-date').value;
+        const startDateStr = document.getElementById('adm-start-date').value;
+        const method = document.getElementById('adm-race-method').value;
+
+        if (!name || !raceDate || !startDateStr) return window.app.toast("Preencha Nome e Datas.");
+
+        let newWorkouts = [];
+        let targetDistance = 0;
+        let estimatedTime = "Não informado";
+
+        const btn = document.querySelector('#modal-adm-add-race button.btn-primary');
+        if(btn) { btn.disabled = true; btn.innerText = "Processando..."; }
+
+        try {
+            if (method === 'ia') {
+                const dist = parseFloat(document.getElementById('adm-race-dist').value) || 0;
+                const time = document.getElementById('adm-race-time').value || "Não informado";
+                const video = document.getElementById('adm-race-video').value || "";
+                targetDistance = dist;
+                estimatedTime = time;
+                const response = await fetch(CF_WORKER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        dist: dist,
+                        estTime: time,
+                        startDate: startDateStr,
+                        raceDate: raceDate,
+                        strengthVideo: video
+                    })
+                });
+                if (!response.ok) throw new Error("Erro na IA");
+                const aiWorkoutsRaw = await response.json();
+                newWorkouts = aiWorkoutsRaw.map(w => ({
+                    title: w.title, desc: w.desc, video: w.video || "", done: false, scheduledDate: w.date, type: w.type || 'run'
+                }));
+            } else {
+                const tplId = document.getElementById('adm-race-template-select').value;
+                if (!tplId) throw new Error("Selecione um modelo.");
+                const tSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, tplId));
+                if (!tSnap.exists()) throw new Error("Modelo não encontrado.");
+                const tData = tSnap.data();
+                const startDate = new Date(startDateStr);
+                newWorkouts = tData.workouts.map((w, index) => {
+                    const date = new Date(startDate);
+                    date.setDate(date.getDate() + index);
+                    return { ...w, scheduledDate: date.toISOString().split('T')[0], done: false };
+                });
+            }
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentAdmUser);
+            const userSnap = await getDoc(userRef);
+            if (!userSnap.exists()) throw new Error("Usuário não encontrado.");
+            const uData = userSnap.data();
+            const races = uData.races || [];
+            races.push({ name, date: raceDate, targetDistance, estimatedTime, workouts: newWorkouts, created: new Date().toISOString() });
+            
+            await updateDoc(userRef, { races });
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
+                date: raceDate, raceName: name, studentName: uData.name, studentEmail: state.currentAdmUser, created: Date.now()
+            });
+
+            window.app.toast("Objetivo criado com sucesso!");
+            document.getElementById('modal-adm-add-race').classList.remove('active');
+            
+            if(document.getElementById('view-dashboard').classList.contains('active')) {
+                window.app.dashReloadData();
+            }
+        } catch (error) {
+            console.error(error);
+            window.app.toast("Erro: " + error.message);
+        } finally {
+            if(btn) { btn.disabled = false; btn.innerText = "Criar"; }
+        }
+    },
+
+    // --- FUNÇÕES DE TREINO (INLINE) ---
+    admAddWorkoutInline: (docId, rIdx) => { 
+        state.currentAdmUser = docId; state.currentAdmRaceIdx = rIdx; state.isEditingTemplate = false; state.editingWorkoutIndex = null; 
+        document.getElementById('modal-workout-title').innerText = "Novo Treino"; 
+        document.getElementById('new-w-title').value = ''; 
+        document.getElementById('new-w-desc').value = ''; 
+        document.getElementById('new-w-video').value = ''; 
+        document.getElementById('modal-add-single-workout').classList.add('active'); 
     },
 
     admImportTemplateInline: (docId, rIdx) => {
@@ -946,7 +980,95 @@ export const admin = {
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentAdmUser), { races: u.races });
         window.app.toast("Modelo importado!");
         document.getElementById('modal-select-template').classList.remove('active');
+        
+        if(document.getElementById('view-dashboard').classList.contains('active')) {
+            window.app.dashReloadData();
+        }
     },
 
-    admDeleteWorkoutInline: async (docId, rIdx, wIdx) => { window.app.showConfirm("Remover treino?", async () => { const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); const u = snap.data(); u.races[rIdx].workouts.splice(wIdx, 1); await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); }); },
+    saveSingleWorkout: async () => {
+        const title = document.getElementById('new-w-title').value;
+        const desc = document.getElementById('new-w-desc').value;
+        const video = document.getElementById('new-w-video').value;
+        if(!title) return window.app.toast('Título obrigatório');
+        if (state.isEditingTemplate) {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, state.currentTemplateId));
+            const t = snap.data();
+            if (state.editingWorkoutIndex !== null) t.workouts[state.editingWorkoutIndex] = { title, desc, video, done: false }; 
+            else t.workouts.push({ title, desc, video, done: false });
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES, state.currentTemplateId), { workouts: t.workouts });
+        } else {
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentAdmUser));
+            const u = snap.data();
+            if (!u.races[state.currentAdmRaceIdx].workouts) u.races[state.currentAdmRaceIdx].workouts = [];
+            u.races[state.currentAdmRaceIdx].workouts.push({title, desc, video, done:false});
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentAdmUser), { races: u.races });
+            
+            if(document.getElementById('view-dashboard').classList.contains('active')) {
+                window.app.dashReloadData();
+            }
+        }
+        document.getElementById('modal-add-single-workout').classList.remove('active');
+        window.app.toast("Salvo com sucesso!");
+    },
+
+    admDeleteWorkoutInline: async (docId, rIdx, wIdx) => { 
+        window.app.showConfirm("Remover treino?", async () => { 
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); 
+            const u = snap.data(); 
+            u.races[rIdx].workouts.splice(wIdx, 1); 
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races }); 
+            if(document.getElementById('view-dashboard').classList.contains('active')) {
+                window.app.dashReloadData();
+            }
+        }); 
+    },
+
+    admToggleWorkoutStatus: async (docId, rIdx, wIdx, status) => {
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
+        if(snap.exists()) {
+            const u = snap.data();
+            if(u.races && u.races[rIdx] && u.races[rIdx].workouts && u.races[rIdx].workouts[wIdx]) {
+                u.races[rIdx].workouts[wIdx].done = status;
+                if(!status) delete u.races[rIdx].workouts[wIdx].completedAt;
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { races: u.races });
+                window.app.toast(status ? "Treino concluído manualmente" : "Treino reativado!");
+                if(document.getElementById('view-dashboard').classList.contains('active')) {
+                    window.app.dashReloadData();
+                }
+            }
+        }
+    },
+
+    admShowWorkoutDetail: (userId, rIdx, wIdx) => {
+        // Tenta buscar do cache mobile ou do array do dashboard
+        let user = state.admUsersCache[userId];
+        if(!user && admin.allDashboardUsers.length > 0) {
+            user = admin.allDashboardUsers.find(u => u.id === userId);
+        }
+
+        if (!user || !user.races[rIdx] || !user.races[rIdx].workouts[wIdx]) return;
+        const w = user.races[rIdx].workouts[wIdx];
+        document.getElementById('adm-workout-det-title').innerText = w.title;
+        document.getElementById('adm-workout-det-desc').innerText = w.desc;
+        const vidContainer = document.getElementById('adm-workout-det-video-container');
+        if (w.video) {
+            const safeVideo = window.app.escape(w.video);
+            vidContainer.style.display = 'block';
+            vidContainer.innerHTML = `<button onclick="window.app.playVideo('${safeVideo}')" class="btn btn-primary" style="font-size:14px;"><i class="fa-solid fa-play"></i> Ver Vídeo</button>`;
+        } else {
+            vidContainer.style.display = 'none';
+        }
+        document.getElementById('modal-adm-workout-detail').classList.add('active');
+    },
+
+    admToggleUser: (docId) => { 
+        if(state.expandedUsers.has(docId)) state.expandedUsers.delete(docId); else state.expandedUsers.add(docId); 
+        const el = document.getElementById(`user-content-${docId}`); if(el) el.classList.toggle('open'); 
+    },
+    
+    admToggleGoal: (key) => { 
+        if(state.expandedRaces.has(key)) state.expandedRaces.delete(key); else state.expandedRaces.add(key); 
+        const el = document.getElementById(`goal-content-${key}`); if(el) el.classList.toggle('open'); 
+    },
 };
