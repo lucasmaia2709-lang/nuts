@@ -19,7 +19,7 @@
 
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
-    background-color: #9cafcc; /* Azul de fundo (só deve aparecer no overscroll) */
+    background-color: #9cafcc;
     color: var(--text-main); 
     width: 100vw; height: 100dvh; overflow: hidden; 
     display: flex; flex-direction: column; 
@@ -38,7 +38,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 /* SCREENS */
 .screen { 
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-    background-color: var(--bg); /* Garante fundo claro */
+    background-color: var(--bg);
     display: none; flex-direction: column; 
     z-index: 10; padding-top: env(safe-area-inset-top); padding-bottom: 0; 
 }
@@ -56,7 +56,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 /* HEADER */
 .app-header { padding: 10px 20px; padding-top: max(15px, env(safe-area-inset-top)); display: flex; justify-content: space-between; align-items: center; background: #9cafcc; position: sticky; top: 0; z-index: 50; }
 
-/* Fix para garantir que o scroll termine ANTES do menu */
 #main-scroll { 
     flex: 1; 
     overflow-y: auto; 
@@ -72,7 +71,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .input { width: 100%; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background-color: #FFF; font-size: 16px; color: var(--text-main); outline: none; font-family: var(--font-main); transition: 0.2s; -webkit-appearance: none; box-shadow: var(--shadow); }
 .input:focus { border-color: var(--primary); }
 
-/* Botões */
 .btn { width: 90%; margin:20px; padding: 18px; border-radius: var(--radius); border: none; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: var(--font-main); transition: 0.2s; -webkit-user-select: none; letter-spacing: 0.5px; }
 .btn-primary { background-color: var(--primary); color: #FFF; box-shadow: 0 5px 15px rgba(255, 138, 65, 0.4); }
 .btn-primary:active { transform: scale(0.98); }
@@ -81,7 +79,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .btn-danger { background-color: #ffe6e6; color: var(--red); }
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
 
-/* CALENDÁRIO */
 .calendar-wrapper { padding: 20px 20px 20px; }
 .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .calendar-title { font-weight: 400; font-size: 24px; text-transform: capitalize; color: var(--text-main); }
@@ -96,7 +93,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .cal-cell.done { background: #e0f7fa; color: var(--text-main); }
 .cal-note-indicator { position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; background: var(--primary); border-radius: 50%; }
 
-/* ESTILO DO MARCADOR DE PROVA (ADMIN) */
 .cal-race-marker {
     position: absolute;
     bottom: 2px;
@@ -109,10 +105,8 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-/* CARDS */
 .card { background: var(--surface); border-radius: var(--radius); padding: 25px; border: none; box-shadow: var(--shadow); margin-bottom: 20px; }
 
-/* NEWS CARD */
 .news-card { overflow: hidden; padding: 0; display: flex; flex-direction: column; border: none; box-shadow: var(--shadow); border-radius: var(--radius); background: #FFF; margin-bottom: 20px; cursor: pointer; transition: transform 0.2s; }
 .news-card:active { transform: scale(0.98); }
 .news-img { width: 100%; height: 220px; object-fit: cover; background: #EEE; }
@@ -120,7 +114,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .news-date { font-size: 11px; color: var(--text-sec); margin-bottom: 8px; font-weight: 700; }
 .news-title { font-size: 18px; font-weight: 700; margin: 0; line-height: 1.2; font-family: var(--font-logo); color: var(--text-main); }
 
-/* NAV BAR FIXADA */
 .nav-bar { 
     position: fixed; 
     bottom: 0; 
@@ -167,7 +160,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     color: #FFF; 
 }
 
-/* --- DESTAQUE PARA BOTÃO HOME (CASINHA) --- */
 .nav-item[data-tab="home"] {
     background-color: var(--primary);
     width: 65px;
@@ -255,7 +247,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     box-shadow: 0 5px 20px rgba(0,0,0,0.05);
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    flex-direction: column; /* Para alinhar dados pessoais abaixo */
     margin-bottom: 25px;
 }
 
