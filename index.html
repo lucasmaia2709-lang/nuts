@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- CSS Externo -->
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=6">
 
     <!-- CORREÇÃO DE OVERSCROLL (FIX DO FUNDO AZUL APARECENDO) -->
     <style>
@@ -398,12 +398,22 @@
         <div class="dash-content">
             <div class="dash-header">
                 <h2 id="dash-title">Painel de Controle</h2>
-                <div style="display:flex; gap:10px;">
-                    <input id="dash-search" placeholder="Buscar aluno..." onkeyup="window.app.dashSearch()" style="padding:10px; border-radius:10px; border:1px solid #ddd; width:250px;">
+                
+                <!-- ÁREA DE FILTROS -->
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span style="font-size:12px; color:#888;">Quem treinou de:</span>
+                    <input type="date" id="dash-date-start" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+                    <span style="font-size:12px; color:#888;">até</span>
+                    <input type="date" id="dash-date-end" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+                    <button onclick="window.app.dashFilterByDate()" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:8px; cursor:pointer;">Filtrar</button>
+                    
+                    <div style="width:1px; height:20px; background:#ccc; margin:0 10px;"></div>
+                    
+                    <input id="dash-search" placeholder="Buscar aluno..." onkeyup="window.app.dashSearch()" style="padding:10px; border-radius:10px; border:1px solid #ddd; width:200px;">
                 </div>
             </div>
 
-            <!-- Tabela de Alunos -->
+            <!-- TABELA DE ALUNOS -->
             <div id="dash-tab-students" class="dash-view">
                 <div class="dash-metrics-row">
                     <div class="dash-metric-card" style="border-left:4px solid var(--success);">
@@ -438,6 +448,11 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- NOVA VIEW: DETALHES DO ALUNO -->
+            <div id="dash-tab-student-detail" class="dash-view hidden">
+                <!-- Conteúdo preenchido via JS -->
             </div>
         </div>
     </div>
@@ -745,6 +760,6 @@
     </div>
 
     <!-- JS MODULE LINKADO -->
-    <script type="module" src="app.js?v=5"></script>
+    <script type="module" src="app.js?v=6"></script>
 </body>
 </html>
