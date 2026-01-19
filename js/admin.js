@@ -245,19 +245,48 @@ export const admin = {
         // Renderiza VIEW COMPLETA
         const initials = u.name.substring(0,2).toUpperCase();
         
+        // Logica para Avatar (Imagem ou Iniciais)
+        let avatarDisplay = `<div class="dash-avatar-placeholder" style="background:var(--primary); color:white;">${initials}</div>`;
+        if(u.avatar) {
+            avatarDisplay = `<img src="${u.avatar}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; border:2px solid #fff; box-shadow:0 2px 5px rgba(0,0,0,0.1);">`;
+        }
+
+        // Dados Pessoais Formatados
+        const city = u.city || 'Não informada';
+        const weight = (u.weightHistory && u.weightHistory.length > 0) ? u.weightHistory[u.weightHistory.length-1].value + 'kg' : '--';
+        const joined = u.created ? new Date(u.created).toLocaleDateString() : '--';
+        
         detailContainer.innerHTML = `
         <button onclick="document.getElementById('dash-tab-students').classList.remove('hidden'); document.getElementById('dash-tab-student-detail').classList.add('hidden');" style="border:none; background:none; font-size:14px; cursor:pointer; color:#666; margin-bottom:15px; display:flex; align-items:center; gap:5px;"><i class="fa-solid fa-arrow-left"></i> Voltar para Lista</button>
         
-        <div class="dash-student-header">
-            <div class="dash-student-info">
-                <div class="dash-avatar-placeholder">${initials}</div>
+        <div class="dash-student-header" style="display:block;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div class="dash-student-info">
+                    ${avatarDisplay}
+                    <div>
+                        <h2 style="margin:0; font-size:24px;">${u.name}</h2>
+                        <span style="color:#888; font-size:14px;">${u.email}</span>
+                    </div>
+                </div>
                 <div>
-                    <h2 style="margin:0; font-size:24px;">${u.name}</h2>
-                    <span style="color:#888; font-size:14px;">${u.email}</span>
+                   <span class="status-pill ${u.status === 'active' ? 'active' : 'inactive'}" style="font-size:12px; padding:6px 12px;">${u.status === 'active' ? 'ATIVO' : 'INATIVO'}</span>
                 </div>
             </div>
-            <div>
-               <span class="status-pill ${u.status === 'active' ? 'active' : 'inactive'}" style="font-size:14px; padding:8px 15px;">${u.status === 'active' ? 'ATIVO' : 'INATIVO'}</span>
+
+            <!-- Dados Pessoais Inseridos no Card Principal -->
+            <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee; display:flex; gap:30px; flex-wrap:wrap;">
+                <div>
+                    <small style="color:#999; font-size:11px; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px;">Cidade</small>
+                    <div style="color:var(--text-main); font-weight:600; font-size:14px;">${city}</div>
+                </div>
+                <div>
+                    <small style="color:#999; font-size:11px; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px;">Peso Atual</small>
+                    <div style="color:var(--text-main); font-weight:600; font-size:14px;">${weight}</div>
+                </div>
+                <div>
+                    <small style="color:#999; font-size:11px; text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px;">Membro Desde</small>
+                    <div style="color:var(--text-main); font-weight:600; font-size:14px;">${joined}</div>
+                </div>
             </div>
         </div>
 
@@ -275,13 +304,6 @@ export const admin = {
                     <div style="max-height:500px; overflow-y:auto; padding-right:5px;">
                         ${painHtml}
                     </div>
-                </div>
-                
-                <div class="dash-metric-card">
-                    <h4 class="dash-card-title" style="margin-top:0;">Dados Pessoais</h4>
-                    <p style="font-size:13px; margin:8px 0;"><strong>Cidade:</strong> ${u.city || '-'}</p>
-                    <p style="font-size:13px; margin:8px 0;"><strong>Peso Atual:</strong> ${u.weightHistory && u.weightHistory.length > 0 ? u.weightHistory[u.weightHistory.length-1].value + 'kg' : '-'}</p>
-                    <p style="font-size:13px; margin:8px 0;"><strong>Cadastro:</strong> ${u.created ? new Date(u.created).toLocaleDateString() : '-'}</p>
                 </div>
             </div>
         </div>
