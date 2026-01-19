@@ -19,947 +19,349 @@ export const student = {
         const grid = document.getElementById('calendar-days');
         grid.innerHTML = '';
         
+        // Pega o último objetivo (mais recente)
         const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
-        const workouts = activeRace ? activeRace.workouts : [];
-        const notes = state.currentUser.notes || {};
-        const todayStr = new Date().toLocaleDateString('en-CA'); // Formato YYYY-MM-DD local
-
+        
         for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div class="cal-cell other-month"></div>`; }
+        
+        const today = new Date();
         for(let d=1; d<=daysInMonth; d++) {
-            // Constrói data manualmente para evitar timezone bugs
-            const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const isToday = dateStr === todayStr;
-            let cellClass = 'cal-cell';
-            if(isToday) cellClass += ' today';
-            let dotHtml = '';
+            const date = new Date(y, m, d);
+            const dateStr = date.toISOString().split('T')[0];
+            const isToday = (d === today.getDate() && m === today.getMonth() && y === today.getFullYear());
             
-            const scheduled = workouts.find(w => w.scheduledDate === dateStr);
-            const doneHere = workouts.find(w => w.done && w.completedAt === dateStr);
-            const isMyRaceDay = activeRace && activeRace.date === dateStr;
-            
-            // Inicializa modalData sempre com array vazio para garantir estrutura
-            let modalData = { studentRaces: [] }; 
+            let hasWorkout = false;
+            let isDone = false;
+            let workoutIdx = -1;
+            let raceIdx = state.currentUser.races ? state.currentUser.races.length - 1 : -1;
 
-            if (scheduled) {
-                 cellClass += ' has-workout'; 
-                 dotHtml += `<div class="cal-dot"></div>`;
-                 // Ao mesclar dados do treino, mantemos studentRaces limpo para popular abaixo
-                 modalData = { ...scheduled, studentRaces: [] }; 
-                 if(scheduled.done) cellClass += ' done';
-            }
-            else if(doneHere) { 
-                 cellClass += ' done'; 
-                 dotHtml += `<div class="cal-dot"></div>`; 
-                 modalData = { ...doneHere, studentRaces: [] }; 
-            } 
-            
-            if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
-
-            // Marcador da MINHA PROVA
-            if (isMyRaceDay) {
-                dotHtml += `<div class="cal-race-marker" style="background:var(--text-sec); border:1px solid #fff; z-index:2;" title="Minha Prova"></div>`;
-                // Adiciona a própria prova ao modalData para aparecer no detalhe do dia
-                modalData.studentRaces.push({ 
-                    studentName: "Você", 
-                    raceName: activeRace.name,
-                    studentEmail: state.currentUser.email,
-                    date: dateStr 
-                });
-            }
-
-            // PROVAS DA COMUNIDADE (Correção de exibição)
-            if (state.communityRacesCache && state.communityRacesCache.length > 0) {
-                let hasStudentRace = false;
-                state.communityRacesCache.forEach(race => {
-                    if (race.studentEmail !== state.currentUser.email && race.date === dateStr) {
-                        hasStudentRace = true;
-                        // Garante fallback para evitar "undefined"
-                        const sName = race.studentName || 'Aluno'; 
-                        const rName = race.raceName || 'Prova';
-                        modalData.studentRaces.push({ 
-                            studentName: sName, 
-                            raceName: rName,
-                            studentEmail: race.studentEmail,
-                            date: dateStr 
-                        });
+            if(activeRace && activeRace.workouts) {
+                const w = activeRace.workouts.find((wk, idx) => {
+                    if(wk.scheduledDate === dateStr) {
+                        workoutIdx = idx;
+                        return true;
                     }
+                    return false;
                 });
-                if (hasStudentRace) {
-                    dotHtml += `<div class="cal-race-marker" title="Prova de aluno"></div>`;
-                }
+                if(w) { hasWorkout = true; isDone = w.done; }
             }
+
+            // Marcador de Prova
+            let raceMarker = '';
+            if(activeRace && activeRace.date === dateStr) {
+                raceMarker = '<div class="cal-race-marker"></div>';
+            }
+
+            const classes = `cal-cell ${isToday ? 'today' : ''} ${hasWorkout ? 'has-workout' : ''} ${isDone ? 'done' : ''}`;
+            const clickAction = hasWorkout ? `onclick="window.app.openDayDetail('${dateStr}', ${raceIdx}, ${workoutIdx})"` : `onclick="window.app.openDayDetail('${dateStr}', null, null)"`;
             
-            const el = document.createElement('div');
-            el.className = cellClass;
-            el.innerText = d;
-            el.innerHTML += dotHtml;
-            // Deep copy seguro para o onclick
-            const dataToPass = JSON.parse(JSON.stringify(modalData));
-            el.onclick = () => window.app.openDayDetail(dateStr, dataToPass);
-            grid.appendChild(el);
-        }
-    },
-
-    openDayDetail: (dateStr, workoutData) => {
-        state.selectedDayDate = dateStr;
-        const modal = document.getElementById('modal-day-detail');
-        document.getElementById('day-det-title').innerText = `Dia ${dateStr.split('-').reverse().join('/')}`;
-        let content = '';
-
-        if(workoutData && (workoutData.title || workoutData.desc)) {
-            content += `<div style="background:#f5f5f5; padding:15px; border-radius:10px; margin-bottom:15px;">
-                <h4 style="margin:0 0 5px 0;">${workoutData.title}</h4>
-                <p style="margin:0; font-size:13px; color:#666;">${workoutData.desc}</p>
-                ${workoutData.done ? '<strong style="color:var(--success); font-size:12px;">Concluído</strong>' : '<span style="color:var(--orange); font-size:12px;">Pendente</span>'}
+            grid.innerHTML += `
+            <div class="${classes}" ${clickAction}>
+                ${d}
+                ${hasWorkout ? '<div class="cal-dot"></div>' : ''}
+                ${raceMarker}
             </div>`;
-        } else if (!workoutData || (!workoutData.title && (!workoutData.studentRaces || workoutData.studentRaces.length === 0))) { 
-            content += `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`; 
         }
+    },
 
-        // Renderiza lista de provas de outros alunos E a própria prova se houver
-        if (workoutData && workoutData.studentRaces && workoutData.studentRaces.length > 0) {
-            content += `<div style="margin-top:15px;">
-                <h4 style="font-size:14px; color:var(--primary); margin-bottom:10px;">Provas Marcadas:</h4>`;
+    openDayDetail: (dateStr, raceIdx, workoutIdx) => {
+        state.selectedDayDate = dateStr;
+        const d = new Date(dateStr);
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset()); // Fix timezone visual
+        
+        document.getElementById('day-det-title').innerText = d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+        const content = document.getElementById('day-det-content');
+        
+        if (workoutIdx !== null && raceIdx !== null) {
+            const w = state.currentUser.races[raceIdx].workouts[workoutIdx];
+            const isDone = w.done;
+            const btnLabel = isDone ? "Treino Concluído" : "Marcar como Feito";
+            const btnClass = isDone ? "btn-success" : "btn-primary";
+            const btnAction = isDone ? "" : `window.app.openFinishModal(${raceIdx}, ${workoutIdx}, '${window.app.escape(w.title)}')`;
             
-            const isAdmin = ADMIN_EMAILS.includes(state.currentUser.email);
-
-            workoutData.studentRaces.forEach(race => {
-                const isMe = race.studentName === 'Você';
-                const bg = isMe ? '#fff3e0' : '#fff'; // Destaque laranja claro se for minha prova
-                const border = isMe ? 'var(--primary)' : '#eee';
-                
-                // Verifica se pode apagar (Dono ou Admin)
-                // Se for Admin, pode apagar QUALQUER prova (inclusive as órfãs)
-                let deleteBtn = '';
-                if (isMe || isAdmin || race.studentEmail === state.currentUser.email) {
-                    // Escapar strings para o onclick
-                    const sEmail = window.app.escape(race.studentEmail);
-                    const rName = window.app.escape(race.raceName);
-                    const rDate = window.app.escape(race.date);
-                    // Passamos true no último parâmetro para indicar "forçar exclusão" se for admin
-                    deleteBtn = `<button onclick="window.app.deletePublicRaceEntry('${sEmail}', '${rName}', '${rDate}', true)" style="border:none; background:none; color:var(--red); cursor:pointer; float:right; font-size:14px;"><i class="fa-solid fa-trash"></i></button>`;
-                }
-
-                content += `<div style="background:${bg}; border:1px solid ${border}; padding:10px; border-radius:8px; margin-bottom:5px; font-size:13px;">
-                    ${deleteBtn}
-                    <strong>${race.studentName}</strong><br>
-                    <span style="color:#666;">${race.raceName}</span>
-                </div>`;
-            });
-            content += `</div>`;
-        }
-
-        document.getElementById('day-det-content').innerHTML = content;
-        const notes = state.currentUser.notes || {};
-        document.getElementById('day-det-note').value = notes[dateStr] || '';
-        modal.classList.add('active');
-    },
-
-    deletePublicRaceEntry: async (studentEmail, raceName, raceDate, force = false) => {
-        let msg = "Remover esta prova do calendário público?";
-        if (force) msg += " (Como Admin, você pode apagar registros órfãos).";
-        
-        if(!confirm(msg)) return;
-        window.app.toast("Apagando...");
-        try {
-            // Se o studentEmail estiver undefined ou vazio (provas muito antigas ou bugadas), tentamos buscar só por nome e data se for Admin
-            let q;
-            if ((!studentEmail || studentEmail === 'undefined') && force) {
-                 q = query(
-                    collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
-                    where("raceName", "==", raceName),
-                    where("date", "==", raceDate)
-                );
-            } else {
-                q = query(
-                    collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
-                    where("studentEmail", "==", studentEmail),
-                    where("raceName", "==", raceName),
-                    where("date", "==", raceDate)
-                );
+            let videoHtml = '';
+            if(w.video) {
+                videoHtml = `<button onclick="window.app.playVideo('${window.app.escape(w.video)}')" style="width:100%; padding:10px; margin:10px 0; background:#f0f0f0; border:none; border-radius:10px; color:var(--primary); font-weight:600;"><i class="fa-solid fa-play"></i> Ver Vídeo</button>`;
             }
 
-            const snapshot = await getDocs(q);
-            const batch = writeBatch(db);
-            let count = 0;
-            snapshot.forEach(d => {
-                batch.delete(d.ref);
-                count++;
-            });
-            
-            if (count > 0) {
-                await batch.commit();
-                window.app.toast(count > 1 ? `${count} cópias removidas!` : "Prova removida!");
-            } else {
-                // Tenta uma busca mais genérica se for admin e falhou a busca exata
-                if (force && count === 0) {
-                     window.app.toast("Tentando busca forçada...");
-                     const qForce = query(
-                        collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
-                        where("date", "==", raceDate),
-                        where("raceName", "==", raceName)
-                    );
-                    const snapForce = await getDocs(qForce);
-                    const batchForce = writeBatch(db);
-                    let countForce = 0;
-                    snapForce.forEach(d => {
-                        batchForce.delete(d.ref);
-                        countForce++;
-                    });
-                    if (countForce > 0) {
-                        await batchForce.commit();
-                        window.app.toast(`${countForce} registros órfãos removidos!`);
-                    } else {
-                        window.app.toast("Nenhum registro encontrado.");
-                    }
-                } else {
-                    window.app.toast("Nenhum registro encontrado.");
-                }
-            }
-            
-            document.getElementById('modal-day-detail').classList.remove('active');
-            // O listener onSnapshot no auth.js atualizará o calendário automaticamente
-        } catch(e) {
-            console.error(e);
-            window.app.toast("Erro ao apagar.");
-        }
-    },
-
-    saveDayNote: async () => {
-        const note = document.getElementById('day-det-note').value;
-        const notes = state.currentUser.notes || {};
-        if(note.trim() === '') delete notes[state.selectedDayDate];
-        else notes[state.selectedDayDate] = note;
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { notes });
-        window.app.toast("Nota salva!");
-        document.getElementById('modal-day-detail').classList.remove('active');
-        window.app.renderCalendar();
-    },
-
-    renderHome: () => { window.app.renderCalendar(); window.app.renderTodayCard(); window.app.loadQuote(); window.app.loadHomeNews(); },
-
-    loadHomeNews: () => {
-        const container = document.getElementById('home-latest-news');
-        container.innerHTML = `<h3 style="font-size: 16px; margin: 0 0 15px;">Última Novidade</h3><div class="skeleton" style="width:100%; height:200px; border-radius:12px;"></div>`;
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
-            const news = []; snap.forEach(d => news.push({id: d.id, ...d.data()})); news.sort((a,b) => b.created - a.created);
-            if(news.length > 0) {
-                const n = news[0];
-                container.innerHTML = `
-                    <h3 style="font-size: 16px; margin: 0 0 15px;">Última Novidade</h3>
-                    <div class="card news-card" style="margin-bottom:0;" onclick="window.app.openNewsDetail('${n.id}')">
-                        ${n.img ? `<img src="${n.img}" class="news-img" style="height:150px;">` : ''}
-                        <div class="news-content" style="padding:15px;">
-                            <div class="news-date" style="font-size:10px;">${new Date(n.created).toLocaleDateString()}</div>
-                            <h3 class="news-title" style="font-size:16px;">${window.app.formatText(n.title)}</h3>
-                        </div>
-                    </div>`;
-                    state.allNews = news; 
-            } else { container.innerHTML = ''; }
-        });
-    },
-
-    loadQuote: () => {
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s)=>{
-            const quotes = [];
-            s.forEach(d=>quotes.push(d.data().text));
-            if(quotes.length>0) {
-                document.getElementById('daily-quote').innerText = quotes[Math.floor(Math.random()*quotes.length)];
-            } else {
-                document.getElementById('daily-quote').innerText = "O único treino ruim é aquele que não aconteceu.";
-            }
-        });
-    },
-
-    openStrengthVideosModal: () => {
-        const list = document.getElementById('strength-video-list');
-        list.innerHTML = '<p style="text-align:center; color:#666;">Carregando...</p>';
-        document.getElementById('modal-strength-videos').classList.add('active');
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
-            list.innerHTML = '';
-            if(snap.empty) {
-                list.innerHTML = '<p style="text-align:center; color:#666;">Nenhum vídeo cadastrado.</p>';
-                return;
-            }
-            snap.forEach(d => {
-                const v = d.data();
-                const safeLink = window.app.escape(v.link);
-                list.innerHTML += `
-                <div style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:600; font-size:14px;">${v.title}</span>
-                    <button onclick="window.app.playVideo('${safeLink}')" style="background:var(--primary); color:#FFF; border:none; width:30px; height:30px; border-radius:50%; cursor:pointer;"><i class="fa-solid fa-play" style="font-size:12px;"></i></button>
-                </div>`;
-            });
-        });
-    },
-
-    // --- TREINOS ---
-    renderTodayCard: (specificWorkout = null) => {
-        const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
-        if(!activeRace || activeRace.workouts.length === 0) { 
-            document.getElementById('today-workout-card').innerHTML = `
-                <div class="card" style="text-align:center; padding:40px 20px;">
-                    <i class="fa-regular fa-clock" style="font-size:40px; color:var(--primary); margin-bottom:20px; opacity:0.8;"></i>
-                    <p style="font-size:16px; color:var(--text-sec); font-weight:500;">Aguardando seu professor lançar os treinos...</p>
-                </div>`; 
-            return; 
+            content.innerHTML = `
+                <h2 style="margin:0; color:var(--text-main);">${w.title}</h2>
+                <p style="color:var(--text-sec); font-size:16px; margin-top:5px;">${w.desc}</p>
+                ${videoHtml}
+                <button onclick="${btnAction}" class="btn ${btnClass}" ${isDone ? 'disabled' : ''} style="margin: 20px 0; width:100%; ${isDone ? 'background:#EEE; color:#888;' : ''}">${btnLabel}</button>
+            `;
+        } else {
+            content.innerHTML = `<p style="text-align:center; color:#888;">Nenhum treino programado.</p>`;
         }
         
-        const todayStr = new Date().toISOString().split('T')[0];
-        let target = specificWorkout;
-        if (!target) target = activeRace.workouts.find(w => w.scheduledDate === todayStr);
-        if (!target) target = activeRace.workouts.find(w => w.done && w.completedAt === todayStr);
-        if (!target) target = activeRace.workouts.find(w => !w.done && (!w.scheduledDate || w.scheduledDate >= todayStr));
+        document.getElementById('modal-day-detail').classList.add('active');
+    },
+
+    // --- MEU PLANO (CORRIGIDO) ---
+    loadUserWorkouts: () => {
+        const list = document.getElementById('workouts-list');
+        list.innerHTML = '';
         
-        const container = document.getElementById('today-workout-card');
-        const totalW = activeRace.workouts.length;
-        const doneW = activeRace.workouts.filter(w => w.done).length;
-        const pct = totalW > 0 ? (doneW / totalW) * 100 : 0;
-        
-        let raceDateDisplay = 'Sem Data';
-        if(activeRace.date) {
-            const p = activeRace.date.split('-');
-            if(p.length === 3) raceDateDisplay = `${p[2]}/${p[1]}/${p[0]}`;
+        const user = state.currentUser;
+        // Verifica se tem objetivos
+        if(!user || !user.races || user.races.length === 0) {
+            list.innerHTML = `
+            <div style="text-align:center; padding:40px 20px;">
+                <i class="fa-solid fa-person-running" style="font-size:40px; color:#ddd; margin-bottom:15px;"></i>
+                <h3 style="color:#888; font-size:16px;">Nenhum plano ativo</h3>
+                <p style="color:#aaa; font-size:13px;">Seu treinador ainda não adicionou um objetivo.</p>
+            </div>`;
+            return;
         }
 
-        let cardHtml = '';
+        // CORREÇÃO: Pega SEMPRE o último objetivo do array (o mais recente)
+        const currentRace = user.races[user.races.length - 1];
         
-        const safeTitle = target ? window.app.escape(target.title) : '';
-        const safeVideo = target && target.video ? window.app.escape(target.video) : '';
+        // Cabeçalho do Objetivo
+        const raceDate = new Date(currentRace.date);
+        raceDate.setMinutes(raceDate.getMinutes() + raceDate.getTimezoneOffset());
+        const daysToRace = Math.ceil((raceDate - new Date()) / (1000 * 60 * 60 * 24));
         
-        if(target) {
-            const doneBtn = target.done ? `<button class="btn" style="background:rgba(255,255,255,0.2); color:#FFF; flex:1; cursor:default;" disabled><i class="fa-solid fa-check"></i> Feito</button>` : `<button onclick="window.app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); flex:1;">Concluir</button>`;
-            let dateDisplay = "";
-            if(target.scheduledDate) {
-                const dParts = target.scheduledDate.split('-');
-                dateDisplay = `<span style="font-size:12px; color:rgba(255,255,255,0.7); margin-left:8px; font-weight:400;">${dParts[2]}/${dParts[1]}</span>`;
-            }
+        list.innerHTML = `
+        <div class="card" style="background: linear-gradient(135deg, var(--primary), #ff9f43); color:white; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:20px; color:white;">${currentRace.name}</h3>
+                <button onclick="window.app.editRaceDate(${user.races.length - 1})" style="border:none; background:rgba(255,255,255,0.2); color:white; width:30px; height:30px; border-radius:50%; cursor:pointer;"><i class="fa-solid fa-pencil"></i></button>
+            </div>
+            <div style="margin-top:10px; font-size:14px; opacity:0.9;">
+                <i class="fa-regular fa-calendar"></i> ${raceDate.toLocaleDateString()} 
+                <span style="float:right; font-weight:700;">${daysToRace} dias</span>
+            </div>
+            <div style="margin-top:5px; font-size:13px; opacity:0.8;">Meta: ${currentRace.estimatedTime || '-'}</div>
+        </div>
+        <h4 style="margin:20px 0 10px 0; color:var(--text-main);">Próximos Treinos</h4>
+        `;
 
-            let actionBtn = '';
-            if (target.type === 'strength' || target.title.toLowerCase().includes('fortalecimento')) {
-                actionBtn = `<button onclick="window.app.openStrengthVideosModal()" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-dumbbell"></i> Ver Exercícios</button>`;
-            } else if (safeVideo) {
-                actionBtn = `<button onclick="window.app.playVideo('${safeVideo}')" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-play"></i> Vídeo</button>`;
-            }
+        if(!currentRace.workouts || currentRace.workouts.length === 0) {
+            list.innerHTML += '<p style="text-align:center; color:#888;">Aguardando treinos...</p>';
+            return;
+        }
 
-            cardHtml = `<div class="card" style="background: #9cafcc; color: var(--text-main); border: none; padding:30px;">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:25px;">
-                    <div>
-                        <h2 style="margin:0; font-size:24px; line-height:1.2; color:var(--text-main);">${target.title} ${dateDisplay}</h2>
-                        <p style="opacity:0.9; font-size:15px; margin-top:8px; font-weight:400; color:var(--text-main);">${target.desc}</p>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.4); width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                        <i class="fa-solid fa-person-running" style="font-size:24px; color:var(--text-main);"></i>
-                    </div>
-                </div>
-                <div style="display:flex; gap:15px;">
-                    ${doneBtn}
-                    ${actionBtn}
-                </div>
+        // Filtra e ordena treinos
+        const today = new Date().toISOString().split('T')[0];
+        const pendingWorkouts = currentRace.workouts
+            .map((w, idx) => ({...w, originalIdx: idx})) // Guarda o índice original para editar
+            .filter(w => !w.done) // Mostra apenas não concluídos ou futuros
+            .sort((a,b) => a.scheduledDate.localeCompare(b.scheduledDate));
+
+        if(pendingWorkouts.length === 0) {
+            list.innerHTML += `
+            <div style="text-align:center; padding:30px; background:#fff; border-radius:20px; box-shadow:var(--shadow);">
+                <i class="fa-solid fa-check-circle" style="font-size:40px; color:var(--success); margin-bottom:10px;"></i>
+                <p>Tudo feito por enquanto!</p>
             </div>`;
         } else {
-            cardHtml = `<div class="card" style="text-align:center; color:var(--success); padding:40px;"><i class="fa-solid fa-circle-check" style="font-size:48px; margin-bottom:15px;"></i><br><strong style="font-size:18px;">Todos os treinos concluídos!</strong></div>`;
+            pendingWorkouts.forEach(w => {
+                const wDate = new Date(w.scheduledDate);
+                wDate.setMinutes(wDate.getMinutes() + wDate.getTimezoneOffset());
+                const isToday = w.scheduledDate === today;
+                const highlight = isToday ? 'border:2px solid var(--primary);' : '';
+                
+                let videoBtn = '';
+                if(w.video) {
+                    videoBtn = `<button onclick="event.stopPropagation(); window.app.playVideo('${window.app.escape(w.video)}')" style="border:none; background:#f0f0f0; color:var(--primary); padding:5px 10px; border-radius:15px; font-size:11px; margin-top:5px;"><i class="fa-solid fa-play"></i> Vídeo</button>`;
+                }
+
+                list.innerHTML += `
+                <div class="card" onclick="window.app.openDayDetail('${w.scheduledDate}', ${user.races.length - 1}, ${w.originalIdx})" style="cursor:pointer; ${highlight} position:relative; overflow:hidden;">
+                    ${isToday ? '<div style="position:absolute; top:0; right:0; background:var(--primary); color:white; font-size:10px; padding:3px 10px; border-radius:0 0 0 10px;">HOJE</div>' : ''}
+                    <div style="font-size:12px; color:var(--text-sec); font-weight:700; margin-bottom:5px;">${wDate.toLocaleDateString('pt-BR', {weekday:'short', day:'numeric', month:'long'})}</div>
+                    <div style="font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:5px;">${w.title}</div>
+                    <div style="font-size:13px; color:#666; line-height:1.4;">${w.desc}</div>
+                    ${videoBtn}
+                </div>`;
+            });
         }
-        
-        container.innerHTML = cardHtml + `
-            <div style="margin-top:20px; font-size:12px; display:flex; justify-content:space-between; color:var(--text-sec); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;"><span>${doneW}/${totalW} Treinos</span> <span>Meta: ${raceDateDisplay}</span></div>
-            <div class="progress-container"><div class="progress-bar" style="width:${pct}%"></div></div>
-        `;
     },
 
-    finishWorkout: (wTitle) => {
-        state.pendingFinishWorkoutTitle = wTitle;
+    openFinishModal: (rIdx, wIdx, title) => {
+        state.editingStudentRaceIndex = { rIdx, wIdx };
+        state.pendingFinishWorkoutTitle = title;
         state.selectedPainLevel = null;
-        document.getElementById('workout-feedback-text').value = '';
-        window.app.renderPainScale();
-        document.getElementById('modal-finish-workout').classList.add('active');
-    },
-
-    renderPainScale: () => {
+        
+        // Resetar seleção de dor
         const container = document.getElementById('pain-scale-container');
         container.innerHTML = '';
         for(let i=0; i<=7; i++) {
-            const isActive = i === state.selectedPainLevel;
-            const bg = isActive ? 'var(--primary)' : '#FFF';
-            const color = isActive ? '#FFF' : 'var(--text-main)';
-            const border = isActive ? 'none' : '1px solid #CCC';
-            
-            container.innerHTML += `
-            <button onclick="window.app.setPainLevel(${i})" style="width:35px; height:35px; border-radius:50%; border:${border}; background:${bg}; color:${color}; font-weight:600; cursor:pointer;">${i}</button>
-            `;
+            const color = i < 3 ? '#2ecc71' : (i < 6 ? '#f1c40f' : '#e74c3c');
+            container.innerHTML += `<div onclick="window.app.selectPain(${i}, this)" class="pain-circle" style="width:35px; height:35px; border-radius:50%; border:2px solid ${color}; display:flex; align-items:center; justify-content:center; cursor:pointer; font-weight:bold; color:${color};" data-val="${i}">${i}</div>`;
         }
+        document.getElementById('workout-feedback-text').value = '';
+        document.getElementById('modal-finish-workout').classList.add('active');
     },
 
-    setPainLevel: (lvl) => {
-        state.selectedPainLevel = lvl;
-        window.app.renderPainScale();
+    selectPain: (val, el) => {
+        state.selectedPainLevel = val;
+        document.querySelectorAll('.pain-circle').forEach(c => {
+            c.style.background = 'transparent';
+            c.style.color = c.style.borderColor;
+        });
+        el.style.background = el.style.borderColor;
+        el.style.color = '#FFF';
     },
 
     confirmFinishWorkout: async () => {
-        if (!state.pendingFinishWorkoutTitle) return;
-        const notes = document.getElementById('workout-feedback-text').value.trim();
+        if(state.selectedPainLevel === null) return window.app.toast("Selecione o nível de dor.");
         
-        if (state.selectedPainLevel === null) return window.app.toast("Selecione o nível de dor.");
-        if (state.selectedPainLevel > 0 && !notes) return window.app.toast("Descreva o que doeu (Obrigatório para dor > 0).");
-
-        const races = [...state.currentUser.races];
-        const rIdx = races.length - 1;
-        const wIdx = races[rIdx].workouts.findIndex(w => w.title === state.pendingFinishWorkoutTitle && !w.done);
+        const feedback = document.getElementById('workout-feedback-text').value;
+        const { rIdx, wIdx } = state.editingStudentRaceIndex;
         
-        if(wIdx > -1) {
-            races[rIdx].workouts[wIdx].done = true;
-            races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
-            
-            if (state.selectedPainLevel > 0 || notes) {
-                races[rIdx].workouts[wIdx].feedback = {
-                    painLevel: state.selectedPainLevel,
-                    notes: notes,
-                    timestamp: Date.now()
-                };
+        // Atualiza Localmente
+        const user = state.currentUser;
+        user.races[rIdx].workouts[wIdx].done = true;
+        user.races[rIdx].workouts[wIdx].completedAt = new Date().toISOString();
+        user.races[rIdx].workouts[wIdx].feedback = {
+            painLevel: state.selectedPainLevel,
+            notes: feedback
+        };
 
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), {
-                    email: state.currentUser.email,
-                    userName: state.currentUser.name,
-                    workoutTitle: state.pendingFinishWorkoutTitle,
-                    painLevel: state.selectedPainLevel,
-                    notes: notes,
-                    timestamp: Date.now(),
-                    readByAdmin: false,
-                    responded: false,
-                    response: null,
-                    readByUser: true
-                });
-            }
+        // Salva no Firestore
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.id), { races: user.races });
 
-            state.currentUser.races = races;
-            
-            window.app.renderHome(); 
-            if(!document.getElementById('tab-workouts').classList.contains('hidden')) {
-                window.app.renderWorkoutsList();
-            }
-            
-            window.app.toast("Treino concluído! Bom descanso.");
-            window.app.haptic();
-            document.getElementById('modal-finish-workout').classList.remove('active');
-            
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
-        }
-    },
-
-    renderWorkoutsList: () => {
-        const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
-        const list = document.getElementById('workouts-list');
-        
-        if(!activeRace) { list.innerHTML = ''; return; }
-        const pendingCount = activeRace.workouts.filter(w => !w.done).length;
-        
-        list.innerHTML = `
-        <div class="card" style="background:var(--primary); color:#FFF; margin-bottom:25px; padding:25px; display:flex; align-items:center; justify-content:space-between;">
-            <div>
-                <h2 style="margin:0; font-size:36px; color:#FFF;">${pendingCount}</h2>
-                <p style="margin:0; opacity:0.9; font-size:14px; color:#FFF;">Treinos Restantes</p>
-            </div>
-            <i class="fa-solid fa-list-check" style="font-size:40px; opacity:0.5; color:#FFF;"></i>
-        </div>`;
-
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        activeRace.workouts.forEach((w, i) => {
-            const color = w.done ? 'var(--success)' : '#E0E0E0';
-            const icon = w.done ? 'fa-circle-check' : 'fa-circle';
-            const safeVideo = w.video ? window.app.escape(w.video) : '';
-            const safeTitle = window.app.escape(w.title);
-            
-            let dateBadge = '';
-            if(w.scheduledDate) {
-                 const dParts = w.scheduledDate.split('-');
-                 dateBadge = `<span style="font-size:10px; color:#FFF; background:var(--primary); padding:2px 6px; border-radius:6px; margin-left:8px; font-weight:600;">${dParts[2]}/${dParts[1]}</span>`;
-            }
-            
-            let videoBtn = '';
-            if (w.type === 'strength' || w.title.toLowerCase().includes('fortalecimento')) {
-                videoBtn = `<button onclick="window.app.openStrengthVideosModal()" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell" style="color:var(--primary);"></i> Ver Exercícios</button>`;
-            } else if (safeVideo) {
-                videoBtn = `<button onclick="window.app.playVideo('${safeVideo}')" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-play" style="color:var(--primary);"></i> Vídeo</button>`;
-            }
-
-            let finishBtn = '';
-            if(!w.done && (!w.scheduledDate || w.scheduledDate <= todayStr)) {
-                finishBtn = `<button onclick="event.stopPropagation(); window.app.finishWorkout('${safeTitle}')" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; margin-right: 8px;"><i class="fa-solid fa-check"></i> Concluir</button>`;
-            }
-
-            list.innerHTML += `<div class="card" style="display:flex; align-items:flex-start; gap: 15px; opacity: ${w.done?0.6:1}; padding:20px;">
-                <div style="color:${color}; font-size:24px; margin-top:2px;"><i class="fa-solid ${icon}"></i></div>
-                <div style="flex:1;">
-                    <h4 style="margin:0; font-size:16px;">${w.title} ${dateBadge}</h4>
-                    <p style="margin:0; font-size:13px; color:var(--text-sec); margin-top:4px;">${w.desc}</p>
-                    <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
-                        ${finishBtn}
-                        ${videoBtn}
-                    </div>
-                </div>
-            </div>`;
+        // Salva Relato de Dor para o Admin
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), {
+            userId: user.id,
+            userName: user.name,
+            email: user.email,
+            workoutTitle: state.pendingFinishWorkoutTitle,
+            painLevel: state.selectedPainLevel,
+            notes: feedback,
+            timestamp: Date.now(),
+            readByAdmin: false,
+            readByUser: true,
+            response: null
         });
+
+        document.getElementById('modal-finish-workout').classList.remove('active');
+        window.app.toast("Treino concluído!");
+        window.app.haptic();
+        window.app.renderCalendar();
+        window.app.loadUserWorkouts();
     },
 
     // --- PERFIL ---
-    openProfile: () => {
-        if(!state.currentUser) return;
-        window.app.screen('view-profile');
-        
-        document.getElementById('profile-name-big').innerText = state.currentUser.name;
-        document.getElementById('profile-email-big').innerText = state.currentUser.email.toLowerCase();
-        const img = document.getElementById('profile-img-big');
-        if(state.currentUser.avatar) { img.src=state.currentUser.avatar; img.style.display='block'; }
-        else { img.style.display='none'; }
-        
-        document.getElementById('prof-birth').value = state.currentUser.birthDate || '';
-        document.getElementById('prof-city').value = state.currentUser.city || '';
-        document.getElementById('prof-country').value = state.currentUser.country || '';
-        document.getElementById('prof-height').value = state.currentUser.height || '';
-        
-        window.app.renderWeightUI();
-        window.app.toggleEditProfile(false);
-
-        const hList = document.getElementById('profile-history');
-        hList.innerHTML = '';
-        (state.currentUser.races || []).forEach((r, i) => {
-            const done = r.workouts.filter(w=>w.done).length;
-            const total = r.workouts.length;
-            const pct = total > 0 ? Math.round((done/total)*100) : 0;
-            const dateStr = r.date ? new Date(r.date).toLocaleDateString() : 'Sem data';
-
-            hList.innerHTML += `
-            <div style="margin-bottom:15px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;">
-                    <div>
-                        <strong style="font-size:14px;">${r.name}</strong>
-                        <button onclick="window.app.openEditRaceDate(${i})" style="border:none; background:none; color:var(--text-sec); cursor:pointer; font-size:12px; margin-left:5px;"><i class="fa-solid fa-pencil"></i></button>
-                        <div style="font-size:11px; color:#888;">${dateStr}</div>
-                    </div>
-                    <span style="font-size:12px; font-weight:600; color:var(--primary);">${pct}%</span>
-                </div>
-                <div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
-                    <div style="width:${pct}%; height:100%; background:var(--primary);"></div>
-                </div>
-            </div>`;
-        });
-
-        const btnAddRace = document.getElementById('btn-add-race');
-        if(btnAddRace) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const hasActiveGoal = (state.currentUser.races || []).some(r => r.date >= todayStr);
-            if (hasActiveGoal) btnAddRace.style.display = 'none';
-            else btnAddRace.style.display = 'block';
-        }
-    },
+    openProfile: () => window.app.screen('view-profile'),
+    closeProfile: () => window.app.screen('view-app'),
     
-    openEditRaceDate: (index) => {
-        if (!state.currentUser || !state.currentUser.races || !state.currentUser.races[index]) return;
-        state.editingStudentRaceIndex = index;
-        const race = state.currentUser.races[index];
-        document.getElementById('edit-race-date-input').value = race.date || '';
-        document.getElementById('modal-edit-date').classList.add('active');
-    },
-
-    saveRaceDate: async () => {
-        if (state.editingStudentRaceIndex === null || !state.currentUser) return;
-        const newDate = document.getElementById('edit-race-date-input').value;
-        if (!newDate) return window.app.toast("Selecione uma data.");
-        
-        const races = state.currentUser.races;
-        const raceToUpdate = races[state.editingStudentRaceIndex];
-        const raceName = raceToUpdate.name;
-        
-        // Guarda a data antiga para poder apagar da coleção pública
-        const oldDate = raceToUpdate.date;
-        
-        // Atualiza a data no objeto local
-        raceToUpdate.date = newDate;
-        
-        window.app.toast("Atualizando data...");
-        try {
-            // 1. Atualiza no perfil do Usuário (Documento Completo)
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
-            
-            // 2. Sincronização com Coleção Pública (para calendário)
-            const q = query(
-                collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), 
-                where("studentEmail", "==", state.currentUser.email),
-                where("raceName", "==", raceName)
-            );
-            
-            const querySnapshot = await getDocs(q);
-            const batch = writeBatch(db);
-            let hasChanges = false;
-
-            // Se encontrar a prova antiga, apaga ela
-            if (!querySnapshot.empty) {
-                querySnapshot.forEach((docSnap) => {
-                    batch.delete(docSnap.ref); // Deleta o registro antigo
-                });
-                hasChanges = true;
-            }
-
-            // Cria um NOVO registro com a NOVA data
-            const newRaceRef = doc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
-            batch.set(newRaceRef, {
-                date: newDate,
-                raceName: raceName,
-                studentName: state.currentUser.name || 'Aluno',
-                studentEmail: state.currentUser.email,
-                created: Date.now()
-            });
-            hasChanges = true;
-
-            if (hasChanges) {
-                await batch.commit();
-            }
-
-            window.app.toast("Data atualizada!");
-            document.getElementById('modal-edit-date').classList.remove('active');
-            
-            // Força atualização visual imediata de todos os componentes
-            window.app.renderHome(); 
-            window.app.renderCalendar(); 
-            window.app.openProfile(); 
-            window.app.haptic();
-        } catch (e) {
-            console.error("Erro ao salvar data:", e);
-            window.app.toast("Erro ao salvar.");
-        }
-    },
-
-    toggleEditProfile: (isEditing) => {
+    toggleEditProfile: (enable) => {
         const inputs = document.querySelectorAll('#profile-form-container input');
-        inputs.forEach(inp => inp.disabled = !isEditing);
-        const btnEdit = document.getElementById('btn-edit-profile');
-        const actionBtns = document.getElementById('profile-edit-actions');
-        if (isEditing) {
-            btnEdit.style.display = 'none';
-            actionBtns.style.display = 'flex';
-        } else {
-            btnEdit.style.display = 'block';
-            actionBtns.style.display = 'none';
-        }
+        inputs.forEach(i => i.disabled = !enable);
+        document.getElementById('btn-edit-profile').style.display = enable ? 'none' : 'block';
+        document.getElementById('profile-edit-actions').style.display = enable ? 'flex' : 'none';
     },
 
     saveProfile: async () => {
-        if(!state.currentUser) return;
-        const birthDate = document.getElementById('prof-birth').value;
+        const birth = document.getElementById('prof-birth').value;
         const city = document.getElementById('prof-city').value;
         const country = document.getElementById('prof-country').value;
         const height = document.getElementById('prof-height').value;
-        let updates = { birthDate, city, country, height };
-        window.app.toast("Salvando perfil...");
-        try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), updates);
-            state.currentUser = { ...state.currentUser, ...updates };
-            window.app.toast("Perfil atualizado!");
-            window.app.toggleEditProfile(false);
-            window.app.haptic();
-        } catch (e) {
-            console.error(e);
-            window.app.toast("Erro ao salvar.");
-        }
-    },
 
-    renderWeightUI: () => {
-        if(!state.currentUser) return;
-        let history = state.currentUser.weightHistory || [];
-        history = history.filter(h => h.value !== undefined && h.value !== null && !isNaN(h.value));
-        history.sort((a,b) => new Date(b.date) - new Date(a.date));
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.id), {
+            birth, city, country, height
+        });
         
-        const displayEl = document.getElementById('display-current-weight');
-        if (history.length > 0) {
-            const currentWeight = history[0].value;
-            displayEl.innerHTML = `${currentWeight} <span style="font-size: 16px; font-weight: 400; color: var(--text-sec);">kg</span>`;
-        } else {
-            displayEl.innerHTML = '--';
-        }
-
-        const listContainer = document.getElementById('weight-history-list');
-        listContainer.innerHTML = '';
-        if(history.length === 0) {
-            listContainer.innerHTML = '<p style="text-align:center; color:#999; font-size:12px; margin-top:10px;">Nenhum registro.</p>';
-        } else {
-            history.forEach(h => {
-                const dateStr = new Date(h.date).toLocaleDateString();
-                listContainer.innerHTML += `
-                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #eee; font-size:14px; color:var(--text-main);">
-                    <span>${dateStr}</span>
-                    <strong>${h.value} kg</strong>
-                </div>`;
-            });
-        }
+        state.currentUser = { ...state.currentUser, birth, city, country, height };
+        window.app.toggleEditProfile(false);
+        window.app.toast("Perfil atualizado!");
     },
 
-    openWeightModal: () => {
-        document.getElementById('new-weight-input').value = '';
-        document.getElementById('modal-add-weight').classList.add('active');
-        document.getElementById('new-weight-input').focus();
-    },
-
-    saveNewWeight: async () => {
-        const val = parseFloat(document.getElementById('new-weight-input').value);
-        if(!val || isNaN(val)) return window.app.toast("Digite um peso válido.");
-
-        const newEntry = {
-            date: new Date().toISOString(),
-            value: val
-        };
-
-        let history = state.currentUser.weightHistory || [];
-        history.push(newEntry);
-        
-        try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { 
-                weightHistory: history 
-            });
-            state.currentUser.weightHistory = history;
-            window.app.renderWeightUI();
-            document.getElementById('modal-add-weight').classList.remove('active');
-            window.app.toast("Peso registrado!");
-            window.app.haptic();
-        } catch(e) {
-            console.error(e);
-            window.app.toast("Erro ao salvar peso.");
-        }
-    },
-
-    closeProfile: () => window.app.screen('view-app'),
-    
     uploadAvatar: async (input) => {
         if(input.files && input.files[0]) {
-            window.app.toast("Trocando foto...");
-            if(state.currentUser.avatar) {
-                await window.app.deleteFile(state.currentUser.avatar);
-            }
-            const imgUrl = await window.app.uploadImage(input.files[0], 'avatars');
-            if(imgUrl) {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { avatar: imgUrl });
-                window.app.toast("Foto atualizada!");
-                window.app.openProfile();
-            }
+            window.app.toast("Enviando foto...");
+            const url = await window.app.uploadImage(input.files[0], 'avatars');
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.id), { avatar: url });
+            document.getElementById('profile-img-big').src = url;
+            document.getElementById('header-avatar-img').src = url;
         }
     },
 
+    // --- PESO ---
+    openWeightModal: () => document.getElementById('modal-add-weight').classList.add('active'),
+    
+    saveNewWeight: async () => {
+        const val = parseFloat(document.getElementById('new-weight-input').value);
+        if(!val) return;
+        const entry = { date: new Date().toISOString(), value: val };
+        
+        const history = state.currentUser.weightHistory || [];
+        history.push(entry);
+        
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.id), { weightHistory: history });
+        state.currentUser.weightHistory = history;
+        
+        document.getElementById('modal-add-weight').classList.remove('active');
+        document.getElementById('new-weight-input').value = '';
+        window.app.loadUser(state.currentUser.email); // Recarrega para atualizar UI
+    },
+
+    // --- SAÚDE ---
+    openHealthNutri: () => window.app.screen('view-health-nutri'),
+    openHealthPhysio: () => window.app.screen('view-health-physio'),
+    openHealthMental: () => window.app.screen('view-health-mental'),
+    closeHealthSubView: () => {
+        window.app.screen('view-app');
+        window.app.nav('health');
+    },
+
+    // --- RACE (ALUNO) ---
     showAddRaceModal: () => document.getElementById('modal-add-race').classList.add('active'),
     
     addStudentRace: async () => {
         const name = document.getElementById('new-race-name').value;
-        const distEl = document.getElementById('new-race-dist');
-        const dist = distEl ? parseFloat(distEl.value) : 10; 
-        const timeEl = document.getElementById('new-race-est-time');
-        const estTime = timeEl ? timeEl.value : "Não informado";
         const date = document.getElementById('new-race-date').value;
-
-        if(!name || !date) return window.app.toast("Preencha o nome e data.");
-
-        const today = new Date();
-        const raceDateObj = new Date(date);
+        if(!name || !date) return window.app.toast("Preencha nome e data");
         
-        const startDateObj = new Date();
-        startDateObj.setDate(today.getDate() + 1);
-        const startDateStr = startDateObj.toISOString().split('T')[0];
-
-        const diffTime = raceDateObj - startDateObj;
-        if (diffTime <= 0) return window.app.toast("Data deve ser futura.");
-
-        window.app.toast("Seu professor está criando seu treino...");
-        const btn = document.querySelector('#modal-add-race button.btn-primary');
-        if(btn) { btn.disabled = true; btn.innerText = "Gerando..."; }
-
-        try {
-            const response = await fetch(CF_WORKER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name,
-                    dist: dist,
-                    estTime: estTime,
-                    startDate: startDateStr,
-                    raceDate: date,
-                    strengthVideo: "" 
-                })
-            });
-
-            if (!response.ok) {
-                let errorDetails = "Erro desconhecido";
-                try {
-                    const errorJson = await response.json();
-                    errorDetails = errorJson.error || JSON.stringify(errorJson);
-                } catch(e) {
-                    errorDetails = await response.text();
-                }
-                throw new Error(`Worker Error: ${errorDetails}`);
-            }
-
-            const aiWorkoutsRaw = await response.json();
-            
-            if (!Array.isArray(aiWorkoutsRaw)) {
-                if (aiWorkoutsRaw.error) throw new Error(aiWorkoutsRaw.error);
-                throw new Error("Formato inválido recebido da IA.");
-            }
-
-            const generatedWorkouts = aiWorkoutsRaw.map(w => ({
-                title: w.title,
-                desc: w.desc,
-                video: w.video || "", 
-                done: false,
-                scheduledDate: w.date,
-                type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run') 
-            }));
-
-            if (generatedWorkouts.length === 0) throw new Error("Erro ao gerar seu treino.");
-
-            const races = state.currentUser.races || [];
-            races.push({ 
-                name, 
-                date, 
-                targetDistance: dist,
-                estimatedTime: estTime,
-                workouts: generatedWorkouts, 
-                created: new Date().toISOString() 
-            });
-
-            // 1. Atualiza documento do aluno (pesado)
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
-            
-            // 2. OTIMIZAÇÃO SOLUÇÃO 1: Cria registro leve na coleção pública
-            // Previne duplicação: apaga provas anteriores com mesmo nome/email
-            const qDup = query(
-                collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
-                where("studentEmail", "==", state.currentUser.email),
-                where("raceName", "==", name)
-            );
-            const snapDup = await getDocs(qDup);
-            const batch = writeBatch(db);
-            snapDup.forEach(doc => batch.delete(doc.ref)); // Remove duplicatas antigas
-
-            const newRaceRef = doc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES));
-            batch.set(newRaceRef, {
-                date: date,
-                raceName: name,
-                studentName: state.currentUser.name,
-                studentEmail: state.currentUser.email,
-                created: Date.now()
-            });
-            await batch.commit();
-
-            // Atualiza cache local para aparecer no calendário imediatamente
-            // Remove antigos do cache se existirem
-            state.communityRacesCache = state.communityRacesCache.filter(r => !(r.studentEmail === state.currentUser.email && r.raceName === name));
-            state.communityRacesCache.push({
-                date: date,
-                raceName: name,
-                studentName: state.currentUser.name,
-                studentEmail: state.currentUser.email
-            });
-
-            document.getElementById('modal-add-race').classList.remove('active');
-            window.app.toast('Planilha criada com sucesso!');
-            window.app.openProfile();
-            window.app.haptic();
-
-        } catch (error) {
-            console.error("ERRO:", error);
-            window.app.toast("Erro: " + error.message);
-        } finally {
-            if(btn) { btn.disabled = false; btn.innerText = "Criar"; }
-        }
-    },
-
-    // --- SAÚDE ---
-    loadHealthTab: () => {
-        if(!state.currentUser) return;
-        window.app.setupUserNotifications(state.currentUser.email);
-    },
-
-    openHealthNutri: () => {
-        window.app.screen('view-health-nutri');
-        window.app.haptic();
-    },
-
-    openHealthMental: () => {
-        window.app.screen('view-health-mental');
-        window.app.haptic();
-    },
-
-    openHealthPhysio: () => {
-        window.app.screen('view-health-physio');
-        window.app.loadPhysioList();
-        window.app.markPainAsReadByUser();
-        window.app.haptic();
-    },
-
-    closeHealthSubView: () => {
-        window.app.screen('view-app');
-        window.app.nav('health');
-        window.app.haptic();
-    },
-
-    loadPhysioList: () => {
-        if(!state.currentUser) return;
-        const list = document.getElementById('health-pain-list');
-        list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
-
-        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
-            where("email", "==", state.currentUser.email)
-        );
-
-        getDocs(q).then((snapshot) => {
-            if(snapshot.empty) {
-                list.innerHTML = '<p style="text-align: center; color: #999; font-size: 13px; padding: 20px;">Nenhum registro de dor.</p>';
-                return;
-            }
-
-            let painItems = [];
-            snapshot.forEach(d => painItems.push(d.data()));
-            painItems.sort((a,b) => b.timestamp - a.timestamp); 
-            painItems = painItems.slice(0, 20); 
-
-            list.innerHTML = '';
-            painItems.forEach(item => {
-                const statusClass = item.responded ? 'answered' : 'pending';
-                const statusText = item.responded ? 'Respondido' : 'Pendente';
-                const dateStr = new Date(item.timestamp).toLocaleDateString();
-
-                let responseHtml = '';
-                if(item.response) {
-                    responseHtml = `
-                    <div class="pain-response-box">
-                        <strong><i class="fa-solid fa-user-doctor"></i> Fisio Respondeu:</strong>
-                        ${item.response}
-                    </div>`;
-                }
-
-                list.innerHTML += `
-                <div class="pain-item ${statusClass}">
-                    <div class="pain-header">
-                        <span>${dateStr} - ${item.workoutTitle}</span>
-                        <span class="status-badge ${statusClass}">${statusText}</span>
-                    </div>
-                    <p class="pain-desc">
-                        <strong>Nível ${item.painLevel}/7:</strong> ${item.notes}
-                    </p>
-                    ${responseHtml}
-                </div>`;
-            });
+        // Simplesmente cria sem IA para o aluno (ou pode conectar a IA aqui tbm se quiser)
+        const newRace = {
+            name, date, workouts: [], created: new Date().toISOString()
+        };
+        
+        const races = state.currentUser.races || [];
+        races.push(newRace);
+        
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.id), { races });
+        
+        // Adiciona registro público para calendário social
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
+            date: date,
+            raceName: name,
+            studentName: state.currentUser.name,
+            studentEmail: state.currentUser.email,
+            created: Date.now()
         });
+
+        document.getElementById('modal-add-race').classList.remove('active');
+        window.app.toast("Objetivo criado!");
+    },
+    
+    editRaceDate: (rIdx) => {
+        state.editingStudentRaceIndex = rIdx; // reusa variavel
+        const r = state.currentUser.races[rIdx];
+        document.getElementById('edit-race-date-input').value = r.date;
+        document.getElementById('modal-edit-date').classList.add('active');
     },
 
-    markPainAsReadByUser: async () => {
-        if(!state.currentUser) return;
-        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
-            where("email", "==", state.currentUser.email)
-        );
-        const snapshot = await getDocs(q);
-        snapshot.forEach(async (d) => {
-            const data = d.data();
-            if(data.readByUser === false && data.response != null) {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, d.id), { readByUser: true });
-            }
-        });
+    saveRaceDate: async () => {
+        const newDate = document.getElementById('edit-race-date-input').value;
+        if(!newDate) return;
+        
+        const rIdx = state.editingStudentRaceIndex;
+        state.currentUser.races[rIdx].date = newDate;
+        
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.id), { races: state.currentUser.races });
+        
+        document.getElementById('modal-edit-date').classList.remove('active');
+        window.app.loadUserWorkouts();
+        window.app.renderCalendar();
     },
+    
+    saveDayNote: () => {
+        // Implementar se quiser salvar notas avulsas no dia
+        document.getElementById('modal-day-detail').classList.remove('active');
+    }
 };
