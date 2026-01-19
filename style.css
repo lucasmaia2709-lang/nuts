@@ -19,7 +19,8 @@
 
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
-    background-color: #9cafcc; color: var(--text-main); 
+    background-color: #9cafcc; /* Azul de fundo (só deve aparecer no overscroll) */
+    color: var(--text-main); 
     width: 100vw; height: 100dvh; overflow: hidden; 
     display: flex; flex-direction: column; 
 }
@@ -37,14 +38,18 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 /* SCREENS */
 .screen { 
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-    background-color: var(--bg); display: none; flex-direction: column; 
+    background-color: var(--bg); /* Garante fundo claro */
+    display: none; flex-direction: column; 
     z-index: 10; padding-top: env(safe-area-inset-top); padding-bottom: 0; 
 }
-#view-app.screen { display: none; padding-top: 0; }
+
+#view-app.screen { display: none; padding-top: 0; background-color: var(--bg); }
 #view-app.screen.active { display: flex; }
+
 .screen.active { display: flex; animation: fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .screen.full-screen { z-index: 200; background: var(--bg); padding-top: env(safe-area-inset-top); padding-bottom: 0; }
 .screen.detail-view { z-index: 150; background: var(--bg); padding-bottom: 0; }
+
 #view-admin.screen.full-screen.active { overflow: hidden; display: flex; flex-direction: column; background: #f8fafc; }
 #view-dashboard.screen.active { display: flex; flex-direction: row; background: #f4f7f9; }
 
@@ -121,16 +126,13 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     bottom: 0; 
     left: 0; 
     width: 100%; 
-    /* Altura calcula a barra + a área segura do iPhone (barra preta) */
     height: calc(var(--nav-height) + env(safe-area-inset-bottom)); 
     background: #9cafcc; 
     border-radius: 0; 
     display: flex; 
     justify-content: space-around; 
     align-items: flex-start; 
-    /* Padding bottom garante que os ícones não fiquem embaixo da barra do iPhone */
     padding: 8px 10px env(safe-area-inset-bottom) 10px; 
-
     z-index: 300; 
     box-shadow: 0 -1px 0 rgba(255,255,255,0.1); 
 }
@@ -167,28 +169,19 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 
 /* --- DESTAQUE PARA BOTÃO HOME (CASINHA) --- */
 .nav-item[data-tab="home"] {
-    background-color: var(--primary); /* Círculo Laranja */
+    background-color: var(--primary);
     width: 65px;
     height: 65px;
     border-radius: 50%;
-    
-    /* Faz o botão "subir" da barra */
     margin-top: -30px; 
-    
-    /* Borda da cor do fundo da barra para criar o efeito de recorte */
     border: 6px solid #9cafcc; 
-    
-    /* Sombra elegante */
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-    
     display: flex;
     align-items: center;
     justify-content: center;
-    
-    color: #FFF !important; /* Ícone sempre branco */
-    flex: 0 0 auto; /* Impede que o flexbox deforme o círculo */
+    color: #FFF !important; 
+    flex: 0 0 auto; 
     z-index: 301;
-    
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -198,10 +191,9 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 
 .nav-item[data-tab="home"] i {
     font-size: 26px;
-    transform: none !important; /* Remove animação padrão para não conflitar */
+    transform: none !important;
     color: #FFF !important;
 }
-/* ----------------------------------------- */
 
 .hidden { display: none !important; }
 .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-main); color: #FFF; padding: 12px 24px; border-radius: 50px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 5000; pointer-events: none; text-align: center; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
@@ -231,7 +223,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .adm-item-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 .adm-btn-small { padding: 6px 12px; font-size: 11px; border-radius: 8px; border: 1px solid #ddd; background: #FFF; cursor: pointer; font-weight: 600; color: var(--text-main); }
 
-/* --- DASHBOARD DESKTOP (Novo) --- */
+/* --- DASHBOARD DESKTOP --- */
 .dash-sidebar { width: 250px; background: #2b4c7e; height: 100%; color: white; display: flex; flex-direction: column; flex-shrink: 0; }
 .dash-content { flex: 1; padding: 40px; overflow-y: auto; }
 .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
@@ -255,6 +247,12 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .status-pill.inactive { background: #ffebee; color: #c62828; }
 .status-pill.pending { background: #fff3e0; color: #ef6c00; }
 
+/* DETALHE DO ALUNO (DESKTOP) */
+.dash-detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+.dash-card-title { font-size: 14px; color: #888; margin-bottom: 15px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.dash-list-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+.dash-list-item:last-child { border-bottom: none; }
+
 /* --- SKELETON LOADING --- */
 .skeleton {
     background: #eee;
@@ -276,8 +274,8 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     max-height: 450px;
     object-fit: cover;
     display: block;
-    background-color: #f0f2f5; /* Placeholder color (fundo cinza antes de carregar) */
-    min-height: 200px; /* Evita que o layout "pule" muito */
+    background-color: #f0f2f5;
+    min-height: 200px;
     opacity: 0;
     transition: opacity 0.3s ease-in;
 }
@@ -286,7 +284,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 }
 
 /* --- SAÚDE & FISIO (NOVOS ESTILOS) --- */
-/* ... (Mantém o resto igual) ... */
 .pain-item {
     background: #f8fafc;
     border-radius: 12px;
@@ -303,12 +300,12 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 }
 
 .pain-item.pending {
-    border-left-color: var(--text-sec); /* Laranja se pendente */
+    border-left-color: var(--text-sec);
     background: #fffbf7;
 }
 
 .pain-item.answered {
-    border-left-color: var(--success); /* Verde se respondido */
+    border-left-color: var(--success);
     background: #f0fff4;
 }
 
@@ -383,7 +380,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     overflow: hidden;
 }
 
-/* Faixa lateral para indicar não lido no admin */
 .adm-pain-card.unread::before {
     content: '';
     position: absolute;
