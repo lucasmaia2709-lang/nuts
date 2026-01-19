@@ -18,6 +18,133 @@ export const admin = {
         document.body.style.backgroundColor = '#9cafcc';
     },
 
+    // --- LOGICA DE DASHBOARD (DESKTOP) ---
+    allDashboardUsers: [], // Cache local para filtrar rápido
+
+    openDashboard: async () => {
+        window.app.screen('view-dashboard');
+        // Carrega TODOS os usuários de uma vez para análise (para 100-500 usuários isso é ok)
+        // Se crescer para 5000+, precisaremos de Cloud Functions
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_USERS));
+        const snap = await getDocs(q);
+        
+        const users = [];
+        snap.forEach(d => users.push({ id: d.id, ...d.data() }));
+        
+        // Processa dados para o Dashboard
+        admin.allDashboardUsers = users.map(u => {
+            const lastWorkout = admin.getLastWorkoutDate(u);
+            const daysInactive = admin.calculateDaysInactive(lastWorkout);
+            return {
+                ...u,
+                lastWorkoutDate: lastWorkout,
+                daysInactive: daysInactive,
+                status: u.active ? (daysInactive > 10 ? 'risk' : 'active') : 'pending'
+            };
+        });
+
+        // Ordena por "Dias Inativo" (Decrescente) para mostrar quem está saindo primeiro
+        admin.allDashboardUsers.sort((a,b) => {
+             // Prioriza pendentes no topo, depois inativos
+             if (a.status === 'pending' && b.status !== 'pending') return -1;
+             if (b.status === 'pending' && a.status !== 'pending') return 1;
+             return b.daysInactive - a.daysInactive;
+        });
+
+        admin.renderDashboardMetrics();
+        admin.renderDashboardTable(admin.allDashboardUsers);
+    },
+
+    closeDashboard: () => {
+        // Volta para o admin mobile
+        admin.loadAdmin();
+    },
+
+    dashTab: (tab) => {
+        // Simples troca de visualização (por enquanto só tem lista de alunos)
+        if(tab === 'overview') admin.openDashboard();
+    },
+
+    dashSearch: () => {
+        const term = document.getElementById('dash-search').value.toLowerCase();
+        const filtered = admin.allDashboardUsers.filter(u => 
+            u.name.toLowerCase().includes(term) || 
+            u.email.toLowerCase().includes(term)
+        );
+        admin.renderDashboardTable(filtered);
+    },
+
+    getLastWorkoutDate: (u) => {
+        if (!u.races || u.races.length === 0) return null;
+        let lastDate = null;
+        
+        // Varre todas as provas e treinos para achar o mais recente concluído
+        u.races.forEach(r => {
+            if(r.workouts) {
+                r.workouts.forEach(w => {
+                    if(w.done && w.completedAt) {
+                        const d = new Date(w.completedAt);
+                        if (!lastDate || d > lastDate) lastDate = d;
+                    }
+                });
+            }
+        });
+        return lastDate; // Retorna objeto Date ou null
+    },
+
+    calculateDaysInactive: (lastDate) => {
+        if (!lastDate) return 999; // Nunca treinou
+        const diff = Date.now() - lastDate.getTime();
+        return Math.floor(diff / (1000 * 60 * 60 * 24));
+    },
+
+    renderDashboardMetrics: () => {
+        const total = admin.allDashboardUsers.length;
+        const risk = admin.allDashboardUsers.filter(u => u.status === 'risk').length;
+        const activeToday = admin.allDashboardUsers.filter(u => u.daysInactive === 0).length;
+
+        document.getElementById('dash-total-students').innerText = total;
+        document.getElementById('dash-risk-students').innerText = risk;
+        document.getElementById('dash-active-today').innerText = activeToday;
+    },
+
+    renderDashboardTable: (users) => {
+        const tbody = document.getElementById('dash-table-body');
+        tbody.innerHTML = '';
+
+        users.forEach(u => {
+            let statusBadge = '';
+            if (u.status === 'pending') statusBadge = '<span class="status-pill pending">Pendente</span>';
+            else if (u.status === 'risk') statusBadge = '<span class="status-pill inactive">Risco (Inativo)</span>';
+            else statusBadge = '<span class="status-pill active">Ativo</span>';
+
+            const lastDateStr = u.lastWorkoutDate ? u.lastWorkoutDate.toLocaleDateString() : 'Nunca';
+            const daysStr = u.daysInactive === 999 ? '-' : `${u.daysInactive} dias`;
+            
+            // Pega a prova atual
+            const currentRace = (u.races && u.races.length > 0) ? u.races[u.races.length-1].name : 'Sem Plano';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <strong>${u.name}</strong>
+                    ${u.active ? '' : '<br><small style="color:red; cursor:pointer;" onclick="window.app.admToggleStatus(\''+window.app.escape(u.id)+'\', true)">[Aprovar]</small>'}
+                </td>
+                <td>${u.email}</td>
+                <td>${statusBadge}</td>
+                <td>${lastDateStr}</td>
+                <td style="font-weight:bold; color:${u.daysInactive > 7 ? 'red' : 'green'}">${daysStr}</td>
+                <td>${currentRace}</td>
+                <td>
+                    <button onclick="window.app.admToggleUser('${window.app.escape(u.id)}'); window.app.loadAdmin();" style="border:1px solid #ddd; background:white; padding:5px 10px; border-radius:5px; cursor:pointer;">Ver App</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    },
+
+    // --- FIM DA LÓGICA DASHBOARD ---
+
     admTab: (t) => {
         document.querySelectorAll('[id^="adm-content"]').forEach(e=>e.classList.add('hidden'));
         document.getElementById('adm-content-'+t).classList.remove('hidden');
