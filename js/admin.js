@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc, setDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, getDocs, startAfter, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, updateDoc, setDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, getDocs, startAfter, addDoc, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { db, appId, C_USERS, C_NEWS, C_TEMPLATES, C_VIDEOS, C_PAIN, C_QUOTES, C_PUBLIC_RACES, CF_WORKER_URL } from "./config.js";
 import { state } from "./state.js";
 
@@ -61,8 +61,12 @@ export const admin = {
     },
 
     dashTab: (tab) => {
-        // Simples troca de visualização (por enquanto só tem lista de alunos)
-        if(tab === 'overview') admin.openDashboard();
+        if(tab === 'overview') {
+            document.getElementById('dash-tab-students').classList.remove('hidden');
+            document.getElementById('dash-tab-student-detail').classList.add('hidden');
+            // Re-renderiza a tabela se necessário
+            admin.renderDashboardTable(admin.allDashboardUsers);
+        }
     },
 
     dashSearch: () => {
@@ -72,6 +76,153 @@ export const admin = {
             u.email.toLowerCase().includes(term)
         );
         admin.renderDashboardTable(filtered);
+    },
+
+    dashFilterByDate: () => {
+        const startStr = document.getElementById('dash-date-start').value;
+        const endStr = document.getElementById('dash-date-end').value;
+
+        if (!startStr || !endStr) return window.app.toast("Selecione data inicial e final.");
+
+        const start = new Date(startStr + 'T00:00:00');
+        const end = new Date(endStr + 'T23:59:59');
+
+        const filtered = admin.allDashboardUsers.filter(u => {
+            if (!u.races) return false;
+            // Verifica se tem ALGUM treino concluído dentro do range
+            return u.races.some(r => {
+                if(!r.workouts) return false;
+                return r.workouts.some(w => {
+                    if (!w.done || !w.completedAt) return false;
+                    const cDate = new Date(w.completedAt + 'T12:00:00'); // Evita bug de timezone
+                    return cDate >= start && cDate <= end;
+                });
+            });
+        });
+
+        window.app.toast(`${filtered.length} alunos treinaram no período.`);
+        admin.renderDashboardTable(filtered);
+    },
+
+    // --- NOVA FUNCIONALIDADE: ABRIR DETALHES DO ALUNO ---
+    openDashStudentDetail: async (userId) => {
+        const u = admin.allDashboardUsers.find(user => user.id === userId);
+        if (!u) return;
+
+        // Esconde tabela, mostra detalhe
+        document.getElementById('dash-tab-students').classList.add('hidden');
+        const detailContainer = document.getElementById('dash-tab-student-detail');
+        detailContainer.classList.remove('hidden');
+        detailContainer.innerHTML = '<p class="skeleton" style="height:100px;"></p>';
+
+        // Busca histórico de dor específico (Fisio)
+        const qPain = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), where("email", "==", u.email));
+        const snapPain = await getDocs(qPain);
+        const painHistory = [];
+        snapPain.forEach(d => painHistory.push(d.data()));
+        painHistory.sort((a,b) => b.timestamp - a.timestamp);
+
+        // Prepara HTML dos Objetivos (Races) e Treinos
+        let racesHtml = '';
+        if (u.races && u.races.length > 0) {
+            // Pega o último objetivo (mais atual)
+            const r = u.races[u.races.length - 1]; 
+            const done = r.workouts.filter(w=>w.done).length;
+            const total = r.workouts.length;
+            const pct = total > 0 ? Math.round((done/total)*100) : 0;
+
+            let workoutsHtml = '';
+            // Lista os últimos 10 treinos
+            const recentWorkouts = r.workouts.slice().reverse().slice(0, 20); 
+            recentWorkouts.forEach(w => {
+                const icon = w.done ? '<i class="fa-solid fa-check-circle" style="color:var(--success)"></i>' : '<i class="fa-regular fa-circle" style="color:#ccc"></i>';
+                const date = w.completedAt ? new Date(w.completedAt).toLocaleDateString() : (w.scheduledDate ? new Date(w.scheduledDate).toLocaleDateString() : '-');
+                
+                // Exibe feedback de dor se houver
+                let feedback = '';
+                if (w.feedback) feedback = `<div style="font-size:11px; color:#e67e22; margin-left:25px;">Dor: ${w.feedback.painLevel} - ${w.feedback.notes}</div>`;
+
+                workoutsHtml += `
+                <div class="dash-list-item" style="display:block;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>${icon} <strong>${w.title}</strong></span>
+                        <span style="font-size:12px; color:#888;">${date}</span>
+                    </div>
+                    <div style="font-size:12px; color:#666; margin-left:25px;">${w.desc}</div>
+                    ${feedback}
+                </div>`;
+            });
+
+            racesHtml = `
+            <div style="background:#f9f9f9; padding:15px; border-radius:10px; margin-bottom:15px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <strong>${r.name}</strong>
+                    <span>${pct}% Concluído</span>
+                </div>
+                <div class="progress-container" style="height:8px; margin-top:0;"><div class="progress-bar colored" style="width:${pct}%"></div></div>
+                <div style="margin-top:15px; max-height:400px; overflow-y:auto;">
+                    <h5 style="margin:0 0 10px;">Últimos Treinos</h5>
+                    ${workoutsHtml}
+                </div>
+            </div>`;
+        } else {
+            racesHtml = '<p>Sem objetivos cadastrados.</p>';
+        }
+
+        // Histórico de Dor (Sidebar)
+        let painHtml = '';
+        if (painHistory.length > 0) {
+            painHistory.forEach(p => {
+                painHtml += `
+                <div style="padding:10px; border-bottom:1px solid #eee;">
+                    <strong style="color:var(--red);">Nível ${p.painLevel}/7</strong> - <small>${new Date(p.timestamp).toLocaleDateString()}</small><br>
+                    <span style="font-size:12px;">${p.notes}</span>
+                    ${p.responded ? '<br><small style="color:var(--success);"><i class="fa-solid fa-check"></i> Respondido</small>' : '<br><small style="color:var(--text-sec);">Pendente</small>'}
+                </div>`;
+            });
+        } else {
+            painHtml = '<p style="color:#999; font-size:12px;">Sem relatos.</p>';
+        }
+
+        // Renderiza VIEW COMPLETA
+        detailContainer.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div style="display:flex; align-items:center; gap:15px;">
+                <button onclick="document.getElementById('dash-tab-students').classList.remove('hidden'); document.getElementById('dash-tab-student-detail').classList.add('hidden');" style="border:none; background:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-arrow-left"></i></button>
+                <div>
+                    <h2 style="margin:0;">${u.name}</h2>
+                    <span style="color:#888;">${u.email}</span>
+                </div>
+            </div>
+            <div>
+               <span class="status-pill ${u.status === 'active' ? 'active' : 'inactive'}">${u.status === 'active' ? 'ATIVO' : 'INATIVO'}</span>
+            </div>
+        </div>
+
+        <div class="dash-detail-grid">
+            <!-- COLUNA ESQUERDA (TREINOS) -->
+            <div>
+                <h4 class="dash-card-title">Objetivo Atual & Progresso</h4>
+                ${racesHtml}
+            </div>
+
+            <!-- COLUNA DIREITA (SAÚDE) -->
+            <div>
+                <div class="dash-metric-card" style="margin-bottom:20px;">
+                    <h4 class="dash-card-title" style="margin-top:0;">Histórico Fisio (Dores)</h4>
+                    <div style="max-height:500px; overflow-y:auto;">
+                        ${painHtml}
+                    </div>
+                </div>
+                
+                <div class="dash-metric-card">
+                    <h4 class="dash-card-title" style="margin-top:0;">Dados Pessoais</h4>
+                    <p style="font-size:13px; margin:5px 0;"><strong>Cidade:</strong> ${u.city || '-'}</p>
+                    <p style="font-size:13px; margin:5px 0;"><strong>Peso Atual:</strong> ${u.weightHistory && u.weightHistory.length > 0 ? u.weightHistory[u.weightHistory.length-1].value + 'kg' : '-'}</p>
+                </div>
+            </div>
+        </div>
+        `;
     },
 
     getLastWorkoutDate: (u) => {
@@ -136,7 +287,7 @@ export const admin = {
                 <td style="font-weight:bold; color:${u.daysInactive > 7 ? 'red' : 'green'}">${daysStr}</td>
                 <td>${currentRace}</td>
                 <td>
-                    <button onclick="window.app.admToggleUser('${window.app.escape(u.id)}'); window.app.loadAdmin();" style="border:1px solid #ddd; background:white; padding:5px 10px; border-radius:5px; cursor:pointer;">Ver App</button>
+                    <button onclick="window.app.openDashStudentDetail('${window.app.escape(u.id)}')" style="border:1px solid #ddd; background:white; padding:5px 10px; border-radius:5px; cursor:pointer; color:var(--primary); font-weight:600;">Ver Detalhes</button>
                 </td>
             `;
             tbody.appendChild(tr);
