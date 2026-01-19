@@ -21,9 +21,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- CSS Externo -->
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="style.css?v=7">
 
-    <!-- CORREÇÃO DE OVERSCROLL (FIX DO FUNDO AZUL APARECENDO) -->
     <style>
         html, body {
             overscroll-behavior: none;
@@ -88,18 +87,13 @@
                 <img id="header-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
                 <span id="header-avatar-txt">U</span>
             </div>
-            
-            <div class="logo-container-small">
-                <span class="logo-nuts-small">nuts</span>
-            </div>
-
+            <div class="logo-container-small"><span class="logo-nuts-small">nuts</span></div>
             <div style="width: 40px; display: flex; justify-content: flex-end;">
                  <button id="btn-admin-access" onclick="window.app.loadAdmin()" style="border:none; background:none; color:var(--primary); font-size:18px; display:none;"><i class="fa-solid fa-lock"></i></button>
             </div>
         </div>
 
         <div id="main-scroll">
-            <!-- ABA HOME -->
             <div id="tab-home" class="tab-content">
                 <div class="calendar-wrapper">
                     <div class="calendar-header">
@@ -126,70 +120,45 @@
                 </div>
             </div>
 
-            <!-- ABA MEU PLANO -->
             <div id="tab-workouts" class="tab-content hidden" style="padding: 0 20px;">
                 <h2 style="margin: 20px 0; color:var(--text-main);">Meu Plano</h2>
                 <div id="workouts-list"></div>
             </div>
 
-            <!-- ABA SAÚDE REESTRUTURADA -->
             <div id="tab-health" class="tab-content hidden" style="padding: 0 20px;">
                 <h2 style="margin: 20px 0; color:var(--text-main);">Minha Saúde</h2>
-                
-                <!-- 1. Card Meu Nutri (Atalho) -->
                 <div class="card" onclick="window.app.openHealthNutri()" style="cursor: pointer; transition: transform 0.2s; margin-bottom: 15px;">
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="width: 50px; height: 50px; background: #e0f2f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #009688; font-size: 20px;">
-                                <i class="fa-solid fa-carrot"></i>
-                            </div>
-                            <div>
-                                <h3 style="margin:0; font-size: 18px; color: var(--text-main);">Meu Nutri</h3>
-                                <p style="margin:0; font-size: 12px; color: var(--text-sec);">Dieta e suplementação</p>
-                            </div>
+                            <div style="width: 50px; height: 50px; background: #e0f2f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #009688; font-size: 20px;"><i class="fa-solid fa-carrot"></i></div>
+                            <div><h3 style="margin:0; font-size: 18px; color: var(--text-main);">Meu Nutri</h3><p style="margin:0; font-size: 12px; color: var(--text-sec);">Dieta e suplementação</p></div>
                         </div>
                         <i class="fa-solid fa-chevron-right" style="color: #ccc;"></i>
                     </div>
                 </div>
-
-                <!-- 2. Card Meu Fisio (Atalho) -->
                 <div class="card" onclick="window.app.openHealthPhysio()" style="cursor: pointer; transition: transform 0.2s; margin-bottom: 15px;">
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="width: 50px; height: 50px; background: #e3f2fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 20px;">
-                                <i class="fa-solid fa-user-doctor"></i>
-                            </div>
-                            <div>
-                                <h3 style="margin:0; font-size: 18px; color: var(--text-main);">Meu Fisio</h3>
-                                <p style="margin:0; font-size: 12px; color: var(--text-sec);">Relatos e tratamentos</p>
-                            </div>
+                            <div style="width: 50px; height: 50px; background: #e3f2fd; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 20px;"><i class="fa-solid fa-user-doctor"></i></div>
+                            <div><h3 style="margin:0; font-size: 18px; color: var(--text-main);">Meu Fisio</h3><p style="margin:0; font-size: 12px; color: var(--text-sec);">Relatos e tratamentos</p></div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <!-- Badge Contador na Home da Saúde -->
                             <span id="health-badge-counter" class="hidden" style="background: var(--red); color: white; font-size: 10px; padding: 4px 8px; border-radius: 10px; font-weight: 700;">0</span>
                             <i class="fa-solid fa-chevron-right" style="color: #ccc;"></i>
                         </div>
                     </div>
                 </div>
-
-                <!-- 3. Card Mental Health (Atalho - Novo) -->
                 <div class="card" onclick="window.app.openHealthMental()" style="cursor: pointer; transition: transform 0.2s; margin-bottom: 15px;">
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="width: 50px; height: 50px; background: #f3e5f5; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #9c27b0; font-size: 20px;">
-                                <i class="fa-solid fa-brain"></i>
-                            </div>
-                            <div>
-                                <h3 style="margin:0; font-size: 18px; color: var(--text-main);">Mental Health</h3>
-                                <p style="margin:0; font-size: 12px; color: var(--text-sec);">Equilíbrio e bem-estar</p>
-                            </div>
+                            <div style="width: 50px; height: 50px; background: #f3e5f5; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #9c27b0; font-size: 20px;"><i class="fa-solid fa-brain"></i></div>
+                            <div><h3 style="margin:0; font-size: 18px; color: var(--text-main);">Mental Health</h3><p style="margin:0; font-size: 12px; color: var(--text-sec);">Equilíbrio e bem-estar</p></div>
                         </div>
                         <i class="fa-solid fa-chevron-right" style="color: #ccc;"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- ABA COMUNIDADE -->
             <div id="tab-social" class="tab-content hidden" style="padding: 0 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin: 20px 0;">
                     <h2 style="margin:0; color:var(--text-main);">Comunidade</h2>
@@ -198,7 +167,6 @@
                 <div id="social-feed"></div>
             </div>
 
-            <!-- ABA NOVIDADES -->
             <div id="tab-news" class="tab-content hidden" style="padding: 0 20px;">
                 <h2 style="margin: 20px 0; color:var(--text-main);">Novidades</h2>
                 <div id="news-feed"></div>
@@ -206,28 +174,18 @@
         </div>
 
         <div class="nav-bar">
-            <!-- 1. Comunidade (Antes era Treinos) -->
             <button class="nav-item" onclick="window.app.nav('social')" data-tab="social"><i class="fa-solid fa-users"></i></button>
-
-            <!-- 2. Saúde -->
             <button class="nav-item" onclick="window.app.nav('health')" data-tab="health" style="position: relative;">
                 <i class="fa-solid fa-heart-pulse"></i>
                 <span id="nav-badge-health" class="hidden" style="position: absolute; top: 5px; right: 25%; width: 8px; height: 8px; background: var(--red); border-radius: 50%; border: 1px solid white;"></span>
             </button>
-            
-            <!-- 3. HOME (CENTRO) -->
             <button class="nav-item active" onclick="window.app.nav('home')" data-tab="home"><i class="fa-solid fa-house"></i></button>
-            
-            <!-- 4. Treinos (Antes era Comunidade) -->
             <button class="nav-item" onclick="window.app.nav('workouts')" data-tab="workouts"><i class="fa-solid fa-person-running"></i></button>
-            
-            <!-- 5. Novidades -->
             <button class="nav-item" onclick="window.app.nav('news')" data-tab="news"><i class="fa-solid fa-bullhorn"></i></button>
         </div>
     </div>
 
     <!-- MODAIS E TELAS EXTRAS -->
-    
     <div id="view-profile" class="screen full-screen" style="overflow-y: auto; -webkit-overflow-scrolling: touch; background: #FFF;">
         <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
             <button onclick="window.app.closeProfile()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main);"><i class="fa-solid fa-times"></i></button>
@@ -243,31 +201,20 @@
             <h2 id="profile-name-big" style="margin:0; font-size:28px; color:var(--text-main);">NOME</h2>
             <p id="profile-email-big" style="color: var(--text-sec); font-size: 16px;">EMAIL</p>
             
-            <!-- ÁREA DE DADOS PESSOAIS -->
             <div class="card" style="text-align: left; margin-top: 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                     <h4 style="margin:0; color:var(--primary);">Dados Pessoais</h4>
                     <button id="btn-edit-profile" onclick="window.app.toggleEditProfile(true)" style="font-size:12px; color:var(--text-sec); border:1px solid var(--border); background:white; padding:4px 10px; border-radius:10px;">Alterar Perfil</button>
                 </div>
-                
                 <div id="profile-form-container">
                     <label class="label">Data de Nascimento</label>
                     <input id="prof-birth" type="date" class="input" disabled style="margin-bottom:10px;">
-                    
                     <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label class="label">Cidade</label>
-                            <input id="prof-city" class="input" disabled style="margin-bottom:10px;">
-                        </div>
-                        <div style="flex:1;">
-                            <label class="label">País</label>
-                            <input id="prof-country" class="input" disabled style="margin-bottom:10px;">
-                        </div>
+                        <div style="flex:1;"><label class="label">Cidade</label><input id="prof-city" class="input" disabled style="margin-bottom:10px;"></div>
+                        <div style="flex:1;"><label class="label">País</label><input id="prof-country" class="input" disabled style="margin-bottom:10px;"></div>
                     </div>
-
                     <label class="label">Altura (cm)</label>
                     <input id="prof-height" type="number" class="input" disabled style="margin-bottom:10px;">
-
                     <div id="profile-edit-actions" style="display:none; gap:10px; margin-top:15px;">
                         <button onclick="window.app.saveProfile()" class="btn btn-primary">Salvar</button>
                         <button onclick="window.app.toggleEditProfile(false)" class="btn btn-outline">Cancelar</button>
@@ -275,110 +222,25 @@
                 </div>
             </div>
 
-            <!-- CARD EXCLUSIVO DE PESO -->
             <div class="card" style="text-align: left; margin-top: 20px; padding: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div>
                         <label class="label" style="font-size: 12px; color: var(--text-sec);">Peso Atual</label>
-                        <div id="display-current-weight" style="font-size: 32px; font-weight: 700; color: var(--text-main);">
-                            --
-                        </div>
+                        <div id="display-current-weight" style="font-size: 32px; font-weight: 700; color: var(--text-main);">--</div>
                     </div>
-                    <button onclick="window.app.openWeightModal()" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
+                    <button onclick="window.app.openWeightModal()" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-plus"></i></button>
                 </div>
-                
                 <div style="border-top: 1px dashed #eee; padding-top: 15px;">
                     <label class="label" style="margin-bottom: 10px; display: block; font-size: 11px; opacity: 0.7;">HISTÓRICO</label>
-                    <div id="weight-history-list" style="max-height: 150px; overflow-y: auto;">
-                    </div>
+                    <div id="weight-history-list" style="max-height: 150px; overflow-y: auto;"></div>
                 </div>
             </div>
 
             <button id="btn-add-race" onclick="window.app.showAddRaceModal()" class="btn btn-primary" style="margin-top: 30px;">+ Novo Objetivo</button>
-
             <div class="card" style="margin-top: 40px; text-align: left;">
                 <h4 style="margin-top:0; color:var(--primary);">Histórico de Provas</h4>
                 <div id="profile-history"></div>
             </div>
-        </div>
-    </div>
-
-    <div id="view-news-detail" class="screen detail-view">
-        <button onclick="window.app.closeNewsDetail()" style="position:absolute; top:40px; left:20px; z-index:10; background:white; border:none; width:45px; height:45px; border-radius:50%; box-shadow:0 5px 15px rgba(0,0,0,0.1); cursor:pointer; display:flex; justify-content:center; align-items:center;"><i class="fa-solid fa-arrow-left" style="color:var(--text-main);"></i></button>
-        <div id="news-det-img-container" style="width:100%; height:350px; background:grey; background-size:cover; background-position:center; background-color: #EEE; display: none;"></div>
-        <div style="background:var(--bg); border-radius:30px 30px 0 0; margin-top:-40px; padding:30px; position:relative; min-height:500px; padding-top: 50px;">
-            <div id="news-det-date" style="font-size: 12px; color: var(--text-sec); font-weight: 700; margin-bottom: 10px;">DATA</div>
-            <h1 id="news-det-title" style="margin:0 0 20px 0; color:var(--text-main); line-height: 1.3;">TITULO</h1>
-            <div id="news-det-body" style="color:var(--text-main); line-height:1.6; font-size: 16px; white-space: pre-line;">
-                Corpo da notícia...
-            </div>
-        </div>
-    </div>
-
-    <!-- NOVAS TELAS DE DETALHE DA ABA SAÚDE -->
-
-    <!-- 1. TELA MEU NUTRI -->
-    <div id="view-health-nutri" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
-        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
-            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
-            <h3 style="margin:0; color: #009688;">Meu Nutri</h3>
-        </div>
-        <div style="padding: 20px; text-align: center;">
-            <div class="card" style="padding: 40px 20px;">
-                <i class="fa-solid fa-carrot" style="font-size: 50px; color: #e0f2f1; margin-bottom: 20px;"></i>
-                <h2 style="color: var(--text-main);">Em breve</h2>
-                <p style="color: var(--text-sec);">O módulo de nutrição está sendo preparado para você.</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- 2. TELA MEU FISIO (Conteúdo movido da aba principal para cá) -->
-    <div id="view-health-physio" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
-        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
-            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
-            <h3 style="margin:0; color: var(--primary);">Meu Fisio</h3>
-        </div>
-        <div style="padding: 20px;">
-            <div class="card" style="margin-bottom: 20px;">
-                <p style="font-size: 14px; color: var(--text-sec); margin-top: 0;">Aqui você acompanha o histórico de dores registradas após seus treinos e as orientações do seu fisioterapeuta.</p>
-            </div>
-            
-            <h4 style="margin: 0 0 15px 0; color: var(--text-main);">Histórico de Relatos</h4>
-            <div id="health-pain-list" style="display: flex; flex-direction: column; gap: 10px;">
-                <p class="skeleton" style="height:50px;"></p>
-                <!-- A lista é populada via JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. TELA MENTAL HEALTH -->
-    <div id="view-health-mental" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
-        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
-            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
-            <h3 style="margin:0; color: #9c27b0;">Mental Health</h3>
-        </div>
-        <div style="padding: 20px; text-align: center;">
-            <div class="card" style="padding: 40px 20px;">
-                <i class="fa-solid fa-brain" style="font-size: 50px; color: #f3e5f5; margin-bottom: 20px;"></i>
-                <h2 style="color: var(--text-main);">Espaço Mental</h2>
-                <p style="color: var(--text-sec);">Ferramentas de bem-estar em breve.</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="view-create-post" class="screen full-screen">
-        <div style="padding: 15px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-top:max(15px, env(safe-area-inset-top));">
-            <button onclick="window.app.closeCreatePost()" class="btn-text" style="padding:10px; font-weight:600;">Cancelar</button>
-            <strong style="font-size:18px; color:var(--text-main);">Criar Post</strong>
-            <button id="btn-submit-post" onclick="window.app.submitPost()" style="border:none; background:var(--primary); color:white; padding: 8px 20px; border-radius: 20px; font-weight:600; cursor:pointer;">Postar</button>
-        </div>
-        <textarea id="post-text" style="width:100%; height:200px; border:none; padding:25px; font-family:var(--font-main); font-size:18px; outline:none; resize:none; background:transparent; color:var(--text-main);" placeholder="No que você está pensando?"></textarea>
-        <div style="padding: 20px;">
-            <div id="post-img-preview" style="width:100%; height:200px; background:#fff; border-radius:20px; display:none; background-size:cover; background-position:center; margin-bottom:20px;"></div>
-            <button onclick="document.getElementById('post-file').click()" class="btn btn-outline" style="border-radius:30px; background:#fff;"><i class="fa-solid fa-camera"></i>&nbsp; Adicionar Foto</button>
-            <input type="file" id="post-file" hidden accept="image/*" onchange="window.app.previewPostImg(this)">
         </div>
     </div>
 
@@ -400,8 +262,15 @@
                 <h2 id="dash-title">Painel de Controle</h2>
                 
                 <!-- ÁREA DE FILTROS -->
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <span style="font-size:12px; color:#888;">Quem treinou de:</span>
+                <div class="dash-filters-container" style="display:flex; gap:10px; align-items:center;">
+                    <select id="dash-filter-status" style="padding:10px; border-radius:10px; border:1px solid #ddd; margin-right:10px;" onchange="window.app.dashFilterStatus()">
+                        <option value="all">Todos os Status</option>
+                        <option value="active">Ativos</option>
+                        <option value="pending">Pendentes</option>
+                        <option value="risk">Risco / Inativos</option>
+                    </select>
+
+                    <span style="font-size:12px; color:#888;">Treinou de:</span>
                     <input type="date" id="dash-date-start" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
                     <span style="font-size:12px; color:#888;">até</span>
                     <input type="date" id="dash-date-end" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
@@ -457,6 +326,76 @@
         </div>
     </div>
 
+    <!-- Modais e Templates auxiliares -->
+    <div id="view-news-detail" class="screen detail-view">
+        <button onclick="window.app.closeNewsDetail()" style="position:absolute; top:40px; left:20px; z-index:10; background:white; border:none; width:45px; height:45px; border-radius:50%; box-shadow:0 5px 15px rgba(0,0,0,0.1); cursor:pointer; display:flex; justify-content:center; align-items:center;"><i class="fa-solid fa-arrow-left" style="color:var(--text-main);"></i></button>
+        <div id="news-det-img-container" style="width:100%; height:350px; background:grey; background-size:cover; background-position:center; background-color: #EEE; display: none;"></div>
+        <div style="background:var(--bg); border-radius:30px 30px 0 0; margin-top:-40px; padding:30px; position:relative; min-height:500px; padding-top: 50px;">
+            <div id="news-det-date" style="font-size: 12px; color: var(--text-sec); font-weight: 700; margin-bottom: 10px;">DATA</div>
+            <h1 id="news-det-title" style="margin:0 0 20px 0; color:var(--text-main); line-height: 1.3;">TITULO</h1>
+            <div id="news-det-body" style="color:var(--text-main); line-height:1.6; font-size: 16px; white-space: pre-line;">Corpo da notícia...</div>
+        </div>
+    </div>
+
+    <!-- TELAS DE SAÚDE -->
+    <div id="view-health-nutri" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
+        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
+            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; color: #009688;">Meu Nutri</h3>
+        </div>
+        <div style="padding: 20px; text-align: center;">
+            <div class="card" style="padding: 40px 20px;">
+                <i class="fa-solid fa-carrot" style="font-size: 50px; color: #e0f2f1; margin-bottom: 20px;"></i>
+                <h2 style="color: var(--text-main);">Em breve</h2>
+                <p style="color: var(--text-sec);">O módulo de nutrição está sendo preparado para você.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-health-physio" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
+        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
+            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; color: var(--primary);">Meu Fisio</h3>
+        </div>
+        <div style="padding: 20px;">
+            <div class="card" style="margin-bottom: 20px;">
+                <p style="font-size: 14px; color: var(--text-sec); margin-top: 0;">Aqui você acompanha o histórico de dores registradas após seus treinos e as orientações do seu fisioterapeuta.</p>
+            </div>
+            <h4 style="margin: 0 0 15px 0; color: var(--text-main);">Histórico de Relatos</h4>
+            <div id="health-pain-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <p class="skeleton" style="height:50px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-health-mental" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
+        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
+            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; color: #9c27b0;">Mental Health</h3>
+        </div>
+        <div style="padding: 20px; text-align: center;">
+            <div class="card" style="padding: 40px 20px;">
+                <i class="fa-solid fa-brain" style="font-size: 50px; color: #f3e5f5; margin-bottom: 20px;"></i>
+                <h2 style="color: var(--text-main);">Espaço Mental</h2>
+                <p style="color: var(--text-sec);">Ferramentas de bem-estar em breve.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-create-post" class="screen full-screen">
+        <div style="padding: 15px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-top:max(15px, env(safe-area-inset-top));">
+            <button onclick="window.app.closeCreatePost()" class="btn-text" style="padding:10px; font-weight:600;">Cancelar</button>
+            <strong style="font-size:18px; color:var(--text-main);">Criar Post</strong>
+            <button id="btn-submit-post" onclick="window.app.submitPost()" style="border:none; background:var(--primary); color:white; padding: 8px 20px; border-radius: 20px; font-weight:600; cursor:pointer;">Postar</button>
+        </div>
+        <textarea id="post-text" style="width:100%; height:200px; border:none; padding:25px; font-family:var(--font-main); font-size:18px; outline:none; resize:none; background:transparent; color:var(--text-main);" placeholder="No que você está pensando?"></textarea>
+        <div style="padding: 20px;">
+            <div id="post-img-preview" style="width:100%; height:200px; background:#fff; border-radius:20px; display:none; background-size:cover; background-position:center; margin-bottom:20px;"></div>
+            <button onclick="document.getElementById('post-file').click()" class="btn btn-outline" style="border-radius:30px; background:#fff;"><i class="fa-solid fa-camera"></i>&nbsp; Adicionar Foto</button>
+            <input type="file" id="post-file" hidden accept="image/*" onchange="window.app.previewPostImg(this)">
+        </div>
+    </div>
+
     <!-- UTILS -->
     <div id="modal-video" class="modal-overlay">
         <div style="width: 100%; max-width: 800px; aspect-ratio: 16/9; background: #000; position: relative; border-radius:20px; overflow:hidden;">
@@ -477,7 +416,6 @@
         </div>
     </div>
 
-    <!-- MODAL EDITAR DATA PROVA -->
     <div id="modal-edit-date" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Alterar Data da Prova</h3>
@@ -490,17 +428,13 @@
         </div>
     </div>
 
-    <!-- MODAL DE FEEDBACK AO CONCLUIR -->
     <div id="modal-finish-workout" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Como foi o treino?</h3>
             <label class="label" style="margin-top:15px; margin-bottom:10px; display:block;">Nível de Dor (0 - 7)</label>
-            <div id="pain-scale-container" style="display:flex; justify-content:center; gap: 5px; flex-wrap: wrap; margin-bottom:20px;">
-            </div>
-            
+            <div id="pain-scale-container" style="display:flex; justify-content:center; gap: 5px; flex-wrap: wrap; margin-bottom:20px;"></div>
             <label class="label">O que doeu? / Observações:</label>
             <textarea id="workout-feedback-text" class="input" style="height:100px; resize:none; margin-bottom:20px;" placeholder="Descreva aqui..."></textarea>
-            
             <div style="display:flex; gap:10px;">
                 <button onclick="window.app.confirmFinishWorkout()" class="btn btn-primary">Confirmar Conclusão</button>
                 <button onclick="document.getElementById('modal-finish-workout').classList.remove('active')" class="btn btn-outline">Cancelar</button>
@@ -508,7 +442,6 @@
         </div>
     </div>
 
-    <!-- MODAL ADD PESO -->
     <div id="modal-add-weight" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Registrar Peso</h3>
@@ -521,13 +454,10 @@
         </div>
     </div>
 
-    <!-- MODAL RESPOSTA ADMIN FISIO (NOVO) -->
     <div id="modal-admin-pain-response" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Orientação do Fisio</h3>
-            <div id="adm-pain-detail-view" style="margin-bottom: 20px; font-size: 14px; color: #555; background: #f9f9f9; padding: 10px; border-radius: 10px;">
-                <!-- JS preenche detalhes da dor -->
-            </div>
+            <div id="adm-pain-detail-view" style="margin-bottom: 20px; font-size: 14px; color: #555; background: #f9f9f9; padding: 10px; border-radius: 10px;"></div>
             <label class="label">Resposta / Recomendação</label>
             <textarea id="adm-pain-response-text" class="input" style="height:120px; resize:none; margin-bottom:20px;" placeholder="Ex: Aplique gelo e descanse por 2 dias..."></textarea>
             <div style="display:flex; gap:10px;">
@@ -620,45 +550,29 @@
     <div id="modal-adm-add-race" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Adicionar Objetivo (Admin)</h3>
-            
             <label class="label">Nome da Prova</label>
             <input id="adm-race-name" class="input" placeholder="Ex: Maratona SP" style="margin-bottom:10px;">
-
             <div style="display:flex; gap:10px; margin-bottom:10px;">
-                <div style="flex:1;">
-                    <label class="label">Data da Prova</label>
-                    <input type="date" id="adm-race-date" class="input">
-                </div>
-                <div style="flex:1;">
-                    <label class="label">Início Treinos</label>
-                    <input type="date" id="adm-start-date" class="input">
-                </div>
+                <div style="flex:1;"><label class="label">Data da Prova</label><input type="date" id="adm-race-date" class="input"></div>
+                <div style="flex:1;"><label class="label">Início Treinos</label><input type="date" id="adm-start-date" class="input"></div>
             </div>
-
             <label class="label">Método</label>
             <select id="adm-race-method" class="input" style="margin-bottom:15px;" onchange="window.app.admToggleRaceMode()">
                 <option value="ia">Gerar com IA</option>
                 <option value="template">Usar Modelo</option>
             </select>
-
-            <!-- IA FIELDS -->
             <div id="adm-race-ia-fields">
                 <label class="label">Distância (KM)</label>
                 <input id="adm-race-dist" class="input" type="number" placeholder="Ex: 42" style="margin-bottom:10px;">
-                
                 <label class="label">Tempo Est. / Ritmo</label>
                 <input id="adm-race-time" class="input" placeholder="Ex: 4h 00m" style="margin-bottom:10px;">
-
                 <label class="label">Vídeo de Fortalecimento (Link)</label>
                 <input id="adm-race-video" class="input" placeholder="Opcional" style="margin-bottom:10px;">
             </div>
-
-            <!-- TEMPLATE FIELDS -->
             <div id="adm-race-tpl-fields" class="hidden">
                 <label class="label">Selecionar Modelo</label>
                 <select id="adm-race-template-select" class="input" style="margin-bottom:10px;"></select>
             </div>
-
             <div style="display:flex; gap:10px; margin-top:10px;">
                 <button onclick="window.app.admConfirmAddRace()" class="btn btn-primary">Criar</button>
                 <button onclick="document.getElementById('modal-adm-add-race').classList.remove('active')" class="btn btn-outline">Cancelar</button>
@@ -670,53 +584,42 @@
         <div class="modal-card">
             <h3 id="adm-workout-det-title" style="color:var(--text-main);">Título do Treino</h3>
             <p id="adm-workout-det-desc" style="color:var(--text-sec); white-space: pre-wrap; margin: 20px 0;">Descrição...</p>
-            <div id="adm-workout-det-video-container" style="display:none; margin-bottom: 20px;">
-            </div>
+            <div id="adm-workout-det-video-container" style="display:none; margin-bottom: 20px;"></div>
             <button onclick="document.getElementById('modal-adm-workout-detail').classList.remove('active')" class="btn btn-outline">Fechar</button>
         </div>
     </div>
 
-    <!-- PAINEL ADMIN (Mantido para Mobile e Legacy) -->
+    <!-- PAINEL ADMIN MOBILE/LEGADO -->
     <div id="view-admin" class="screen full-screen">
         <div class="admin-header">
             <div style="display: flex; justify-content: space-between;">
                 <span>ADMIN</span>
                 <button onclick="window.app.closeAdmin()" style="color: #333; background: none; border: none; cursor:pointer;">SAIR</button>
             </div>
-            <!-- BOTAO PARA IR PARA O DASHBOARD (Novo) -->
             <button onclick="window.app.openDashboard()" style="width:100%; margin-top:10px; background:#2b4c7e; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer;">
                 <i class="fa-solid fa-desktop"></i> Abrir Painel Desktop
             </button>
         </div>
-        
         <div class="admin-tabs-wrapper">
             <button onclick="window.app.admTab('users')" id="btn-adm-users" class="admin-tab-btn active">USUÁRIOS</button>
-            
-            <!-- Nova Aba Admin Fisio -->
             <button onclick="window.app.admTab('physio')" id="btn-adm-physio" class="admin-tab-btn" style="position: relative;">
-                FISIO 
-                <span id="adm-physio-badge" class="hidden" style="position: absolute; top: 10px; right: 5px; width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span>
+                FISIO <span id="adm-physio-badge" class="hidden" style="position: absolute; top: 10px; right: 5px; width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span>
             </button>
-            
             <button onclick="window.app.admTab('templates')" id="btn-adm-templates" class="admin-tab-btn">MODELOS</button>
             <button onclick="window.app.admTab('news')" id="btn-adm-news" class="admin-tab-btn">NOTÍCIAS</button>
             <button onclick="window.app.admTab('quotes')" id="btn-adm-quotes" class="admin-tab-btn">FRASES</button>
             <button onclick="window.app.admTab('videos')" id="btn-adm-videos" class="admin-tab-btn">VÍDEOS</button>
         </div>
-        
         <div class="admin-content-scroll">
             <div id="adm-content-users" style="padding: 20px;">
                 <h3>USUÁRIOS</h3>
                 <div id="adm-users-list"></div>
             </div>
-            
-            <!-- Conteúdo Admin Fisio -->
             <div id="adm-content-physio" class="hidden" style="padding: 20px;">
                 <h3>RELATOS DE DOR</h3>
                 <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Toque em um card para responder.</p>
                 <div id="adm-physio-list"></div>
             </div>
-            
             <div id="adm-content-templates" class="hidden" style="padding: 20px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>MODELOS DE TREINO</h3>
@@ -724,7 +627,6 @@
                 </div>
                 <div id="adm-templates-list"></div>
             </div>
-            
             <div id="adm-content-news" class="hidden" style="padding: 20px;">
                 <h3>PUBLICAR NOVIDADE</h3>
                 <div class="card">
@@ -737,7 +639,6 @@
                 </div>
                 <div id="adm-news-history"></div>
             </div>
-
             <div id="adm-content-quotes" class="hidden" style="padding: 20px;">
                 <h3>FRASES MOTIVACIONAIS</h3>
                 <div class="card">
@@ -746,7 +647,6 @@
                 </div>
                 <div id="adm-quotes-list"></div>
             </div>
-
             <div id="adm-content-videos" class="hidden" style="padding: 20px;">
                 <h3>VÍDEOS DE FORTALECIMENTO</h3>
                 <div class="card">
@@ -760,6 +660,6 @@
     </div>
 
     <!-- JS MODULE LINKADO -->
-    <script type="module" src="app.js?v=6"></script>
+    <script type="module" src="app.js?v=7"></script>
 </body>
 </html>
