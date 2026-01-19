@@ -97,85 +97,112 @@ export const student = {
         document.getElementById('modal-day-detail').classList.add('active');
     },
 
-    // --- MEU PLANO (CORRIGIDO) ---
+    // --- MEU PLANO (CORRIGIDO E ROBUSTO) ---
     loadUserWorkouts: () => {
-        const list = document.getElementById('workouts-list');
-        list.innerHTML = '';
-        
-        const user = state.currentUser;
-        // Verifica se tem objetivos
-        if(!user || !user.races || user.races.length === 0) {
-            list.innerHTML = `
-            <div style="text-align:center; padding:40px 20px;">
-                <i class="fa-solid fa-person-running" style="font-size:40px; color:#ddd; margin-bottom:15px;"></i>
-                <h3 style="color:#888; font-size:16px;">Nenhum plano ativo</h3>
-                <p style="color:#aaa; font-size:13px;">Seu treinador ainda não adicionou um objetivo.</p>
-            </div>`;
-            return;
-        }
-
-        // CORREÇÃO: Pega SEMPRE o último objetivo do array (o mais recente)
-        const currentRace = user.races[user.races.length - 1];
-        
-        // Cabeçalho do Objetivo
-        const raceDate = new Date(currentRace.date);
-        raceDate.setMinutes(raceDate.getMinutes() + raceDate.getTimezoneOffset());
-        const daysToRace = Math.ceil((raceDate - new Date()) / (1000 * 60 * 60 * 24));
-        
-        list.innerHTML = `
-        <div class="card" style="background: linear-gradient(135deg, var(--primary), #ff9f43); color:white; padding:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; font-size:20px; color:white;">${currentRace.name}</h3>
-                <button onclick="window.app.editRaceDate(${user.races.length - 1})" style="border:none; background:rgba(255,255,255,0.2); color:white; width:30px; height:30px; border-radius:50%; cursor:pointer;"><i class="fa-solid fa-pencil"></i></button>
-            </div>
-            <div style="margin-top:10px; font-size:14px; opacity:0.9;">
-                <i class="fa-regular fa-calendar"></i> ${raceDate.toLocaleDateString()} 
-                <span style="float:right; font-weight:700;">${daysToRace} dias</span>
-            </div>
-            <div style="margin-top:5px; font-size:13px; opacity:0.8;">Meta: ${currentRace.estimatedTime || '-'}</div>
-        </div>
-        <h4 style="margin:20px 0 10px 0; color:var(--text-main);">Próximos Treinos</h4>
-        `;
-
-        if(!currentRace.workouts || currentRace.workouts.length === 0) {
-            list.innerHTML += '<p style="text-align:center; color:#888;">Aguardando treinos...</p>';
-            return;
-        }
-
-        // Filtra e ordena treinos
-        const today = new Date().toISOString().split('T')[0];
-        const pendingWorkouts = currentRace.workouts
-            .map((w, idx) => ({...w, originalIdx: idx})) // Guarda o índice original para editar
-            .filter(w => !w.done) // Mostra apenas não concluídos ou futuros
-            .sort((a,b) => a.scheduledDate.localeCompare(b.scheduledDate));
-
-        if(pendingWorkouts.length === 0) {
-            list.innerHTML += `
-            <div style="text-align:center; padding:30px; background:#fff; border-radius:20px; box-shadow:var(--shadow);">
-                <i class="fa-solid fa-check-circle" style="font-size:40px; color:var(--success); margin-bottom:10px;"></i>
-                <p>Tudo feito por enquanto!</p>
-            </div>`;
-        } else {
-            pendingWorkouts.forEach(w => {
-                const wDate = new Date(w.scheduledDate);
-                wDate.setMinutes(wDate.getMinutes() + wDate.getTimezoneOffset());
-                const isToday = w.scheduledDate === today;
-                const highlight = isToday ? 'border:2px solid var(--primary);' : '';
-                
-                let videoBtn = '';
-                if(w.video) {
-                    videoBtn = `<button onclick="event.stopPropagation(); window.app.playVideo('${window.app.escape(w.video)}')" style="border:none; background:#f0f0f0; color:var(--primary); padding:5px 10px; border-radius:15px; font-size:11px; margin-top:5px;"><i class="fa-solid fa-play"></i> Vídeo</button>`;
-                }
-
-                list.innerHTML += `
-                <div class="card" onclick="window.app.openDayDetail('${w.scheduledDate}', ${user.races.length - 1}, ${w.originalIdx})" style="cursor:pointer; ${highlight} position:relative; overflow:hidden;">
-                    ${isToday ? '<div style="position:absolute; top:0; right:0; background:var(--primary); color:white; font-size:10px; padding:3px 10px; border-radius:0 0 0 10px;">HOJE</div>' : ''}
-                    <div style="font-size:12px; color:var(--text-sec); font-weight:700; margin-bottom:5px;">${wDate.toLocaleDateString('pt-BR', {weekday:'short', day:'numeric', month:'long'})}</div>
-                    <div style="font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:5px;">${w.title}</div>
-                    <div style="font-size:13px; color:#666; line-height:1.4;">${w.desc}</div>
-                    ${videoBtn}
+        try {
+            const list = document.getElementById('workouts-list');
+            if(!list) return;
+            
+            list.innerHTML = '';
+            
+            const user = state.currentUser;
+            // Verifica se tem objetivos
+            if(!user || !user.races || user.races.length === 0) {
+                list.innerHTML = `
+                <div style="text-align:center; padding:40px 20px;">
+                    <i class="fa-solid fa-person-running" style="font-size:40px; color:#ddd; margin-bottom:15px;"></i>
+                    <h3 style="color:#888; font-size:16px;">Nenhum plano ativo</h3>
+                    <p style="color:#aaa; font-size:13px;">Seu treinador ainda não adicionou um objetivo.</p>
                 </div>`;
-            });
+                return;
+            }
+
+            // Pega SEMPRE o último objetivo do array (o mais recente)
+            const currentRace = user.races[user.races.length - 1];
+            
+            // Cabeçalho do Objetivo
+            const raceDateStr = currentRace.date || new Date().toISOString();
+            const raceDate = new Date(raceDateStr);
+            // Ajuste seguro de timezone visual apenas se a data for válida
+            if(!isNaN(raceDate.getTime())) {
+                raceDate.setMinutes(raceDate.getMinutes() + raceDate.getTimezoneOffset());
+            }
+            
+            const daysToRace = Math.ceil((raceDate - new Date()) / (1000 * 60 * 60 * 24));
+            
+            list.innerHTML = `
+            <div class="card" style="background: linear-gradient(135deg, var(--primary), #ff9f43); color:white; padding:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; font-size:20px; color:white;">${currentRace.name}</h3>
+                    <button onclick="window.app.editRaceDate(${user.races.length - 1})" style="border:none; background:rgba(255,255,255,0.2); color:white; width:30px; height:30px; border-radius:50%; cursor:pointer;"><i class="fa-solid fa-pencil"></i></button>
+                </div>
+                <div style="margin-top:10px; font-size:14px; opacity:0.9;">
+                    <i class="fa-regular fa-calendar"></i> ${!isNaN(raceDate) ? raceDate.toLocaleDateString() : 'Data inválida'} 
+                    <span style="float:right; font-weight:700;">${!isNaN(daysToRace) ? daysToRace : '-'} dias</span>
+                </div>
+                <div style="margin-top:5px; font-size:13px; opacity:0.8;">Meta: ${currentRace.estimatedTime || '-'}</div>
+            </div>
+            <h4 style="margin:20px 0 10px 0; color:var(--text-main);">Próximos Treinos</h4>
+            `;
+
+            if(!currentRace.workouts || currentRace.workouts.length === 0) {
+                list.innerHTML += '<p style="text-align:center; color:#888;">Aguardando treinos...</p>';
+                return;
+            }
+
+            // Filtra e ordena treinos com verificação de segurança para datas nulas
+            const today = new Date().toISOString().split('T')[0];
+            const pendingWorkouts = currentRace.workouts
+                .map((w, idx) => ({...w, originalIdx: idx})) 
+                .filter(w => !w.done) 
+                .sort((a,b) => {
+                    const dateA = a.scheduledDate || '9999-99-99';
+                    const dateB = b.scheduledDate || '9999-99-99';
+                    return dateA.localeCompare(dateB);
+                });
+
+            if(pendingWorkouts.length === 0) {
+                list.innerHTML += `
+                <div style="text-align:center; padding:30px; background:#fff; border-radius:20px; box-shadow:var(--shadow);">
+                    <i class="fa-solid fa-check-circle" style="font-size:40px; color:var(--success); margin-bottom:10px;"></i>
+                    <p>Tudo feito por enquanto!</p>
+                </div>`;
+            } else {
+                pendingWorkouts.forEach(w => {
+                    let dateDisplay = 'Data a definir';
+                    let highlight = '';
+                    let isTodayHTML = '';
+
+                    if(w.scheduledDate) {
+                        const wDate = new Date(w.scheduledDate);
+                        wDate.setMinutes(wDate.getMinutes() + wDate.getTimezoneOffset());
+                        dateDisplay = wDate.toLocaleDateString('pt-BR', {weekday:'short', day:'numeric', month:'long'});
+                        
+                        if(w.scheduledDate === today) {
+                            highlight = 'border:2px solid var(--primary);';
+                            isTodayHTML = '<div style="position:absolute; top:0; right:0; background:var(--primary); color:white; font-size:10px; padding:3px 10px; border-radius:0 0 0 10px;">HOJE</div>';
+                        }
+                    }
+                    
+                    let videoBtn = '';
+                    if(w.video) {
+                        videoBtn = `<button onclick="event.stopPropagation(); window.app.playVideo('${window.app.escape(w.video)}')" style="border:none; background:#f0f0f0; color:var(--primary); padding:5px 10px; border-radius:15px; font-size:11px; margin-top:5px;"><i class="fa-solid fa-play"></i> Vídeo</button>`;
+                    }
+
+                    list.innerHTML += `
+                    <div class="card" onclick="window.app.openDayDetail('${w.scheduledDate || today}', ${user.races.length - 1}, ${w.originalIdx})" style="cursor:pointer; ${highlight} position:relative; overflow:hidden;">
+                        ${isTodayHTML}
+                        <div style="font-size:12px; color:var(--text-sec); font-weight:700; margin-bottom:5px;">${dateDisplay}</div>
+                        <div style="font-size:16px; font-weight:700; color:var(--text-main); margin-bottom:5px;">${w.title}</div>
+                        <div style="font-size:13px; color:#666; line-height:1.4;">${w.desc}</div>
+                        ${videoBtn}
+                    </div>`;
+                });
+            }
+        } catch (e) {
+            console.error("Erro ao carregar treinos:", e);
+            const list = document.getElementById('workouts-list');
+            if(list) list.innerHTML += `<p style="color:red; text-align:center;">Erro ao carregar lista. Tente recarregar.</p>`;
         }
     },
 
