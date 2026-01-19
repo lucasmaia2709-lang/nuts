@@ -8,6 +8,11 @@ export const state = {
     // Antes era allUsersCache (pesado), agora é communityRacesCache (leve)
     communityRacesCache: [], 
 
+    // --- OTIMIZAÇÃO DE FEED (Novo) ---
+    feedLimit: 5, // Começa carregando apenas 5 posts (muito mais rápido)
+    isFeedLoading: false, // Evita disparos duplos do scroll
+    feedSentinelObserver: null, // Referência para o observador de scroll
+
     // Variáveis temporárias de upload
     tempPostFile: null,
     tempNewsFile: null,
