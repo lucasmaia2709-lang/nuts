@@ -5,11 +5,14 @@ import { state } from "./state.js";
 export const social = {
     // --- FEED ---
     loadFeed: () => {
+        // Garante que o container do loader existe no final do feed
+        window.app.setupFeedLoader();
+
         const feed = document.getElementById('social-feed');
         if(state.unsubscribeFeed) state.unsubscribeFeed();
 
-        // Ordenar no Firestore para docChanges funcionar previsivelmente
-        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), orderBy('created', 'desc'), limit(50));
+        // Usa state.feedLimit para paginação (começa com 5, aumenta conforme rola)
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), orderBy('created', 'desc'), limit(state.feedLimit));
 
         state.unsubscribeFeed = onSnapshot(q, (snapshot) => {
             snapshot.docChanges().forEach((change) => {
@@ -17,12 +20,16 @@ export const social = {
                 const postElId = `post-${p.id}`;
 
                 if (change.type === "added") {
+                    // OTIMIZAÇÃO: Verifica se já existe para evitar duplicatas ao aumentar o limite
+                    if (document.getElementById(postElId)) return;
+
                     // Criar HTML do novo card
                     const html = window.app.createPostCardHTML(p);
                     const div = document.createElement('div');
                     div.innerHTML = html;
                     const newNode = div.firstElementChild; 
 
+                    // Lógica de inserção mantendo ordem
                     if (change.newIndex === 0 && feed.firstChild) {
                         feed.insertBefore(newNode, feed.firstChild);
                     } else if (change.newIndex < feed.children.length) {
@@ -46,10 +53,52 @@ export const social = {
                 }
             });
             
-            if(snapshot.empty) {
-                feed.innerHTML = '<p style="text-align:center; color:#666; padding:20px;">Seja o primeiro a postar!</p>';
-            }
+            // Controle de estado de carregamento
+            state.isFeedLoading = false;
+            const loader = document.getElementById('feed-loader-sentinel');
+            if(loader) loader.innerText = snapshot.empty ? "Seja o primeiro a postar!" : "";
+            
+            // Re-conecta o observador de scroll se tivermos posts
+            if (!snapshot.empty) window.app.observeFeedScroll();
         });
+    },
+
+    // Cria o elemento invisível no final da lista para detectar o scroll
+    setupFeedLoader: () => {
+        const tabSocial = document.getElementById('tab-social');
+        // Remove loader antigo se existir em lugar errado
+        const oldLoader = document.getElementById('feed-loader-sentinel');
+        if (oldLoader) oldLoader.remove();
+
+        const loaderDiv = document.createElement('div');
+        loaderDiv.id = 'feed-loader-sentinel';
+        loaderDiv.style.padding = '20px';
+        loaderDiv.style.textAlign = 'center';
+        loaderDiv.style.color = '#888';
+        loaderDiv.style.fontSize = '12px';
+        loaderDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Carregando mais...';
+        
+        // Adiciona APÓS a lista de feed
+        tabSocial.appendChild(loaderDiv);
+    },
+
+    observeFeedScroll: () => {
+        if (state.feedSentinelObserver) state.feedSentinelObserver.disconnect();
+
+        const sentinel = document.getElementById('feed-loader-sentinel');
+        if (!sentinel) return;
+
+        state.feedSentinelObserver = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !state.isFeedLoading) {
+                state.isFeedLoading = true;
+                // Aumenta o limite para carregar mais posts
+                state.feedLimit += 5;
+                // Recarrega o feed com o novo limite (Firestore lida com o cache)
+                window.app.loadFeed();
+            }
+        }, { threshold: 0.1 });
+
+        state.feedSentinelObserver.observe(sentinel);
     },
 
     createPostCardHTML: (p) => {
@@ -78,6 +127,9 @@ export const social = {
             </div>`;
         });
 
+        // OTIMIZAÇÃO DE IMAGEM: content-visibility ajuda o browser a renderizar apenas o visível
+        const imgStyle = "width:100%; max-height:450px; object-fit:cover; display:block; background-color:#f0f2f5; min-height:200px; content-visibility: auto;";
+
         return `
         <div id="post-${p.id}" class="card" style="padding:0; overflow:hidden; margin-bottom:25px;">
             <div style="padding:15px; display:flex; align-items:center; gap:12px;">
@@ -88,7 +140,7 @@ export const social = {
                 </div>
                 ${deleteBtn}
             </div>
-            ${imgUrl ? `<img src="${imgUrl}" loading="lazy" class="feed-img" onload="this.classList.add('loaded')">` : ''}
+            ${imgUrl ? `<img src="${imgUrl}" loading="lazy" class="feed-img" style="${imgStyle}" onload="this.classList.add('loaded')">` : ''}
             <div style="padding:15px;">
                 <div style="display:flex; gap:20px; margin-bottom:10px; align-items: center;">
                     <button onclick="window.app.toggleLike('${p.id}')" class="btn-like-action" style="border:none; background:none; font-size:22px; cursor:pointer; ${likeColor} display:flex; align-items:center; gap:8px; padding:0;">
@@ -225,6 +277,10 @@ export const social = {
         document.getElementById('btn-submit-post').disabled = false;
         window.app.closeCreatePost();
         window.app.haptic();
+        
+        // Reseta o limite para o feed recarregar do topo e mostrar o novo post
+        state.feedLimit = 5;
+        window.app.loadFeed();
     },
 
     // --- NOTÍCIAS ---
