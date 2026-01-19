@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- CSS Externo -->
-    <link rel="stylesheet" href="style.css?v=3">
+    <link rel="stylesheet" href="style.css?v=5">
 
     <!-- CORREÇÃO DE OVERSCROLL (FIX DO FUNDO AZUL APARECENDO) -->
     <style>
@@ -382,6 +382,66 @@
         </div>
     </div>
 
+    <!-- NOVO: DASHBOARD DESKTOP -->
+    <div id="view-dashboard" class="screen full-screen" style="background:#f4f7f9;">
+        <!-- Sidebar -->
+        <div class="dash-sidebar">
+            <div style="padding: 20px;">
+                <h2 style="color:white; margin:0;">NUTS<span style="color:#ff8a41">.admin</span></h2>
+            </div>
+            <button class="dash-nav-btn active" onclick="window.app.dashTab('overview')"><i class="fa-solid fa-chart-pie"></i> Visão Geral</button>
+            <button class="dash-nav-btn" onclick="window.app.dashTab('students')"><i class="fa-solid fa-users"></i> Alunos</button>
+            <button class="dash-nav-btn" onclick="window.app.closeDashboard()" style="margin-top:auto;"><i class="fa-solid fa-arrow-left"></i> Voltar pro App</button>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="dash-content">
+            <div class="dash-header">
+                <h2 id="dash-title">Painel de Controle</h2>
+                <div style="display:flex; gap:10px;">
+                    <input id="dash-search" placeholder="Buscar aluno..." onkeyup="window.app.dashSearch()" style="padding:10px; border-radius:10px; border:1px solid #ddd; width:250px;">
+                </div>
+            </div>
+
+            <!-- Tabela de Alunos -->
+            <div id="dash-tab-students" class="dash-view">
+                <div class="dash-metrics-row">
+                    <div class="dash-metric-card" style="border-left:4px solid var(--success);">
+                        <span>Total Alunos</span>
+                        <strong id="dash-total-students">0</strong>
+                    </div>
+                    <div class="dash-metric-card" style="border-left:4px solid var(--red);">
+                        <span>Em Risco (>10 dias)</span>
+                        <strong id="dash-risk-students">0</strong>
+                    </div>
+                    <div class="dash-metric-card" style="border-left:4px solid var(--primary);">
+                        <span>Treinaram Hoje</span>
+                        <strong id="dash-active-today">0</strong>
+                    </div>
+                </div>
+
+                <div class="dash-table-container">
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Último Treino</th>
+                                <th>Dias Parado</th>
+                                <th>Plano Atual</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-table-body">
+                            <!-- JS preenche -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- UTILS -->
     <div id="modal-video" class="modal-overlay">
         <div style="width: 100%; max-width: 800px; aspect-ratio: 16/9; background: #000; position: relative; border-radius:20px; overflow:hidden;">
@@ -601,13 +661,17 @@
         </div>
     </div>
 
-    <!-- PAINEL ADMIN -->
+    <!-- PAINEL ADMIN (Mantido para Mobile e Legacy) -->
     <div id="view-admin" class="screen full-screen">
         <div class="admin-header">
             <div style="display: flex; justify-content: space-between;">
                 <span>ADMIN</span>
                 <button onclick="window.app.closeAdmin()" style="color: #333; background: none; border: none; cursor:pointer;">SAIR</button>
             </div>
+            <!-- BOTAO PARA IR PARA O DASHBOARD (Novo) -->
+            <button onclick="window.app.openDashboard()" style="width:100%; margin-top:10px; background:#2b4c7e; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer;">
+                <i class="fa-solid fa-desktop"></i> Abrir Painel Desktop
+            </button>
         </div>
         
         <div class="admin-tabs-wrapper">
@@ -681,6 +745,6 @@
     </div>
 
     <!-- JS MODULE LINKADO -->
-    <script type="module" src="app.js?v=4"></script>
+    <script type="module" src="app.js?v=5"></script>
 </body>
 </html>
