@@ -1,4 +1,4 @@
-:root {
+root {
     --bg: #f4f7f9;
     --primary: #ff8a41;
     --secondary: #9cafcc;
@@ -231,7 +231,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .adm-item-box { background: #fff; border: 1px solid #eee; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 .adm-btn-small { padding: 6px 12px; font-size: 11px; border-radius: 8px; border: 1px solid #ddd; background: #FFF; cursor: pointer; font-weight: 600; color: var(--text-main); }
 
-/* --- DASHBOARD DESKTOP (Novo) --- */
+/* --- DASHBOARD DESKTOP --- */
 .dash-sidebar { width: 250px; background: #2b4c7e; height: 100%; color: white; display: flex; flex-direction: column; flex-shrink: 0; }
 .dash-content { flex: 1; padding: 40px; overflow-y: auto; }
 .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
@@ -254,6 +254,12 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .status-pill.active { background: #e8f5e9; color: #2e7d32; }
 .status-pill.inactive { background: #ffebee; color: #c62828; }
 .status-pill.pending { background: #fff3e0; color: #ef6c00; }
+
+/* DETALHE DO ALUNO (DESKTOP) */
+.dash-detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+.dash-card-title { font-size: 14px; color: #888; margin-bottom: 15px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.dash-list-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+.dash-list-item:last-child { border-bottom: none; }
 
 /* --- SKELETON LOADING --- */
 .skeleton {
@@ -286,7 +292,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 }
 
 /* --- SAÚDE & FISIO (NOVOS ESTILOS) --- */
-/* ... (Mantém o resto igual) ... */
 .pain-item {
     background: #f8fafc;
     border-radius: 12px;
