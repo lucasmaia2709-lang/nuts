@@ -16,6 +16,12 @@ export const utils = {
         return text;
     },
     
+    // CORREÇÃO CRÍTICA: Função necessária para o Admin não travar
+    escape: (str) => {
+        if (typeof str !== 'string') return str;
+        return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    },
+
     compressImage: (file) => {
         return new Promise((resolve) => {
             if (!file || !file.type.startsWith('image/')) {
@@ -43,131 +49,68 @@ export const utils = {
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         canvas.toBlob((blob) => {
-                            if (!blob) { resolve(file); return; } 
-                            const newFile = new File([blob], "image.jpg", {
-                                type: 'image/jpeg',
-                                lastModified: Date.now(),
-                            });
-                            resolve(newFile);
-                        }, 'image/jpeg', quality);
+                            resolve(blob);
+                        }, file.type, quality);
                     };
-                    img.onerror = () => resolve(file); 
                 };
-                reader.onerror = () => resolve(file); 
-            } catch (e) {
-                console.warn("Erro na compressão:", e);
-                resolve(file); 
-            }
+            } catch (e) { resolve(file); }
         });
     },
 
-    uploadImage: async (file, folderName) => {
-        if (!file) return null;
-        try {
-            window.app.toast("Processando imagem...");
-            
-            let fileToUpload = file;
-            try {
-                fileToUpload = await window.app.compressImage(file);
-            } catch (e) {
-                console.warn("Compressão falhou, usando original", e);
-            }
-            
-            window.app.toast("Enviando...");
-            
-            const ext = 'jpg';
-            const safeName = `${Date.now()}_${Math.floor(Math.random()*1000)}.${ext}`;
-            
-            let path = `${folderName}/${safeName}`;
-            if (state.currentUser && state.currentUser.email) {
-                path = `${folderName}/${state.currentUser.email}/${safeName}`;
-            }
-
-            const storageRef = ref(storage, path);
-            const snapshot = await uploadBytes(storageRef, fileToUpload);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            return downloadURL;
-        } catch (error) {
-            console.error("Erro no Upload:", error);
-            
-            let msg = "Erro ao enviar imagem.";
-            if(error.code === 'storage/unauthorized') msg = "Sem permissão para enviar.";
-            if(error.code === 'storage/quota-exceeded') msg = "Cota de armazenamento cheia (tente amanhã).";
-            if(error.code === 'storage/retry-limit-exceeded') msg = "Internet instável. Tente novamente.";
-            if(error.code === 'storage/invalid-argument') msg = "Arquivo inválido.";
-
-            window.app.toast(msg); 
-            return null;
-        }
+    uploadImage: async (file, path) => {
+        if(!file) return null;
+        const compressed = await utils.compressImage(file);
+        const storageRef = ref(storage, `images/${path}/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, compressed);
+        return await getDownloadURL(storageRef);
     },
 
     deleteFile: async (url) => {
-        if (!url) return;
+        if(!url) return;
         try {
             const fileRef = ref(storage, url);
             await deleteObject(fileRef);
-        } catch (error) {
-            console.warn("Aviso ao apagar arquivo:", error.message);
-        }
+        } catch(e) { console.log("Erro ao deletar arquivo", e); }
     },
 
-    escape: (str) => {
-        if (!str) return '';
-        return str.toString().replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+    toast: (msg) => {
+        const t = document.createElement('div');
+        t.className = 'toast show';
+        t.innerText = msg;
+        document.getElementById('toast-container').appendChild(t);
+        setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
     },
 
-    screen: (id) => { 
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
-        const el = document.getElementById(id); 
-        if(el) el.classList.add('active'); 
-    },
-
-    nav: (tab) => {
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-        document.getElementById('tab-'+tab).classList.remove('hidden');
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-        
-        if(tab === 'home') window.app.renderHome();
-        if(tab === 'workouts') window.app.renderWorkoutsList();
-        if(tab === 'social') window.app.loadFeed();
-        if(tab === 'news') window.app.loadNews();
-        if(tab === 'health') window.app.loadHealthTab(); 
-        
-        window.app.haptic();
-    },
-
-    toast: (msg) => { 
-        const t = document.getElementById('toast-container'); 
-        t.innerHTML = `<div class="toast show">${msg}</div>`; 
-        setTimeout(() => t.innerHTML='', 3000); 
-    },
-    
-    showPrompt: (title, callback) => {
-        const el = document.getElementById('modal-prompt');
-        document.getElementById('prompt-title').innerText = title;
-        const inp = document.getElementById('prompt-input');
-        inp.value = '';
-        el.classList.add('active');
-        inp.focus();
-        const okBtn = document.getElementById('prompt-confirm');
-        const cancelBtn = document.getElementById('prompt-cancel');
-        okBtn.replaceWith(okBtn.cloneNode(true));
-        cancelBtn.replaceWith(cancelBtn.cloneNode(true));
-        document.getElementById('prompt-confirm').onclick = () => { const val = document.getElementById('prompt-input').value; if(val) callback(val); el.classList.remove('active'); };
-        document.getElementById('prompt-cancel').onclick = () => el.classList.remove('active');
-    },
-    
     showConfirm: (text, callback) => {
         const el = document.getElementById('modal-confirm');
         document.getElementById('confirm-text').innerText = text;
         el.classList.add('active');
+        // Clona botões para remover listeners antigos
         const okBtn = document.getElementById('confirm-ok');
         const cancelBtn = document.getElementById('confirm-cancel');
         okBtn.replaceWith(okBtn.cloneNode(true));
         cancelBtn.replaceWith(cancelBtn.cloneNode(true));
-        document.getElementById('confirm-ok').onclick = () => { callback(); el.classList.remove('active'); };
-        document.getElementById('confirm-cancel').onclick = () => el.classList.remove('active');
+        
+        document.getElementById('confirm-ok').onclick = () => { callback(); document.getElementById('modal-confirm').classList.remove('active'); };
+        document.getElementById('confirm-cancel').onclick = () => document.getElementById('modal-confirm').classList.remove('active');
+    },
+
+    showPrompt: (title, callback) => {
+        const el = document.getElementById('modal-prompt');
+        document.getElementById('prompt-title').innerText = title;
+        document.getElementById('prompt-input').value = '';
+        el.classList.add('active');
+        
+        const okBtn = document.getElementById('prompt-confirm');
+        const cancelBtn = document.getElementById('prompt-cancel');
+        okBtn.replaceWith(okBtn.cloneNode(true));
+        cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+
+        document.getElementById('prompt-confirm').onclick = () => { 
+            callback(document.getElementById('prompt-input').value); 
+            el.classList.remove('active'); 
+        };
+        document.getElementById('prompt-cancel').onclick = () => el.classList.remove('active');
     },
 
     playVideo: (url) => {
@@ -190,4 +133,27 @@ export const utils = {
     goToLogin: () => window.app.screen('view-login'),
     goToRegister: () => window.app.screen('view-register'),
     goToLanding: () => window.app.screen('view-landing'),
+    
+    screen: (id) => {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById(id);
+        if(el) el.classList.add('active');
+        window.scrollTo(0, 0);
+    },
+
+    nav: (tab) => {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(`tab-${tab}`).classList.remove('hidden');
+        const btn = document.querySelector(`.nav-item[data-tab="${tab}"]`);
+        if(btn) btn.classList.add('active');
+        
+        if(tab === 'social') window.app.loadFeed();
+        if(tab === 'news') window.app.loadNews();
+        if(tab === 'workouts') window.app.loadUserWorkouts(); 
+        if(tab === 'health') window.app.checkHealthBadges();
+        
+        window.app.haptic();
+    }
 };
