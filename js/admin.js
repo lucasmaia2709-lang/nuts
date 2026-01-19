@@ -88,7 +88,10 @@ export const admin = {
     // --- SISTEMA DE FILTROS UNIFICADO ---
     dashApplyFilters: () => {
         const term = document.getElementById('dash-search').value.toLowerCase();
-        const statusFilter = document.getElementById('dash-filter-status') ? document.getElementById('dash-filter-status').value : 'all';
+        // Verifica se o elemento existe antes de pegar o valor
+        const statusFilterEl = document.getElementById('dash-filter-status');
+        const statusFilter = statusFilterEl ? statusFilterEl.value : 'all';
+        
         const startStr = document.getElementById('dash-date-start').value;
         const endStr = document.getElementById('dash-date-end').value;
 
@@ -125,8 +128,6 @@ export const admin = {
         }
 
         admin.renderDashboardTable(filtered);
-        
-        // Atualiza contadores do topo com base no total REAL, não no filtrado, pra não confundir
         admin.renderDashboardMetrics(); 
     },
 
@@ -135,44 +136,15 @@ export const admin = {
     dashFilterStatus: () => admin.dashApplyFilters(),
     dashFilterByDate: () => admin.dashApplyFilters(),
 
-    // --- RENDERIZAÇÃO DA UI ---
-
-    // Adiciona o Select de Status no Header se não existir
-    setupDashFiltersUI: () => {
-        const container = document.querySelector('.dash-header .dash-filters-container');
-        // Se já foi injetado pelo HTML estático, ok. Se não, injetamos aqui dinamicamente se precisar.
-        // Assumindo que você vai manter o HTML atual, vamos focar em renderizar a tabela.
-    },
-
     renderDashboardMetrics: () => {
         const total = admin.allDashboardUsers.length;
         const risk = admin.allDashboardUsers.filter(u => u.status === 'risk').length;
         const activeToday = admin.allDashboardUsers.filter(u => u.daysInactive === 0).length;
-        const pending = admin.allDashboardUsers.filter(u => u.status === 'pending').length;
 
         // Atualiza UI
         if(document.getElementById('dash-total-students')) document.getElementById('dash-total-students').innerText = total;
         if(document.getElementById('dash-risk-students')) document.getElementById('dash-risk-students').innerText = risk;
         if(document.getElementById('dash-active-today')) document.getElementById('dash-active-today').innerText = activeToday;
-        
-        // Injeta o dropdown de filtro se não existir no HTML original
-        const headerFilterArea = document.querySelector('.dash-header > div');
-        if (headerFilterArea && !document.getElementById('dash-filter-status')) {
-            const select = document.createElement('select');
-            select.id = 'dash-filter-status';
-            select.style.padding = '10px';
-            select.style.borderRadius = '10px';
-            select.style.border = '1px solid #ddd';
-            select.style.marginRight = '10px';
-            select.innerHTML = `
-                <option value="all">Todos os Status</option>
-                <option value="active">Ativos</option>
-                <option value="pending">Pendentes (${pending})</option>
-                <option value="risk">Risco / Inativos</option>
-            `;
-            select.onchange = () => admin.dashApplyFilters();
-            headerFilterArea.insertBefore(select, document.getElementById('dash-search'));
-        }
     },
 
     renderDashboardTable: (users) => {
@@ -278,7 +250,7 @@ export const admin = {
                         </div>`;
                     });
                 } else {
-                    workoutsHtml = '<div style="padding:20px; color:#999; text-align:center;">Sem treinos neste objetivo.</div>';
+                    workoutsHtml = '<div style="padding:20px; color:#999; text-align:center;">Sem treinosneste objetivo.</div>';
                 }
 
                 racesHtml += `
@@ -341,7 +313,6 @@ export const admin = {
         if(u.status === 'pending') {
             approveBtn = `<button onclick="window.app.admToggleStatus('${u.id}', true)" class="btn-primary" style="background:var(--success); color:white; padding:10px 20px; border:none; border-radius:20px; cursor:pointer; font-weight:700; box-shadow:0 4px 10px rgba(46, 204, 113, 0.3);"><i class="fa-solid fa-check"></i> Aprovar Acesso</button>`;
         } else {
-            // Se já ativo, talvez botão para bloquear
             approveBtn = `<button onclick="window.app.admToggleStatus('${u.id}', false)" style="background:#fff; border:1px solid var(--red); color:var(--red); padding:8px 15px; border-radius:20px; cursor:pointer; font-size:12px;">Bloquear Aluno</button>`;
         }
 
@@ -442,12 +413,9 @@ export const admin = {
 
     // --- FUNÇÕES DE ADMINISTRAÇÃO REUTILIZADAS (Com Refresh para Dashboard) ---
 
-    // Abaixo estão as funções originais do Mobile Admin, mas com triggers para atualizar o Dashboard se ele estiver aberto.
-
     admToggleStatus: async (docId, status) => { 
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status }); 
         window.app.toast(status ? "Aluno Aprovado" : "Aluno Bloqueado");
-        // Refresh dashboard se estiver ativo
         if(document.getElementById('view-dashboard').classList.contains('active')) {
             window.app.dashReloadData();
         }
@@ -557,7 +525,6 @@ export const admin = {
             window.app.toast("Objetivo criado com sucesso!");
             document.getElementById('modal-adm-add-race').classList.remove('active');
             
-            // Refresh dashboard se estiver ativo
             if(document.getElementById('view-dashboard').classList.contains('active')) {
                 window.app.dashReloadData();
             }
@@ -570,7 +537,6 @@ export const admin = {
         }
     },
 
-    // --- FUNÇÕES LEGADO (MOBILE) MANTIDAS PARA O APP ---
     admAddRaceInline: async (docId) => { 
         state.currentAdmUser = docId;
         const tplSelect = document.getElementById('adm-race-template-select');
@@ -605,7 +571,6 @@ export const admin = {
         }
     },
 
-    // Funções auxiliares (Templates, Videos, News, etc) mantidas idênticas
     admDeleteUserQuick: async (docId) => { window.app.showConfirm(`Apagar permanentemente?`, async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); }); },
     
     admLoadTemplates: () => {
@@ -694,7 +659,6 @@ export const admin = {
 
     admDelQuote: async (id) => { window.app.showConfirm('Apagar frase?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id))); },
 
-    // Mantido para compatibilidade com o HTML mobile antigo
     admLoadUsers: async () => {
         const list = document.getElementById('adm-users-list');
         list.innerHTML = ''; 
