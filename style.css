@@ -247,11 +247,128 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .status-pill.inactive { background: #ffebee; color: #c62828; }
 .status-pill.pending { background: #fff3e0; color: #ef6c00; }
 
-/* DETALHE DO ALUNO (DESKTOP) */
+/* --- NOVO DESIGN DO DETALHE DO ALUNO (IMPROVED) --- */
+.dash-student-header {
+    background: #fff;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.dash-student-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.dash-avatar-placeholder {
+    width: 60px;
+    height: 60px;
+    background: var(--primary);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+}
+
 .dash-detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-.dash-card-title { font-size: 14px; color: #888; margin-bottom: 15px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-.dash-list-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
-.dash-list-item:last-child { border-bottom: none; }
+
+/* Goal/Race Accordion */
+.dash-goal-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.dash-goal-card:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.dash-goal-header {
+    padding: 15px 20px;
+    background: #fcfcfc;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid transparent;
+}
+
+.dash-goal-header.active {
+    border-bottom: 1px solid #eee;
+    background: #fff;
+}
+
+.dash-goal-content {
+    display: none;
+    background: #fff;
+    padding: 0;
+}
+
+.dash-goal-content.open {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+/* Workout Accordion */
+.dash-workout-item {
+    border-bottom: 1px solid #f4f4f4;
+}
+
+.dash-workout-item:last-child {
+    border-bottom: none;
+}
+
+.dash-workout-header {
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.dash-workout-header:hover {
+    background: #f9f9f9;
+}
+
+.dash-workout-details {
+    display: none;
+    padding: 15px 20px;
+    background: #fafafa;
+    border-top: 1px solid #f0f0f0;
+    font-size: 13px;
+    color: #666;
+}
+
+.dash-workout-details.open {
+    display: block;
+}
+
+/* Pain Cards Improved */
+.dash-pain-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 15px;
+    border-left: 5px solid #ccc;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    margin-bottom: 10px;
+    transition: transform 0.2s;
+}
+.dash-pain-card:hover { transform: translateX(5px); }
+.dash-pain-card.level-high { border-left-color: var(--red); }
+.dash-pain-card.level-med { border-left-color: var(--text-sec); }
+.dash-pain-card.level-low { border-left-color: var(--success); }
 
 /* --- SKELETON LOADING --- */
 .skeleton {
