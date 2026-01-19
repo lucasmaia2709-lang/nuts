@@ -104,7 +104,27 @@ export const admin = {
         admin.renderDashboardTable(filtered);
     },
 
-    // --- NOVA FUNCIONALIDADE: ABRIR DETALHES DO ALUNO ---
+    // --- HELPER TOGGLES PARA ACCORDION ---
+    dashToggleGoal: (id) => {
+        const content = document.getElementById(`goal-content-${id}`);
+        const header = document.getElementById(`goal-header-${id}`);
+        content.classList.toggle('open');
+        header.classList.toggle('active');
+        
+        // Gira o ícone se desejar (opcional, pode adicionar classe rotate no CSS)
+        const icon = header.querySelector('.fa-chevron-down');
+        if(icon) {
+            icon.style.transform = content.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
+            icon.style.transition = 'transform 0.2s';
+        }
+    },
+
+    dashToggleWorkout: (id) => {
+        const content = document.getElementById(`workout-det-${id}`);
+        if(content) content.classList.toggle('open');
+    },
+
+    // --- DETALHES DO ALUNO (IMPROVED) ---
     openDashStudentDetail: async (userId) => {
         const u = admin.allDashboardUsers.find(user => user.id === userId);
         if (!u) return;
@@ -125,84 +145,126 @@ export const admin = {
         // Prepara HTML dos Objetivos (Races) e Treinos
         let racesHtml = '';
         if (u.races && u.races.length > 0) {
-            // Pega o último objetivo (mais atual)
-            const r = u.races[u.races.length - 1]; 
-            const done = r.workouts.filter(w=>w.done).length;
-            const total = r.workouts.length;
-            const pct = total > 0 ? Math.round((done/total)*100) : 0;
+            // Renderiza de trás pra frente (mais recentes primeiro)
+            [...u.races].reverse().forEach((r, rIdx) => {
+                // Indice original invertido
+                const originalIdx = u.races.length - 1 - rIdx;
+                const uniqueId = `g-${originalIdx}`;
+                const done = r.workouts ? r.workouts.filter(w=>w.done).length : 0;
+                const total = r.workouts ? r.workouts.length : 0;
+                const pct = total > 0 ? Math.round((done/total)*100) : 0;
 
-            let workoutsHtml = '';
-            // Lista os últimos 10 treinos
-            const recentWorkouts = r.workouts.slice().reverse().slice(0, 20); 
-            recentWorkouts.forEach(w => {
-                const icon = w.done ? '<i class="fa-solid fa-check-circle" style="color:var(--success)"></i>' : '<i class="fa-regular fa-circle" style="color:#ccc"></i>';
-                const date = w.completedAt ? new Date(w.completedAt).toLocaleDateString() : (w.scheduledDate ? new Date(w.scheduledDate).toLocaleDateString() : '-');
-                
-                // Exibe feedback de dor se houver
-                let feedback = '';
-                if (w.feedback) feedback = `<div style="font-size:11px; color:#e67e22; margin-left:25px;">Dor: ${w.feedback.painLevel} - ${w.feedback.notes}</div>`;
+                let workoutsHtml = '';
+                if(r.workouts && r.workouts.length > 0) {
+                     // Lista todos os treinos do objetivo
+                    r.workouts.forEach((w, wIdx) => {
+                        const wId = `${uniqueId}-w-${wIdx}`;
+                        const isDone = w.done;
+                        const icon = isDone ? '<i class="fa-solid fa-circle-check" style="color:var(--success); font-size:18px;"></i>' : '<i class="fa-regular fa-circle" style="color:#ddd; font-size:18px;"></i>';
+                        const titleStyle = isDone ? 'text-decoration:line-through; color:#999;' : 'color:var(--text-main); font-weight:600;';
+                        const date = w.completedAt ? new Date(w.completedAt).toLocaleDateString() : (w.scheduledDate ? new Date(w.scheduledDate).toLocaleDateString() : '-');
+                        
+                        let feedbackHtml = '';
+                        if (w.feedback) {
+                            feedbackHtml = `
+                            <div style="margin-top:10px; padding:10px; background:#fff5eb; border-radius:8px; border-left:3px solid var(--text-sec);">
+                                <strong style="color:var(--text-sec);">Dor Nível ${w.feedback.painLevel}</strong>
+                                <p style="margin:5px 0 0 0; font-size:12px;">${w.feedback.notes || ''}</p>
+                            </div>`;
+                        } else {
+                            feedbackHtml = `<p style="margin:0; font-style:italic;">Sem feedback registrado.</p>`;
+                        }
 
-                workoutsHtml += `
-                <div class="dash-list-item" style="display:block;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <span>${icon} <strong>${w.title}</strong></span>
-                        <span style="font-size:12px; color:#888;">${date}</span>
+                        workoutsHtml += `
+                        <div class="dash-workout-item">
+                            <div class="dash-workout-header" onclick="window.app.dashToggleWorkout('${wId}')">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    ${icon}
+                                    <div>
+                                        <div style="${titleStyle}">${w.title}</div>
+                                        <div style="font-size:11px; color:#888;">${date}</div>
+                                    </div>
+                                </div>
+                                <i class="fa-solid fa-chevron-down" style="font-size:12px; color:#ccc;"></i>
+                            </div>
+                            <div id="workout-det-${wId}" class="dash-workout-details">
+                                <p style="margin:0 0 10px 0;"><strong>Descrição:</strong> ${w.desc}</p>
+                                ${w.video ? `<a href="#" onclick="window.app.playVideo('${window.app.escape(w.video)}')" style="color:var(--primary); font-size:12px;">Ver Vídeo</a>` : ''}
+                                ${feedbackHtml}
+                            </div>
+                        </div>`;
+                    });
+                } else {
+                    workoutsHtml = '<div style="padding:20px; color:#999; text-align:center;">Sem treinos neste objetivo.</div>';
+                }
+
+                racesHtml += `
+                <div class="dash-goal-card">
+                    <div id="goal-header-${uniqueId}" class="dash-goal-header" onclick="window.app.dashToggleGoal('${uniqueId}')">
+                        <div style="flex:1;">
+                            <strong style="font-size:16px;">${r.name}</strong>
+                            <div class="progress-container" style="height:6px; margin-top:8px; width:150px;"><div class="progress-bar colored" style="width:${pct}%"></div></div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <span style="font-size:12px; color:#888;">${done}/${total}</span>
+                            <i class="fa-solid fa-chevron-down" style="color:#ccc;"></i>
+                        </div>
                     </div>
-                    <div style="font-size:12px; color:#666; margin-left:25px;">${w.desc}</div>
-                    ${feedback}
+                    <div id="goal-content-${uniqueId}" class="dash-goal-content">
+                        ${workoutsHtml}
+                    </div>
                 </div>`;
             });
-
-            racesHtml = `
-            <div style="background:#f9f9f9; padding:15px; border-radius:10px; margin-bottom:15px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <strong>${r.name}</strong>
-                    <span>${pct}% Concluído</span>
-                </div>
-                <div class="progress-container" style="height:8px; margin-top:0;"><div class="progress-bar colored" style="width:${pct}%"></div></div>
-                <div style="margin-top:15px; max-height:400px; overflow-y:auto;">
-                    <h5 style="margin:0 0 10px;">Últimos Treinos</h5>
-                    ${workoutsHtml}
-                </div>
-            </div>`;
         } else {
-            racesHtml = '<p>Sem objetivos cadastrados.</p>';
+            racesHtml = '<div style="padding:20px; background:#fff; border-radius:12px; color:#999; text-align:center;">Sem objetivos cadastrados.</div>';
         }
 
-        // Histórico de Dor (Sidebar)
+        // Histórico de Dor (Sidebar - Improved Cards)
         let painHtml = '';
         if (painHistory.length > 0) {
             painHistory.forEach(p => {
+                let levelClass = 'level-low';
+                if(p.painLevel >= 3) levelClass = 'level-med';
+                if(p.painLevel >= 5) levelClass = 'level-high';
+
                 painHtml += `
-                <div style="padding:10px; border-bottom:1px solid #eee;">
-                    <strong style="color:var(--red);">Nível ${p.painLevel}/7</strong> - <small>${new Date(p.timestamp).toLocaleDateString()}</small><br>
-                    <span style="font-size:12px;">${p.notes}</span>
-                    ${p.responded ? '<br><small style="color:var(--success);"><i class="fa-solid fa-check"></i> Respondido</small>' : '<br><small style="color:var(--text-sec);">Pendente</small>'}
+                <div class="dash-pain-card ${levelClass}">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <strong style="color:var(--text-main); font-size:14px;">Dor Nível ${p.painLevel}/7</strong>
+                        <span style="font-size:11px; color:#888;">${new Date(p.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    <p style="font-size:12px; color:#555; margin:0 0 5px 0;">${p.notes}</p>
+                    <div style="font-size:10px; color:#888;">Treino: ${p.workoutTitle}</div>
+                    ${p.responded ? '<div style="margin-top:5px; font-size:10px; color:var(--success); font-weight:700;"><i class="fa-solid fa-check"></i> Respondido</div>' : ''}
                 </div>`;
             });
         } else {
-            painHtml = '<p style="color:#999; font-size:12px;">Sem relatos.</p>';
+            painHtml = '<p style="color:#999; font-size:12px; text-align:center; padding:20px;">Sem relatos de dor.</p>';
         }
 
         // Renderiza VIEW COMPLETA
+        const initials = u.name.substring(0,2).toUpperCase();
+        
         detailContainer.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <div style="display:flex; align-items:center; gap:15px;">
-                <button onclick="document.getElementById('dash-tab-students').classList.remove('hidden'); document.getElementById('dash-tab-student-detail').classList.add('hidden');" style="border:none; background:none; font-size:18px; cursor:pointer;"><i class="fa-solid fa-arrow-left"></i></button>
+        <button onclick="document.getElementById('dash-tab-students').classList.remove('hidden'); document.getElementById('dash-tab-student-detail').classList.add('hidden');" style="border:none; background:none; font-size:14px; cursor:pointer; color:#666; margin-bottom:15px; display:flex; align-items:center; gap:5px;"><i class="fa-solid fa-arrow-left"></i> Voltar para Lista</button>
+        
+        <div class="dash-student-header">
+            <div class="dash-student-info">
+                <div class="dash-avatar-placeholder">${initials}</div>
                 <div>
-                    <h2 style="margin:0;">${u.name}</h2>
-                    <span style="color:#888;">${u.email}</span>
+                    <h2 style="margin:0; font-size:24px;">${u.name}</h2>
+                    <span style="color:#888; font-size:14px;">${u.email}</span>
                 </div>
             </div>
             <div>
-               <span class="status-pill ${u.status === 'active' ? 'active' : 'inactive'}">${u.status === 'active' ? 'ATIVO' : 'INATIVO'}</span>
+               <span class="status-pill ${u.status === 'active' ? 'active' : 'inactive'}" style="font-size:14px; padding:8px 15px;">${u.status === 'active' ? 'ATIVO' : 'INATIVO'}</span>
             </div>
         </div>
 
         <div class="dash-detail-grid">
             <!-- COLUNA ESQUERDA (TREINOS) -->
             <div>
-                <h4 class="dash-card-title">Objetivo Atual & Progresso</h4>
+                <h4 class="dash-card-title">Objetivos & Treinos</h4>
                 ${racesHtml}
             </div>
 
@@ -210,15 +272,16 @@ export const admin = {
             <div>
                 <div class="dash-metric-card" style="margin-bottom:20px;">
                     <h4 class="dash-card-title" style="margin-top:0;">Histórico Fisio (Dores)</h4>
-                    <div style="max-height:500px; overflow-y:auto;">
+                    <div style="max-height:500px; overflow-y:auto; padding-right:5px;">
                         ${painHtml}
                     </div>
                 </div>
                 
                 <div class="dash-metric-card">
                     <h4 class="dash-card-title" style="margin-top:0;">Dados Pessoais</h4>
-                    <p style="font-size:13px; margin:5px 0;"><strong>Cidade:</strong> ${u.city || '-'}</p>
-                    <p style="font-size:13px; margin:5px 0;"><strong>Peso Atual:</strong> ${u.weightHistory && u.weightHistory.length > 0 ? u.weightHistory[u.weightHistory.length-1].value + 'kg' : '-'}</p>
+                    <p style="font-size:13px; margin:8px 0;"><strong>Cidade:</strong> ${u.city || '-'}</p>
+                    <p style="font-size:13px; margin:8px 0;"><strong>Peso Atual:</strong> ${u.weightHistory && u.weightHistory.length > 0 ? u.weightHistory[u.weightHistory.length-1].value + 'kg' : '-'}</p>
+                    <p style="font-size:13px; margin:8px 0;"><strong>Cadastro:</strong> ${u.created ? new Date(u.created).toLocaleDateString() : '-'}</p>
                 </div>
             </div>
         </div>
