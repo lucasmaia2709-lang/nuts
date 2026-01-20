@@ -4,6 +4,109 @@ import { state } from "./state.js";
 
 // Lógica de Calendário, Treinos, Perfil e Saúde
 export const student = {
+    
+    // --- CARREGAMENTO DE USUÁRIO (Restaurada) ---
+    // Esta função é chamada pelo auth.js ao fazer login
+    loadUser: async (email) => {
+        // Busca usuário pelo email na coleção correta
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_USERS), where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            state.currentUser = { id: userDoc.id, ...userDoc.data() };
+
+            // 1. Atualiza UI do Perfil (Avatar e Textos)
+            const initials = state.currentUser.name.substring(0, 2).toUpperCase();
+            
+            if (state.currentUser.avatar) {
+                // Header
+                const headerImg = document.getElementById('header-avatar-img');
+                const headerTxt = document.getElementById('header-avatar-txt');
+                if(headerImg) { headerImg.src = state.currentUser.avatar; headerImg.style.display = 'block'; }
+                if(headerTxt) { headerTxt.style.display = 'none'; }
+                
+                // Perfil Grande
+                const profImg = document.getElementById('profile-img-big');
+                if(profImg) { profImg.src = state.currentUser.avatar; profImg.style.display = 'block'; }
+            } else {
+                // Header
+                const headerImg = document.getElementById('header-avatar-img');
+                const headerTxt = document.getElementById('header-avatar-txt');
+                if(headerTxt) { headerTxt.innerText = initials; headerTxt.style.display = 'block'; }
+                if(headerImg) { headerImg.style.display = 'none'; }
+                
+                // Perfil Grande
+                const profImg = document.getElementById('profile-img-big');
+                if(profImg) { profImg.style.display = 'none'; }
+            }
+
+            const nameEl = document.getElementById('profile-name-big');
+            const emailEl = document.getElementById('profile-email-big');
+            if(nameEl) nameEl.innerText = state.currentUser.name;
+            if(emailEl) emailEl.innerText = state.currentUser.email;
+
+            // 2. Preenche formulário de dados pessoais
+            if(document.getElementById('prof-birth')) document.getElementById('prof-birth').value = state.currentUser.birth || '';
+            if(document.getElementById('prof-city')) document.getElementById('prof-city').value = state.currentUser.city || '';
+            if(document.getElementById('prof-country')) document.getElementById('prof-country').value = state.currentUser.country || '';
+            if(document.getElementById('prof-height')) document.getElementById('prof-height').value = state.currentUser.height || '';
+
+            // 3. Atualiza Peso Atual e Histórico
+            const wHistory = state.currentUser.weightHistory || [];
+            if(wHistory.length > 0) {
+                const lastW = wHistory[wHistory.length - 1];
+                if(document.getElementById('display-current-weight')) document.getElementById('display-current-weight').innerText = `${lastW.value} kg`;
+                
+                const wList = document.getElementById('weight-history-list');
+                if(wList) {
+                    wList.innerHTML = '';
+                    [...wHistory].reverse().forEach(w => {
+                        wList.innerHTML += `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; font-size:13px;"><span>${new Date(w.date).toLocaleDateString()}</span><strong>${w.value} kg</strong></div>`;
+                    });
+                }
+            }
+
+            // 4. Exibir Botão Admin se for admin
+            if (ADMIN_EMAILS.includes(email)) {
+                const btnAdm = document.getElementById('btn-admin-access');
+                if(btnAdm) btnAdm.style.display = 'block';
+            }
+
+            // 5. Carregar Dados do App
+            window.app.renderCalendar();
+            window.app.loadUserWorkouts();
+            window.app.loadProfileHistory();
+            window.app.loadFeed(); 
+            window.app.loadNews();
+            window.app.checkHealthBadges();
+            
+            // Carrega frase motivacional
+            window.app.loadDailyQuote();
+
+            // Vai para a tela do App
+            window.app.screen('view-app');
+        } else {
+            // Se não achar o usuário, talvez tenha que deslogar ou mandar pro registro
+            // Mas cuidado com o loop de login se o banco estiver vazio
+            console.log("Usuário logado mas não encontrado na coleção:", C_USERS);
+            // window.app.screen('view-login'); // Comentado para evitar loop se for o primeiro acesso pós-mudança de config
+        }
+    },
+
+    loadDailyQuote: async () => {
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES));
+        const snap = await getDocs(q);
+        if(!snap.empty) {
+            const quotes = [];
+            snap.forEach(d => quotes.push(d.data().text));
+            const random = quotes[Math.floor(Math.random() * quotes.length)];
+            if(document.getElementById('daily-quote')) document.getElementById('daily-quote').innerText = `"${random}"`;
+        } else {
+            if(document.getElementById('daily-quote')) document.getElementById('daily-quote').innerText = '"O sucesso é a soma de pequenos esforços repetidos dia após dia."';
+        }
+    },
+
     // --- CALENDÁRIO ---
     changeMonth: (dir) => { state.currentMonth.setMonth(state.currentMonth.getMonth() + dir); window.app.renderCalendar(); },
     
@@ -14,12 +117,12 @@ export const student = {
         const firstDay = new Date(y, m, 1).getDay();
         const daysInMonth = new Date(y, m+1, 0).getDate();
         
-        document.getElementById('cal-month-title').innerText = state.currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(' de ', ' ');
+        if(document.getElementById('cal-month-title')) document.getElementById('cal-month-title').innerText = state.currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(' de ', ' ');
         
         const grid = document.getElementById('calendar-days');
+        if(!grid) return;
         grid.innerHTML = '';
         
-        // Pega o último objetivo (mais recente)
         const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
         
         for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div class="cal-cell other-month"></div>`; }
@@ -46,7 +149,6 @@ export const student = {
                 if(w) { hasWorkout = true; isDone = w.done; }
             }
 
-            // Marcador de Prova
             let raceMarker = '';
             if(activeRace && activeRace.date === dateStr) {
                 raceMarker = '<div class="cal-race-marker"></div>';
@@ -67,7 +169,7 @@ export const student = {
     openDayDetail: (dateStr, raceIdx, workoutIdx) => {
         state.selectedDayDate = dateStr;
         const d = new Date(dateStr);
-        d.setMinutes(d.getMinutes() + d.getTimezoneOffset()); // Fix timezone visual
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset()); 
         
         document.getElementById('day-det-title').innerText = d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
         const content = document.getElementById('day-det-content');
@@ -97,16 +199,15 @@ export const student = {
         document.getElementById('modal-day-detail').classList.add('active');
     },
 
-    // --- MEU PLANO (CORRIGIDO E ROBUSTO) ---
+    // --- MEU PLANO ---
     loadUserWorkouts: () => {
         try {
             const list = document.getElementById('workouts-list');
             if(!list) return;
             
             list.innerHTML = '';
-            
             const user = state.currentUser;
-            // Verifica se tem objetivos
+            
             if(!user || !user.races || user.races.length === 0) {
                 list.innerHTML = `
                 <div style="text-align:center; padding:40px 20px;">
@@ -117,17 +218,14 @@ export const student = {
                 return;
             }
 
-            // Pega SEMPRE o último objetivo do array (o mais recente)
+            // Pega o ÚLTIMO objetivo (mais recente)
             const currentRace = user.races[user.races.length - 1];
             
-            // Cabeçalho do Objetivo
             const raceDateStr = currentRace.date || new Date().toISOString();
             const raceDate = new Date(raceDateStr);
-            // Ajuste seguro de timezone visual apenas se a data for válida
             if(!isNaN(raceDate.getTime())) {
                 raceDate.setMinutes(raceDate.getMinutes() + raceDate.getTimezoneOffset());
             }
-            
             const daysToRace = Math.ceil((raceDate - new Date()) / (1000 * 60 * 60 * 24));
             
             list.innerHTML = `
@@ -150,7 +248,6 @@ export const student = {
                 return;
             }
 
-            // Filtra e ordena treinos com verificação de segurança para datas nulas
             const today = new Date().toISOString().split('T')[0];
             const pendingWorkouts = currentRace.workouts
                 .map((w, idx) => ({...w, originalIdx: idx})) 
@@ -177,7 +274,6 @@ export const student = {
                         const wDate = new Date(w.scheduledDate);
                         wDate.setMinutes(wDate.getMinutes() + wDate.getTimezoneOffset());
                         dateDisplay = wDate.toLocaleDateString('pt-BR', {weekday:'short', day:'numeric', month:'long'});
-                        
                         if(w.scheduledDate === today) {
                             highlight = 'border:2px solid var(--primary);';
                             isTodayHTML = '<div style="position:absolute; top:0; right:0; background:var(--primary); color:white; font-size:10px; padding:3px 10px; border-radius:0 0 0 10px;">HOJE</div>';
@@ -201,8 +297,6 @@ export const student = {
             }
         } catch (e) {
             console.error("Erro ao carregar treinos:", e);
-            const list = document.getElementById('workouts-list');
-            if(list) list.innerHTML += `<p style="color:red; text-align:center;">Erro ao carregar lista. Tente recarregar.</p>`;
         }
     },
 
@@ -210,8 +304,6 @@ export const student = {
         state.editingStudentRaceIndex = { rIdx, wIdx };
         state.pendingFinishWorkoutTitle = title;
         state.selectedPainLevel = null;
-        
-        // Resetar seleção de dor
         const container = document.getElementById('pain-scale-container');
         container.innerHTML = '';
         for(let i=0; i<=7; i++) {
@@ -234,34 +326,19 @@ export const student = {
 
     confirmFinishWorkout: async () => {
         if(state.selectedPainLevel === null) return window.app.toast("Selecione o nível de dor.");
-        
         const feedback = document.getElementById('workout-feedback-text').value;
         const { rIdx, wIdx } = state.editingStudentRaceIndex;
         
-        // Atualiza Localmente
         const user = state.currentUser;
         user.races[rIdx].workouts[wIdx].done = true;
         user.races[rIdx].workouts[wIdx].completedAt = new Date().toISOString();
-        user.races[rIdx].workouts[wIdx].feedback = {
-            painLevel: state.selectedPainLevel,
-            notes: feedback
-        };
+        user.races[rIdx].workouts[wIdx].feedback = { painLevel: state.selectedPainLevel, notes: feedback };
 
-        // Salva no Firestore
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.id), { races: user.races });
-
-        // Salva Relato de Dor para o Admin
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), {
-            userId: user.id,
-            userName: user.name,
-            email: user.email,
-            workoutTitle: state.pendingFinishWorkoutTitle,
-            painLevel: state.selectedPainLevel,
-            notes: feedback,
-            timestamp: Date.now(),
-            readByAdmin: false,
-            readByUser: true,
-            response: null
+            userId: user.id, userName: user.name, email: user.email,
+            workoutTitle: state.pendingFinishWorkoutTitle, painLevel: state.selectedPainLevel, notes: feedback,
+            timestamp: Date.now(), readByAdmin: false, readByUser: true, response: null
         });
 
         document.getElementById('modal-finish-workout').classList.remove('active');
@@ -269,6 +346,32 @@ export const student = {
         window.app.haptic();
         window.app.renderCalendar();
         window.app.loadUserWorkouts();
+    },
+
+    // --- HISTÓRICO DE PERFIL ---
+    loadProfileHistory: () => {
+        const div = document.getElementById('profile-history');
+        if(!div) return;
+        div.innerHTML = '';
+        const user = state.currentUser;
+        if(user.races && user.races.length > 0) {
+            [...user.races].reverse().forEach(r => {
+                const done = r.workouts ? r.workouts.filter(w=>w.done).length : 0;
+                const total = r.workouts ? r.workouts.length : 0;
+                const pct = total > 0 ? Math.round((done/total)*100) : 0;
+                div.innerHTML += `
+                <div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:700;">
+                        <span>${r.name}</span>
+                        <span>${pct}%</span>
+                    </div>
+                    <div style="font-size:12px; color:#888;">${new Date(r.date).toLocaleDateString()}</div>
+                    <div class="progress-container" style="height:5px; margin-top:5px;"><div class="progress-bar colored" style="width:${pct}%"></div></div>
+                </div>`;
+            });
+        } else {
+            div.innerHTML = '<p style="color:#999; font-size:13px;">Sem histórico.</p>';
+        }
     },
 
     // --- PERFIL ---
@@ -323,7 +426,7 @@ export const student = {
         
         document.getElementById('modal-add-weight').classList.remove('active');
         document.getElementById('new-weight-input').value = '';
-        window.app.loadUser(state.currentUser.email); // Recarrega para atualizar UI
+        window.app.loadUser(state.currentUser.email); 
     },
 
     // --- SAÚDE ---
@@ -335,6 +438,72 @@ export const student = {
         window.app.nav('health');
     },
 
+    // --- BADGES E NOTIFICAÇÕES (Restaurada) ---
+    checkHealthBadges: () => {
+        const list = document.getElementById('health-pain-list');
+        if(list) list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
+        
+        if(!state.currentUser) return;
+
+        // Limpa badge de leitura
+        window.app.markPainAsReadByUser();
+
+        // Carrega histórico para a tela de Fisio
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), where("email", "==", state.currentUser.email));
+        
+        onSnapshot(q, (snapshot) => {
+            if(list) {
+                if(snapshot.empty) { list.innerHTML = '<p style="text-align:center; color:#999;">Sem histórico.</p>'; return; }
+                
+                const items = [];
+                snapshot.forEach(d => items.push(d.data()));
+                items.sort((a,b) => b.timestamp - a.timestamp);
+
+                list.innerHTML = '';
+                items.forEach(item => {
+                    const statusClass = item.responded ? 'answered' : 'pending';
+                    const statusText = item.responded ? 'RESPONDIDO' : 'PENDENTE';
+                    const dateStr = new Date(item.timestamp).toLocaleDateString();
+
+                    let responseHtml = '';
+                    if(item.response) {
+                        responseHtml = `
+                        <div class="pain-response-box">
+                            <strong><i class="fa-solid fa-user-doctor"></i> Fisio Respondeu:</strong>
+                            ${item.response}
+                        </div>`;
+                    }
+
+                    list.innerHTML += `
+                    <div class="pain-item ${statusClass}">
+                        <div class="pain-header">
+                            <span>${dateStr} - ${item.workoutTitle}</span>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        <p class="pain-desc">
+                            <strong>Nível ${item.painLevel}/7:</strong> ${item.notes}
+                        </p>
+                        ${responseHtml}
+                    </div>`;
+                });
+            }
+        });
+    },
+
+    markPainAsReadByUser: async () => {
+        if(!state.currentUser) return;
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
+            where("email", "==", state.currentUser.email)
+        );
+        const snapshot = await getDocs(q);
+        snapshot.forEach(async (d) => {
+            const data = d.data();
+            if(data.readByUser === false && data.response != null) {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, d.id), { readByUser: true });
+            }
+        });
+    },
+
     // --- RACE (ALUNO) ---
     showAddRaceModal: () => document.getElementById('modal-add-race').classList.add('active'),
     
@@ -343,23 +512,13 @@ export const student = {
         const date = document.getElementById('new-race-date').value;
         if(!name || !date) return window.app.toast("Preencha nome e data");
         
-        // Simplesmente cria sem IA para o aluno (ou pode conectar a IA aqui tbm se quiser)
-        const newRace = {
-            name, date, workouts: [], created: new Date().toISOString()
-        };
-        
+        const newRace = { name, date, workouts: [], created: new Date().toISOString() };
         const races = state.currentUser.races || [];
         races.push(newRace);
         
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.id), { races });
-        
-        // Adiciona registro público para calendário social
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), {
-            date: date,
-            raceName: name,
-            studentName: state.currentUser.name,
-            studentEmail: state.currentUser.email,
-            created: Date.now()
+            date: date, raceName: name, studentName: state.currentUser.name, studentEmail: state.currentUser.email, created: Date.now()
         });
 
         document.getElementById('modal-add-race').classList.remove('active');
@@ -367,7 +526,7 @@ export const student = {
     },
     
     editRaceDate: (rIdx) => {
-        state.editingStudentRaceIndex = rIdx; // reusa variavel
+        state.editingStudentRaceIndex = rIdx; 
         const r = state.currentUser.races[rIdx];
         document.getElementById('edit-race-date-input').value = r.date;
         document.getElementById('modal-edit-date').classList.add('active');
@@ -387,8 +546,5 @@ export const student = {
         window.app.renderCalendar();
     },
     
-    saveDayNote: () => {
-        // Implementar se quiser salvar notas avulsas no dia
-        document.getElementById('modal-day-detail').classList.remove('active');
-    }
+    saveDayNote: () => document.getElementById('modal-day-detail').classList.remove('active')
 };
