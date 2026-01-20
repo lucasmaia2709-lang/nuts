@@ -1,10 +1,10 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// MUDANÇA AQUI: Importamos initializeAuth e indexedDBLocalPersistence
+import { initializeAuth, indexedDBLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- ÁREA DE CONFIGURAÇÃO ---
-// Substitua pelas suas credenciais se necessário
 const firebaseConfig = { 
     apiKey: "AIzaSyDti6glq6Yw_mz_RV8JC167wPyOkbSDs-s", 
     authDomain: "nuts-aea26.firebaseapp.com", 
@@ -17,31 +17,29 @@ const firebaseConfig = {
 // INICIALIZAÇÃO
 const appInit = initializeApp(firebaseConfig);
 
-// Usando getAuth padrão para garantir compatibilidade máxima de login
-export const auth = getAuth(appInit);
+// MUDANÇA AQUI: Inicialização forçando persistência compatível com Capacitor iOS
+export const auth = initializeAuth(appInit, {
+  persistence: indexedDBLocalPersistence
+});
 
 export const db = getFirestore(appInit);
 export const storage = getStorage(appInit);
 
-// ID do App (Namespace no Firestore)
+// ID do App
 export const appId = 'nuts-app-v1'; 
 
-// URL DO CLOUDFLARE WORKER (IA)
+// URL DO CLOUDFLARE WORKER
 export const CF_WORKER_URL = "https://nuts.lucasabreucotefis.workers.dev"; 
 
-// LISTA DE ADMINS (E-mails que podem ver o botão de cadeado)
-export const ADMIN_EMAILS = [
-    "lucas_maia9@hotmail.com", 
-    "admin@nuts.com" 
-];
+// CONSTANTES E CONFIGURAÇÕES DE COLEÇÕES
+export const C_USERS = 'expliq_users_v9';
+export const C_POSTS = 'expliq_posts_v9';
+export const C_NEWS = 'expliq_news_v9';
+export const C_QUOTES = 'expliq_quotes_v9';
+export const C_TEMPLATES = 'expliq_templates_v9';
+export const C_VIDEOS = 'expliq_strength_videos_v9'; 
+export const C_PAIN = 'expliq_pain_v9'; 
+export const C_PUBLIC_RACES = 'expliq_public_races_v9';
 
-// --- NOMES DAS COLEÇÕES (CONSTANTES) ---
-// Centralizamos aqui para garantir que admin.js e student.js usem os mesmos nomes
-export const C_USERS = 'expliq_users_v9';       // Usuários
-export const C_POSTS = 'expliq_posts_v2';       // Feed Social
-export const C_NEWS = 'expliq_news_v1';         // Notícias
-export const C_TEMPLATES = 'expliq_templates_v1'; // Modelos de Treino
-export const C_VIDEOS = 'expliq_videos_v1';     // Vídeos de Fortalecimento
-export const C_PAIN = 'expliq_pain_v1';         // Relatos de Dor (Fisio)
-export const C_QUOTES = 'expliq_quotes_v1';     // Frases Motivacionais
-export const C_PUBLIC_RACES = 'expliq_races_public_v1'; // Calendário Social
+// !!! SEGURANÇA ADMIN !!!
+export const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edgarzanin@outlook.com"];
