@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- CSS Externo -->
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=7">
 
     <style>
         html, body {
@@ -185,11 +185,8 @@
         </div>
     </div>
 
-    <!-- MODAIS GERAIS (ALUNO E ADMIN) -->
-    <!-- Todos os modais anteriores continuam aqui (perfil, vídeos, templates, etc) -->
-    <!-- ... (Modais mantidos iguais) ... -->
+    <!-- MODAIS E TELAS EXTRAS -->
     <div id="view-profile" class="screen full-screen" style="overflow-y: auto; -webkit-overflow-scrolling: touch; background: #FFF;">
-        <!-- ... Conteúdo Perfil ... -->
         <div style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
             <button onclick="window.app.closeProfile()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main);"><i class="fa-solid fa-times"></i></button>
             <h3 style="margin:0;">Meu Perfil</h3>
@@ -203,12 +200,203 @@
             <input type="file" id="profile-upload" hidden accept="image/*" onchange="window.app.uploadAvatar(this)">
             <h2 id="profile-name-big" style="margin:0; font-size:28px; color:var(--text-main);">NOME</h2>
             <p id="profile-email-big" style="color: var(--text-sec); font-size: 16px;">EMAIL</p>
-            <!-- (Resto do perfil simplificado para caber no exemplo) -->
+            
+            <div class="card" style="text-align: left; margin-top: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h4 style="margin:0; color:var(--primary);">Dados Pessoais</h4>
+                    <button id="btn-edit-profile" onclick="window.app.toggleEditProfile(true)" style="font-size:12px; color:var(--text-sec); border:1px solid var(--border); background:white; padding:4px 10px; border-radius:10px;">Alterar Perfil</button>
+                </div>
+                <div id="profile-form-container">
+                    <label class="label">Data de Nascimento</label>
+                    <input id="prof-birth" type="date" class="input" disabled style="margin-bottom:10px;">
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;"><label class="label">Cidade</label><input id="prof-city" class="input" disabled style="margin-bottom:10px;"></div>
+                        <div style="flex:1;"><label class="label">País</label><input id="prof-country" class="input" disabled style="margin-bottom:10px;"></div>
+                    </div>
+                    <label class="label">Altura (cm)</label>
+                    <input id="prof-height" type="number" class="input" disabled style="margin-bottom:10px;">
+                    <div id="profile-edit-actions" style="display:none; gap:10px; margin-top:15px;">
+                        <button onclick="window.app.saveProfile()" class="btn btn-primary">Salvar</button>
+                        <button onclick="window.app.toggleEditProfile(false)" class="btn btn-outline">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="text-align: left; margin-top: 20px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <label class="label" style="font-size: 12px; color: var(--text-sec);">Peso Atual</label>
+                        <div id="display-current-weight" style="font-size: 32px; font-weight: 700; color: var(--text-main);">--</div>
+                    </div>
+                    <button onclick="window.app.openWeightModal()" style="width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div style="border-top: 1px dashed #eee; padding-top: 15px;">
+                    <label class="label" style="margin-bottom: 10px; display: block; font-size: 11px; opacity: 0.7;">HISTÓRICO</label>
+                    <div id="weight-history-list" style="max-height: 150px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
             <button id="btn-add-race" onclick="window.app.showAddRaceModal()" class="btn btn-primary" style="margin-top: 30px;">+ Novo Objetivo</button>
+            <div class="card" style="margin-top: 40px; text-align: left;">
+                <h4 style="margin-top:0; color:var(--primary);">Histórico de Provas</h4>
+                <div id="profile-history"></div>
+            </div>
         </div>
     </div>
 
-    <!-- UTILS: MODAIS -->
+    <!-- NOVO: DASHBOARD DESKTOP -->
+    <div id="view-dashboard" class="screen full-screen" style="background:#f4f7f9;">
+        <!-- Sidebar -->
+        <div class="dash-sidebar">
+            <div style="padding: 20px;">
+                <h2 style="color:white; margin:0;">NUTS<span style="color:#ff8a41">.admin</span></h2>
+            </div>
+            <button class="dash-nav-btn active" onclick="window.app.dashTab('overview')"><i class="fa-solid fa-chart-pie"></i> Visão Geral</button>
+            <button class="dash-nav-btn" onclick="window.app.dashTab('students')"><i class="fa-solid fa-users"></i> Alunos</button>
+            <button class="dash-nav-btn" onclick="window.app.closeDashboard()" style="margin-top:auto;"><i class="fa-solid fa-arrow-left"></i> Voltar pro App</button>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="dash-content">
+            <div class="dash-header">
+                <h2 id="dash-title">Painel de Controle</h2>
+                
+                <!-- ÁREA DE FILTROS -->
+                <div class="dash-filters-container" style="display:flex; gap:10px; align-items:center;">
+                    <select id="dash-filter-status" style="padding:10px; border-radius:10px; border:1px solid #ddd; margin-right:10px;" onchange="window.app.dashFilterStatus()">
+                        <option value="all">Todos os Status</option>
+                        <option value="active">Ativos</option>
+                        <option value="pending">Pendentes</option>
+                        <option value="risk">Risco / Inativos</option>
+                    </select>
+
+                    <span style="font-size:12px; color:#888;">Treinou de:</span>
+                    <input type="date" id="dash-date-start" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+                    <span style="font-size:12px; color:#888;">até</span>
+                    <input type="date" id="dash-date-end" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
+                    <button onclick="window.app.dashFilterByDate()" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:8px; cursor:pointer;">Filtrar</button>
+                    
+                    <div style="width:1px; height:20px; background:#ccc; margin:0 10px;"></div>
+                    
+                    <input id="dash-search" placeholder="Buscar aluno..." onkeyup="window.app.dashSearch()" style="padding:10px; border-radius:10px; border:1px solid #ddd; width:200px;">
+                </div>
+            </div>
+
+            <!-- TABELA DE ALUNOS -->
+            <div id="dash-tab-students" class="dash-view">
+                <div class="dash-metrics-row">
+                    <div class="dash-metric-card" style="border-left:4px solid var(--success);">
+                        <span>Total Alunos</span>
+                        <strong id="dash-total-students">0</strong>
+                    </div>
+                    <div class="dash-metric-card" style="border-left:4px solid var(--red);">
+                        <span>Em Risco (>10 dias)</span>
+                        <strong id="dash-risk-students">0</strong>
+                    </div>
+                    <div class="dash-metric-card" style="border-left:4px solid var(--primary);">
+                        <span>Treinaram Hoje</span>
+                        <strong id="dash-active-today">0</strong>
+                    </div>
+                </div>
+
+                <div class="dash-table-container">
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Último Treino</th>
+                                <th>Dias Parado</th>
+                                <th>Plano Atual</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-table-body">
+                            <!-- JS preenche -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- NOVA VIEW: DETALHES DO ALUNO -->
+            <div id="dash-tab-student-detail" class="dash-view hidden">
+                <!-- Conteúdo preenchido via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modais e Templates auxiliares -->
+    <div id="view-news-detail" class="screen detail-view">
+        <button onclick="window.app.closeNewsDetail()" style="position:absolute; top:40px; left:20px; z-index:10; background:white; border:none; width:45px; height:45px; border-radius:50%; box-shadow:0 5px 15px rgba(0,0,0,0.1); cursor:pointer; display:flex; justify-content:center; align-items:center;"><i class="fa-solid fa-arrow-left" style="color:var(--text-main);"></i></button>
+        <div id="news-det-img-container" style="width:100%; height:350px; background:grey; background-size:cover; background-position:center; background-color: #EEE; display: none;"></div>
+        <div style="background:var(--bg); border-radius:30px 30px 0 0; margin-top:-40px; padding:30px; position:relative; min-height:500px; padding-top: 50px;">
+            <div id="news-det-date" style="font-size: 12px; color: var(--text-sec); font-weight: 700; margin-bottom: 10px;">DATA</div>
+            <h1 id="news-det-title" style="margin:0 0 20px 0; color:var(--text-main); line-height: 1.3;">TITULO</h1>
+            <div id="news-det-body" style="color:var(--text-main); line-height:1.6; font-size: 16px; white-space: pre-line;">Corpo da notícia...</div>
+        </div>
+    </div>
+
+    <!-- TELAS DE SAÚDE -->
+    <div id="view-health-nutri" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
+        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
+            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; color: #009688;">Meu Nutri</h3>
+        </div>
+        <div style="padding: 20px; text-align: center;">
+            <div class="card" style="padding: 40px 20px;">
+                <i class="fa-solid fa-carrot" style="font-size: 50px; color: #e0f2f1; margin-bottom: 20px;"></i>
+                <h2 style="color: var(--text-main);">Em breve</h2>
+                <p style="color: var(--text-sec);">O módulo de nutrição está sendo preparado para você.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-health-physio" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
+        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
+            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; color: var(--primary);">Meu Fisio</h3>
+        </div>
+        <div style="padding: 20px;">
+            <div class="card" style="margin-bottom: 20px;">
+                <p style="font-size: 14px; color: var(--text-sec); margin-top: 0;">Aqui você acompanha o histórico de dores registradas após seus treinos e as orientações do seu fisioterapeuta.</p>
+            </div>
+            <h4 style="margin: 0 0 15px 0; color: var(--text-main);">Histórico de Relatos</h4>
+            <div id="health-pain-list" style="display: flex; flex-direction: column; gap: 10px;">
+                <p class="skeleton" style="height:50px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-health-mental" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
+        <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
+            <button onclick="window.app.closeHealthSubView()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; color: #9c27b0;">Mental Health</h3>
+        </div>
+        <div style="padding: 20px; text-align: center;">
+            <div class="card" style="padding: 40px 20px;">
+                <i class="fa-solid fa-brain" style="font-size: 50px; color: #f3e5f5; margin-bottom: 20px;"></i>
+                <h2 style="color: var(--text-main);">Espaço Mental</h2>
+                <p style="color: var(--text-sec);">Ferramentas de bem-estar em breve.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-create-post" class="screen full-screen">
+        <div style="padding: 15px 20px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-top:max(15px, env(safe-area-inset-top));">
+            <button onclick="window.app.closeCreatePost()" class="btn-text" style="padding:10px; font-weight:600;">Cancelar</button>
+            <strong style="font-size:18px; color:var(--text-main);">Criar Post</strong>
+            <button id="btn-submit-post" onclick="window.app.submitPost()" style="border:none; background:var(--primary); color:white; padding: 8px 20px; border-radius: 20px; font-weight:600; cursor:pointer;">Postar</button>
+        </div>
+        <textarea id="post-text" style="width:100%; height:200px; border:none; padding:25px; font-family:var(--font-main); font-size:18px; outline:none; resize:none; background:transparent; color:var(--text-main);" placeholder="No que você está pensando?"></textarea>
+        <div style="padding: 20px;">
+            <div id="post-img-preview" style="width:100%; height:200px; background:#fff; border-radius:20px; display:none; background-size:cover; background-position:center; margin-bottom:20px;"></div>
+            <button onclick="document.getElementById('post-file').click()" class="btn btn-outline" style="border-radius:30px; background:#fff;"><i class="fa-solid fa-camera"></i>&nbsp; Adicionar Foto</button>
+            <input type="file" id="post-file" hidden accept="image/*" onchange="window.app.previewPostImg(this)">
+        </div>
+    </div>
+
+    <!-- UTILS -->
     <div id="modal-video" class="modal-overlay">
         <div style="width: 100%; max-width: 800px; aspect-ratio: 16/9; background: #000; position: relative; border-radius:20px; overflow:hidden;">
             <button onclick="document.getElementById('modal-video').classList.remove('active'); document.getElementById('video-container').innerHTML='';" style="position: absolute; top: 15px; right: 15px; color: white; background: rgba(0,0,0,0.5); width:35px; height:35px; border-radius:50%; border: none; font-size: 18px; cursor:pointer; z-index:10;">✕</button>
@@ -228,6 +416,18 @@
         </div>
     </div>
 
+    <div id="modal-edit-date" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Alterar Data da Prova</h3>
+            <label class="label">Nova Data</label>
+            <input type="date" id="edit-race-date-input" class="input" style="margin-bottom:20px;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.saveRaceDate()" class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-edit-date').classList.remove('active')" class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-finish-workout" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main);">Como foi o treino?</h3>
@@ -238,6 +438,18 @@
             <div style="display:flex; gap:10px;">
                 <button onclick="window.app.confirmFinishWorkout()" class="btn btn-primary">Confirmar Conclusão</button>
                 <button onclick="document.getElementById('modal-finish-workout').classList.remove('active')" class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-add-weight" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Registrar Peso</h3>
+            <label class="label">Peso (kg)</label>
+            <input type="number" id="new-weight-input" class="input" step="0.1" placeholder="Ex: 75.5" style="margin-bottom:20px;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.saveNewWeight()" class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-add-weight').classList.remove('active')" class="btn btn-outline">Cancelar</button>
             </div>
         </div>
     </div>
@@ -255,32 +467,34 @@
         </div>
     </div>
 
-    <div id="modal-add-weight" class="modal-overlay"><div class="modal-card"><h3 style="color:var(--text-main);">Registrar Peso</h3><label class="label">Peso (kg)</label><input type="number" id="new-weight-input" class="input" step="0.1" placeholder="Ex: 75.5" style="margin-bottom:20px;"><div style="display:flex; gap:10px;"><button onclick="window.app.saveNewWeight()" class="btn btn-primary">Salvar</button><button onclick="document.getElementById('modal-add-weight').classList.remove('active')" class="btn btn-outline">Cancelar</button></div></div></div>
-    <div id="modal-confirm" class="modal-overlay"><div class="modal-card"><h3 id="confirm-title" style="color:var(--text-main);">Tem Certeza?</h3><p id="confirm-text" style="color:var(--text-sec); font-size:15px; line-height:1.5;"></p><div style="display:flex; gap:10px; margin-top:20px;"><button id="confirm-cancel" class="btn btn-outline">Não</button><button id="confirm-ok" class="btn btn-danger">Sim</button></div></div></div>
-    <div id="modal-prompt" class="modal-overlay"><div class="modal-card"><h3 id="prompt-title" style="color:var(--text-main);">Entrada</h3><input id="prompt-input" class="input"><div style="display:flex; gap:10px; margin-top:10px;"><button id="prompt-cancel" class="btn btn-outline">Cancelar</button><button id="prompt-confirm" class="btn btn-primary">OK</button></div></div></div>
-    <div id="modal-edit-date" class="modal-overlay"><div class="modal-card"><h3 style="color:var(--text-main);">Alterar Data</h3><input type="date" id="edit-race-date-input" class="input" style="margin-bottom:20px;"><div style="display:flex; gap:10px;"><button onclick="window.app.saveRaceDate()" class="btn btn-primary">Salvar</button><button onclick="document.getElementById('modal-edit-date').classList.remove('active')" class="btn btn-outline">Cancelar</button></div></div></div>
-    <div id="modal-add-race" class="modal-overlay"><div class="modal-card"><h3 style="color:var(--text-main);">Novo Objetivo</h3><input id="new-race-name" class="input" placeholder="Ex: Maratona do Rio" style="margin-bottom:10px;"><input id="new-race-dist" class="input" type="number" placeholder="Distância (KM)"><input id="new-race-est-time" class="input" placeholder="Tempo Est"><input type="date" id="new-race-date" class="input"><button onclick="window.app.addStudentRace()" class="btn btn-primary">Salvar</button><button onclick="document.getElementById('modal-add-race').classList.remove('active')" class="btn btn-text">Cancelar</button></div></div>
-
-    <!-- MODAL ADD RACE (ADMIN) -->
-    <div id="modal-adm-add-race" class="modal-overlay">
+    <div id="modal-prompt" class="modal-overlay">
         <div class="modal-card">
-            <h3 style="color:var(--text-main);">Adicionar Objetivo</h3>
-            <label class="label">Nome da Prova</label><input id="adm-race-name" class="input" placeholder="Ex: Maratona SP">
-            <div style="display:flex; gap:10px; margin:10px 0;"><div style="flex:1;"><label class="label">Data Prova</label><input type="date" id="adm-race-date" class="input"></div><div style="flex:1;"><label class="label">Início Treinos</label><input type="date" id="adm-start-date" class="input"></div></div>
-            <label class="label">Método</label><select id="adm-race-method" class="input" style="margin-bottom:15px;" onchange="window.app.admToggleRaceMode()"><option value="ia">Gerar com IA</option><option value="template">Usar Modelo</option></select>
-            <div id="adm-race-ia-fields"><input id="adm-race-dist" class="input" placeholder="Distância (KM)"><input id="adm-race-time" class="input" placeholder="Tempo Estimado"><input id="adm-race-video" class="input" placeholder="Link Vídeo Fortalecimento"></div>
-            <div id="adm-race-tpl-fields" class="hidden"><select id="adm-race-template-select" class="input"></select></div>
-            <div style="display:flex; gap:10px; margin-top:15px;"><button onclick="window.app.admConfirmAddRace()" class="btn btn-primary">Criar</button><button onclick="document.getElementById('modal-adm-add-race').classList.remove('active')" class="btn btn-outline">Cancelar</button></div>
+            <h3 id="prompt-title" style="color:var(--text-main);">Entrada</h3>
+            <input id="prompt-input" class="input">
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button id="prompt-cancel" class="btn btn-outline">Cancelar</button>
+                <button id="prompt-confirm" class="btn btn-primary">OK</button>
+            </div>
         </div>
     </div>
 
-    <!-- MODAL SINGLE WORKOUT -->
+    <div id="modal-confirm" class="modal-overlay">
+        <div class="modal-card">
+            <h3 id="confirm-title" style="color:var(--text-main);">Tem Certeza?</h3>
+            <p id="confirm-text" style="color:var(--text-sec); font-size:15px; line-height:1.5;"></p>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button id="confirm-cancel" class="btn btn-outline">Não</button>
+                <button id="confirm-ok" class="btn btn-danger">Sim</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modal-add-single-workout" class="modal-overlay">
         <div class="modal-card">
             <h3 id="modal-workout-title" style="color:var(--text-main);">Novo Treino</h3>
-            <input id="new-w-title" class="input" placeholder="Título" style="margin-bottom:15px;">
-            <input id="new-w-desc" class="input" placeholder="Descrição" style="margin-bottom:15px;">
-            <input id="new-w-video" class="input" placeholder="Link do Vídeo" style="margin-bottom:15px;">
+            <input id="new-w-title" class="input" placeholder="Título (ex: Trote Leve)" style="margin-bottom:15px;">
+            <input id="new-w-desc" class="input" placeholder="Descrição (ex: 30min Zona 2)" style="margin-bottom:15px;">
+            <input id="new-w-video" class="input" placeholder="Link do Vídeo (Opcional)" style="margin-bottom:15px;">
             <div style="display:flex; gap:10px;">
                 <button onclick="window.app.saveSingleWorkout()" class="btn btn-primary">Salvar</button>
                 <button onclick="document.getElementById('modal-add-single-workout').classList.remove('active')" class="btn btn-outline">Cancelar</button>
@@ -288,131 +502,164 @@
         </div>
     </div>
 
-    <div id="modal-select-template" class="modal-overlay"><div class="modal-card"><h3>Selecionar Modelo</h3><div id="template-select-list"></div><label>Início:</label><input type="date" id="template-start-date" class="input"><button onclick="window.app.confirmTemplateImport()" class="btn btn-primary">Importar</button><button onclick="document.getElementById('modal-select-template').classList.remove('active')" class="btn btn-outline">Cancelar</button></div></div>
-    <div id="modal-adm-workout-detail" class="modal-overlay"><div class="modal-card"><h3 id="adm-workout-det-title"></h3><p id="adm-workout-det-desc"></p><div id="adm-workout-det-video-container"></div><button onclick="document.getElementById('modal-adm-workout-detail').classList.remove('active')" class="btn btn-outline">Fechar</button></div></div>
-
-    <!-- ============================================= -->
-    <!-- DASHBOARD DESKTOP COMPLETO (TODAS AS ABAS)    -->
-    <!-- ============================================= -->
-    <div id="view-dashboard" class="screen full-screen" style="background:#f4f7f9;">
-        <!-- Sidebar -->
-        <div class="dash-sidebar">
-            <div style="padding: 20px;">
-                <h2 style="color:white; margin:0;">NUTS<span style="color:#ff8a41">.admin</span></h2>
+    <div id="modal-select-template" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Selecionar Modelo</h3>
+            <div id="template-select-list" style="max-height: 250px; overflow-y: auto; border:1px solid #eee; border-radius:15px; padding:10px; margin-bottom:20px;"></div>
+            <div style="margin-bottom: 20px;">
+                <label class="label">Data de Início:</label>
+                <input type="date" id="template-start-date" class="input">
             </div>
-            <button class="dash-nav-btn active" onclick="window.app.dashTab('overview')" id="btn-dash-overview"><i class="fa-solid fa-chart-pie"></i> Visão Geral</button>
-            <button class="dash-nav-btn" onclick="window.app.dashTab('students')" id="btn-dash-students"><i class="fa-solid fa-users"></i> Alunos</button>
-            <button class="dash-nav-btn" onclick="window.app.dashTab('physio')" id="btn-dash-physio"><i class="fa-solid fa-user-doctor"></i> Fisio</button>
-            <button class="dash-nav-btn" onclick="window.app.dashTab('templates')" id="btn-dash-templates"><i class="fa-solid fa-clipboard-list"></i> Modelos</button>
-            <button class="dash-nav-btn" onclick="window.app.dashTab('news')" id="btn-dash-news"><i class="fa-solid fa-newspaper"></i> Notícias</button>
-            <button class="dash-nav-btn" onclick="window.app.dashTab('quotes')" id="btn-dash-quotes"><i class="fa-solid fa-quote-left"></i> Frases</button>
-            <button class="dash-nav-btn" onclick="window.app.dashTab('videos')" id="btn-dash-videos"><i class="fa-solid fa-video"></i> Vídeos</button>
-            
-            <button class="dash-nav-btn" onclick="window.app.closeDashboard()" style="margin-top:auto;"><i class="fa-solid fa-arrow-left"></i> Voltar pro App</button>
-        </div>
-        
-        <!-- Main Content -->
-        <div class="dash-content">
-            <div class="dash-header">
-                <h2 id="dash-title">Painel de Controle</h2>
-                
-                <!-- Filtros (Só aparece na aba Students, controlado via JS) -->
-                <div id="dash-filters-wrapper" class="dash-filters-container hidden" style="display:flex; gap:10px; align-items:center;">
-                    <select id="dash-filter-status" style="padding:10px; border-radius:10px; border:1px solid #ddd; margin-right:10px;" onchange="window.app.dashFilterStatus()">
-                        <option value="all">Todos os Status</option>
-                        <option value="active">Ativos</option>
-                        <option value="pending">Pendentes</option>
-                        <option value="risk">Risco / Inativos</option>
-                    </select>
-                    <span style="font-size:12px; color:#888;">Treinou de:</span>
-                    <input type="date" id="dash-date-start" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
-                    <span style="font-size:12px; color:#888;">até</span>
-                    <input type="date" id="dash-date-end" style="padding:8px; border-radius:8px; border:1px solid #ddd;">
-                    <button onclick="window.app.dashFilterByDate()" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:8px; cursor:pointer;">Filtrar</button>
-                    <div style="width:1px; height:20px; background:#ccc; margin:0 10px;"></div>
-                    <input id="dash-search" placeholder="Buscar aluno..." onkeyup="window.app.dashSearch()" style="padding:10px; border-radius:10px; border:1px solid #ddd; width:200px;">
-                </div>
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.confirmTemplateImport()" class="btn btn-primary">Importar</button>
+                <button onclick="document.getElementById('modal-select-template').classList.remove('active')" class="btn btn-outline">Cancelar</button>
             </div>
-
-            <!-- VIEW: ALUNOS / OVERVIEW -->
-            <div id="dash-tab-students" class="dash-view">
-                <div class="dash-metrics-row">
-                    <div class="dash-metric-card" style="border-left:4px solid var(--success);"><span>Total Alunos</span><strong id="dash-total-students">0</strong></div>
-                    <div class="dash-metric-card" style="border-left:4px solid var(--red);"><span>Em Risco (>10 dias)</span><strong id="dash-risk-students">0</strong></div>
-                    <div class="dash-metric-card" style="border-left:4px solid var(--primary);"><span>Treinaram Hoje</span><strong id="dash-active-today">0</strong></div>
-                </div>
-                <div class="dash-table-container">
-                    <table class="dash-table">
-                        <thead><tr><th>Nome</th><th>Email</th><th>Status</th><th>Último Treino</th><th>Dias Parado</th><th>Plano Atual</th><th>Ações</th></tr></thead>
-                        <tbody id="dash-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- VIEW: DETALHES DO ALUNO -->
-            <div id="dash-tab-student-detail" class="dash-view hidden"></div>
-
-            <!-- VIEW: FISIO -->
-            <div id="dash-tab-physio" class="dash-view hidden">
-                <div class="dash-table-container">
-                    <table class="dash-table">
-                        <thead><tr><th>Data</th><th>Aluno</th><th>Treino</th><th>Nível Dor</th><th>Descrição</th><th>Status</th><th>Ação</th></tr></thead>
-                        <tbody id="dash-physio-body"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- VIEW: MODELOS (TEMPLATES) -->
-            <div id="dash-tab-templates" class="dash-view hidden">
-                <button onclick="window.app.admAddTemplateInline()" class="btn-primary" style="width:auto; margin-bottom:20px;">+ Novo Modelo</button>
-                <div id="dash-templates-list" style="display:flex; flex-direction:column; gap:15px;"></div>
-            </div>
-
-            <!-- VIEW: NOTÍCIAS -->
-            <div id="dash-tab-news" class="dash-view hidden">
-                <div class="dash-form-card">
-                    <h4>Publicar Novidade</h4>
-                    <div style="display:flex; gap:10px;">
-                        <input id="dash-news-title" class="dash-input" placeholder="Título">
-                        <button onclick="document.getElementById('dash-news-file').click()" class="btn-outline" style="width:auto;">Foto</button>
-                        <input type="file" id="dash-news-file" hidden onchange="window.app.previewDashNewsImg(this)">
-                    </div>
-                    <textarea id="dash-news-body" class="dash-input" style="height:80px; margin-top:10px;" placeholder="Texto..."></textarea>
-                    <img id="dash-news-preview" style="height:100px; display:none; margin:10px 0; border-radius:10px;">
-                    <button id="btn-dash-post-news" onclick="window.app.postNewsDash()" class="btn-primary" style="width:auto; margin-top:10px;">Publicar</button>
-                </div>
-                <div id="dash-news-grid" class="dash-grid-cards"></div>
-            </div>
-
-            <!-- VIEW: FRASES -->
-            <div id="dash-tab-quotes" class="dash-view hidden">
-                <div class="dash-form-card">
-                    <div style="display:flex; gap:10px;">
-                        <input id="dash-quote-text" class="dash-input" placeholder="Digite a frase motivacional...">
-                        <button onclick="window.app.postQuoteDash()" class="btn-primary" style="width:auto;">Adicionar</button>
-                    </div>
-                </div>
-                <div id="dash-quotes-list" style="display:flex; flex-direction:column; gap:10px;"></div>
-            </div>
-
-            <!-- VIEW: VÍDEOS -->
-            <div id="dash-tab-videos" class="dash-view hidden">
-                <div class="dash-form-card">
-                    <div style="display:flex; gap:10px;">
-                        <input id="dash-video-title" class="dash-input" placeholder="Título do Exercício">
-                        <input id="dash-video-link" class="dash-input" placeholder="Link (Youtube/etc)">
-                        <button onclick="window.app.admAddStrengthVideoDash()" class="btn-primary" style="width:auto;">Cadastrar</button>
-                    </div>
-                </div>
-                <div id="dash-videos-grid" class="dash-grid-cards"></div>
-            </div>
-
         </div>
     </div>
 
-    <!-- VIEW ADMIN LEGADO (ESCONDIDO/BACKUP) -->
-    <div id="view-admin" class="screen full-screen hidden"></div>
+    <div id="modal-strength-videos" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Vídeos de Apoio</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Selecione um exercício para assistir:</p>
+            <div id="strength-video-list" style="max-height: 300px; overflow-y: auto;">
+                <p>Carregando...</p>
+            </div>
+            <div style="margin-top: 15px; text-align: right;">
+                <button onclick="document.getElementById('modal-strength-videos').classList.remove('active')" class="btn btn-outline">Fechar</button>
+            </div>
+        </div>
+    </div>
 
-    <script type="module" src="app.js?v=8"></script>
+    <div id="modal-add-race" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Novo Objetivo</h3>
+            <label class="label">Nome da Prova</label>
+            <input id="new-race-name" class="input" placeholder="Ex: Maratona do Rio" style="margin-bottom:10px;">
+            <label class="label">Distância (KM)</label>
+            <input id="new-race-dist" class="input" type="number" placeholder="Ex: 21" style="margin-bottom:10px;">
+            <label class="label">Tempo Estimado / Ritmo</label>
+            <input id="new-race-est-time" class="input" type="text" placeholder="Ex: 2h 00m ou 5:30/km" style="margin-bottom:10px;">
+            <label class="label">Data da Prova</label>
+            <input type="date" id="new-race-date" class="input" style="margin-bottom:20px;">
+            <button onclick="window.app.addStudentRace()" class="btn btn-primary">Gerar Plano & Salvar</button>
+            <button onclick="document.getElementById('modal-add-race').classList.remove('active')" class="btn btn-text">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL ADMIN ADD RACE -->
+    <div id="modal-adm-add-race" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Adicionar Objetivo (Admin)</h3>
+            <label class="label">Nome da Prova</label>
+            <input id="adm-race-name" class="input" placeholder="Ex: Maratona SP" style="margin-bottom:10px;">
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="flex:1;"><label class="label">Data da Prova</label><input type="date" id="adm-race-date" class="input"></div>
+                <div style="flex:1;"><label class="label">Início Treinos</label><input type="date" id="adm-start-date" class="input"></div>
+            </div>
+            <label class="label">Método</label>
+            <select id="adm-race-method" class="input" style="margin-bottom:15px;" onchange="window.app.admToggleRaceMode()">
+                <option value="ia">Gerar com IA</option>
+                <option value="template">Usar Modelo</option>
+            </select>
+            <div id="adm-race-ia-fields">
+                <label class="label">Distância (KM)</label>
+                <input id="adm-race-dist" class="input" type="number" placeholder="Ex: 42" style="margin-bottom:10px;">
+                <label class="label">Tempo Est. / Ritmo</label>
+                <input id="adm-race-time" class="input" placeholder="Ex: 4h 00m" style="margin-bottom:10px;">
+                <label class="label">Vídeo de Fortalecimento (Link)</label>
+                <input id="adm-race-video" class="input" placeholder="Opcional" style="margin-bottom:10px;">
+            </div>
+            <div id="adm-race-tpl-fields" class="hidden">
+                <label class="label">Selecionar Modelo</label>
+                <select id="adm-race-template-select" class="input" style="margin-bottom:10px;"></select>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button onclick="window.app.admConfirmAddRace()" class="btn btn-primary">Criar</button>
+                <button onclick="document.getElementById('modal-adm-add-race').classList.remove('active')" class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-adm-workout-detail" class="modal-overlay">
+        <div class="modal-card">
+            <h3 id="adm-workout-det-title" style="color:var(--text-main);">Título do Treino</h3>
+            <p id="adm-workout-det-desc" style="color:var(--text-sec); white-space: pre-wrap; margin: 20px 0;">Descrição...</p>
+            <div id="adm-workout-det-video-container" style="display:none; margin-bottom: 20px;"></div>
+            <button onclick="document.getElementById('modal-adm-workout-detail').classList.remove('active')" class="btn btn-outline">Fechar</button>
+        </div>
+    </div>
+
+    <!-- PAINEL ADMIN MOBILE/LEGADO -->
+    <div id="view-admin" class="screen full-screen">
+        <div class="admin-header">
+            <div style="display: flex; justify-content: space-between;">
+                <span>ADMIN</span>
+                <button onclick="window.app.closeAdmin()" style="color: #333; background: none; border: none; cursor:pointer;">SAIR</button>
+            </div>
+            <button onclick="window.app.openDashboard()" style="width:100%; margin-top:10px; background:#2b4c7e; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer;">
+                <i class="fa-solid fa-desktop"></i> Abrir Painel Desktop
+            </button>
+        </div>
+        <div class="admin-tabs-wrapper">
+            <button onclick="window.app.admTab('users')" id="btn-adm-users" class="admin-tab-btn active">USUÁRIOS</button>
+            <button onclick="window.app.admTab('physio')" id="btn-adm-physio" class="admin-tab-btn" style="position: relative;">
+                FISIO <span id="adm-physio-badge" class="hidden" style="position: absolute; top: 10px; right: 5px; width: 8px; height: 8px; background: var(--red); border-radius: 50%;"></span>
+            </button>
+            <button onclick="window.app.admTab('templates')" id="btn-adm-templates" class="admin-tab-btn">MODELOS</button>
+            <button onclick="window.app.admTab('news')" id="btn-adm-news" class="admin-tab-btn">NOTÍCIAS</button>
+            <button onclick="window.app.admTab('quotes')" id="btn-adm-quotes" class="admin-tab-btn">FRASES</button>
+            <button onclick="window.app.admTab('videos')" id="btn-adm-videos" class="admin-tab-btn">VÍDEOS</button>
+        </div>
+        <div class="admin-content-scroll">
+            <div id="adm-content-users" style="padding: 20px;">
+                <h3>USUÁRIOS</h3>
+                <div id="adm-users-list"></div>
+            </div>
+            <div id="adm-content-physio" class="hidden" style="padding: 20px;">
+                <h3>RELATOS DE DOR</h3>
+                <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Toque em um card para responder.</p>
+                <div id="adm-physio-list"></div>
+            </div>
+            <div id="adm-content-templates" class="hidden" style="padding: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>MODELOS DE TREINO</h3>
+                    <button onclick="window.app.admAddTemplateInline()" class="btn-primary" style="padding:5px 15px; font-size:12px; border-radius:20px;">+ NOVO</button>
+                </div>
+                <div id="adm-templates-list"></div>
+            </div>
+            <div id="adm-content-news" class="hidden" style="padding: 20px;">
+                <h3>PUBLICAR NOVIDADE</h3>
+                <div class="card">
+                    <input id="news-title" class="input" placeholder="Título" style="margin-bottom:10px;">
+                    <textarea id="news-body" class="input" placeholder="Texto..." style="margin-bottom:10px; height:100px; resize:none;"></textarea>
+                    <button onclick="document.getElementById('news-file').click()" class="btn" style="border:1px solid #CCC; margin-bottom:10px;">FOTO</button>
+                    <input type="file" id="news-file" hidden onchange="window.app.previewNewsImg(this)">
+                    <img id="news-preview" style="width:100%; height:100px; object-fit:cover; display:none; margin-bottom:10px;">
+                    <button id="btn-post-news" onclick="window.app.postNews()" class="btn btn-primary">Publicar</button>
+                </div>
+                <div id="adm-news-history"></div>
+            </div>
+            <div id="adm-content-quotes" class="hidden" style="padding: 20px;">
+                <h3>FRASES MOTIVACIONAIS</h3>
+                <div class="card">
+                    <textarea id="adm-quote-text" class="input" placeholder="Digite a frase..." style="margin-bottom:10px; resize:none;"></textarea>
+                    <button onclick="window.app.postQuote()" class="btn btn-primary">Adicionar</button>
+                </div>
+                <div id="adm-quotes-list"></div>
+            </div>
+            <div id="adm-content-videos" class="hidden" style="padding: 20px;">
+                <h3>VÍDEOS DE FORTALECIMENTO</h3>
+                <div class="card">
+                    <input id="adm-video-title" class="input" placeholder="Título do Exercício" style="margin-bottom:10px;">
+                    <input id="adm-video-link" class="input" placeholder="Link do Vídeo (Youtube/etc)" style="margin-bottom:10px;">
+                    <button onclick="window.app.admAddStrengthVideo()" class="btn btn-primary">Cadastrar Vídeo</button>
+                </div>
+                <div id="adm-videos-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS MODULE LINKADO -->
+    <script type="module" src="app.js?v=7"></script>
 </body>
 </html>
