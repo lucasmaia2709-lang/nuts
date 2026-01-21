@@ -52,7 +52,8 @@ export const social = {
         );
     },
 
-    createPostCardHTML: (p) => {
+    // Funções auxiliares para gerar IDs únicos (evita conflito entre feed principal e detalhe)
+    createPostCardHTML: (p, suffix = '') => {
         const isLiked = p.likes && p.likes.includes(state.currentUser.email);
         const likeIcon = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
         const likeColor = isLiked ? 'var(--red)' : 'var(--text-main)';
@@ -69,8 +70,8 @@ export const social = {
 
         const safeAvatar = p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.userName)}&background=random`;
         
-        // APLICANDO ESTILOS SOLICITADOS NA IMAGEM E REMOVENDO O ONCLICK/CURSOR
-        const safeImg = p.img ? `<img src="${p.img}" style="width: 100%; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; margin-bottom: 10px; border-radius: 4px;">` : '';
+        // Estilo padrão para posts (Feed e Detalhe)
+        const safeImg = p.img ? `<img src="${p.img}" onclick="window.app.viewImage('${p.img}')" style="width: 100%; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; margin-bottom: 10px; cursor: pointer; border-radius: 4px;">` : '';
         
         const safeUserEmail = window.app.escape(p.email);
 
@@ -93,10 +94,10 @@ export const social = {
                 <span style="font-size:14px; font-weight:600; color:var(--text-main);">${comments.length}</span>
             </div>
             <div style="background:#f9f9f9; padding:10px 15px;">
-                <div id="comments-${p.id}" style="max-height:100px; overflow-y:auto; margin-bottom:10px;">${commentsHtml}</div>
+                <div id="comments-${p.id}${suffix}" style="max-height:100px; overflow-y:auto; margin-bottom:10px;">${commentsHtml}</div>
                 <div style="display:flex;">
-                    <input id="input-comment-${p.id}" type="text" placeholder="Comentar..." style="flex:1; border:1px solid #ddd; padding:8px 12px; border-radius:20px; outline:none; font-size:13px;">
-                    <button onclick="window.app.submitComment('${p.id}')" style="border:none; background:none; color:var(--primary); font-weight:600; margin-left:10px; cursor:pointer;">Enviar</button>
+                    <input id="input-comment-${p.id}${suffix}" type="text" placeholder="Comentar..." style="flex:1; border:1px solid #ddd; padding:8px 12px; border-radius:20px; outline:none; font-size:13px;">
+                    <button onclick="window.app.submitComment('${p.id}', '${suffix}')" style="border:none; background:none; color:var(--primary); font-weight:600; margin-left:10px; cursor:pointer;">Enviar</button>
                 </div>
             </div>
         </div>`;
@@ -188,9 +189,12 @@ export const social = {
         }
     },
 
-    submitComment: async (postId) => {
+    submitComment: async (postId, suffix = '') => {
         if (!state.currentUser) return;
-        const input = document.getElementById(`input-comment-${postId}`);
+        // Pega o input correto (seja do feed principal ou do detalhe)
+        const input = document.getElementById(`input-comment-${postId}${suffix}`);
+        if (!input) return;
+        
         const text = input.value.trim();
         if (!text) return;
         const newComment = {
@@ -237,11 +241,9 @@ export const social = {
         const modalInner = document.querySelector('#modal-video > div');
         
         if(modalInner) {
-            // Garante que o container interno ocupe a tela toda e permita alinhamento central
             modalInner.style.cssText = 'aspect-ratio: unset; max-width: 100vw; max-height: 100vh; width: 100%; height: 100%; background: transparent; box-shadow: none; border-radius: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 20px;';
         }
 
-        // CORREÇÃO: Adicionado display: flex; align-items: center; justify-content: center; ao container
         container.style.cssText = 'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;';
 
         container.innerHTML = `<img src="${url}" style="width: 100%; max-width: 600px; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">`;
@@ -303,7 +305,7 @@ export const social = {
         document.body.style.backgroundColor = '#9cafcc';
     },
 
-    // --- PERFIL PÚBLICO ---
+    // --- PERFIL PÚBLICO & NAVEGAÇÃO DE POSTS ---
     
     openPublicProfile: async (targetEmail) => {
         document.getElementById('pp-avatar').src = '';
@@ -361,7 +363,7 @@ export const social = {
                 return;
             }
 
-            // 2. Busca Galeria
+            // 2. Busca Galeria (SEM ORDER BY) para evitar erros de índice
             const q = query(
                 collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), 
                 where("email", "==", targetEmail)
@@ -372,13 +374,18 @@ export const social = {
             
             let posts = [];
             querySnapshot.forEach((doc) => {
-                posts.push(doc.data());
+                posts.push({ id: doc.id, ...doc.data() });
             });
 
+            // Ordena em memória
             posts.sort((a, b) => b.created - a.created);
+            
+            // Armazena posts no estado para navegação posterior
+            state.currentProfilePosts = posts;
             
             let photoCount = 0;
             posts.forEach((p) => {
+                // Renderiza todas as fotos, mas ao clicar abre o Post Detail
                 if (p.img) {
                     photoCount++;
                     const div = document.createElement('div');
@@ -390,7 +397,8 @@ export const social = {
                     div.style.cursor = 'pointer';
                     div.style.backgroundColor = '#eee';
                     div.style.borderRadius = '4px';
-                    div.onclick = () => window.app.viewImage(p.img);
+                    // MUDANÇA: Abre o post específico em vez da imagem pura
+                    div.onclick = () => window.app.openPostDetail(p.id);
                     grid.appendChild(div);
                 }
             });
@@ -409,5 +417,37 @@ export const social = {
         window.app.screen('view-app');
         window.app.nav('social');
         document.body.style.backgroundColor = '#9cafcc';
+    },
+
+    // --- NOVA FUNÇÃO: Feed Detalhado do Perfil ---
+    openPostDetail: (startPostId) => {
+        const container = document.getElementById('post-detail-feed');
+        container.innerHTML = ''; // Limpa anterior
+        
+        // Renderiza todos os posts desse usuário
+        state.currentProfilePosts.forEach(p => {
+            // Adiciona sufixo '_detail' para evitar IDs duplicados com o feed principal
+            const html = window.app.createPostCardHTML(p, '_detail');
+            const div = document.createElement('div');
+            // ID único para scroll
+            div.id = `detail-post-${p.id}`; 
+            div.innerHTML = html;
+            container.appendChild(div);
+        });
+
+        window.app.screen('view-post-detail');
+        document.body.style.backgroundColor = '#f4f7f9';
+
+        // Rola até o post clicado
+        setTimeout(() => {
+            const target = document.getElementById(`detail-post-${startPostId}`);
+            if (target) target.scrollIntoView({ behavior: 'auto', block: 'center' });
+        }, 100);
+    },
+
+    closePostDetail: () => {
+        // Volta para o perfil público
+        window.app.screen('view-public-profile');
+        document.body.style.backgroundColor = '#FFFFFF';
     }
 };
