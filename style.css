@@ -24,12 +24,22 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+/* FIX PWA: Adicionado html para garantir fundo infinito e evitar barras brancas */
+html {
+    background-color: #9cafcc;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
 /* Body mantém o azul base para evitar flashes brancos */
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
     background-color: #9cafcc; color: var(--text-main); 
     width: 100vw; height: 100dvh; overflow: hidden; 
     display: flex; flex-direction: column; 
+    overscroll-behavior: none; /* Reforço para iOS */
 }
 
 h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--text-main); }
@@ -47,9 +57,11 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .screen { 
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
     background-color: var(--bg); 
-    display: none; /* Removido !important para compatibilidade com JS */
+    display: none; 
     flex-direction: column; 
     z-index: 10; 
+    /* CORREÇÃO PWA: Padding removido daqui. Quem cuida da safe-area é o Header ou o conteúdo interno */
+    padding-top: 0; 
     padding-bottom: 0; 
 }
 
@@ -70,7 +82,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 
 /* Apenas a tela ativa é visível */
 .screen.active { 
-    display: flex; /* Removido !important */
+    display: flex; 
     animation: fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -78,7 +90,8 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .screen.full-screen { 
     z-index: 200; 
     background-color: var(--bg) !important; /* Garante fundo sólido */
-    padding-top: env(safe-area-inset-top); 
+    /* CORREÇÃO PWA: Padding removido para permitir que headers customizados encostem no topo */
+    padding-top: 0; 
     padding-bottom: 0; 
 }
 
@@ -90,6 +103,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 
 /* HEADER */
 .app-header { 
+    /* Padding-top com max garante respeito ao notch E um mínimo estético */
     padding: 10px 20px; padding-top: max(15px, env(safe-area-inset-top)); 
     display: flex; justify-content: space-between; align-items: center; 
     background: #9cafcc; position: sticky; top: 0; 
