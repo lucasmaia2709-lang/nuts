@@ -50,7 +50,6 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     display: none; /* Removido !important para compatibilidade com JS */
     flex-direction: column; 
     z-index: 10; 
-    padding-top: env(safe-area-inset-top); 
     padding-bottom: 0; 
 }
 
