@@ -204,10 +204,21 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .modal-card { width: 90%; max-width: 400px; background: #FFF; border-radius: 30px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; border: 1px solid rgba(0,0,0,0.05); }
 
 /* --- CORREÇÃO DO BOTÃO 'X' NO MODAL DE IMAGEM --- */
-/* Força o botão a respeitar a área segura do topo (notch) e direita */
+/* Aumentei a área de segurança para garantir que fique bem abaixo do notch */
+/* Usamos #modal-video para ser específico ao modal de imagem/video */
 #modal-video > div > button {
-    top: max(20px, env(safe-area-inset-top)) !important;
-    right: max(20px, env(safe-area-inset-right)) !important;
+    position: absolute !important;
+    top: max(40px, calc(env(safe-area-inset-top) + 20px)) !important;
+    right: 20px !important;
+    z-index: 2001 !important;
+    background: rgba(0,0,0,0.6) !important;
+    border-radius: 50% !important;
+    width: 40px !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 2px solid white !important;
 }
 
 /* ESTILOS DE ADMIN */
