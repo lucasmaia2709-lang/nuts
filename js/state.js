@@ -1,17 +1,16 @@
-// Este arquivo armazena as variáveis globais que são compartilhadas entre módulos
+/// Este arquivo armazena as variáveis globais que são compartilhadas entre módulos
 export const state = {
     currentUser: null,
     currentMonth: new Date(),
     selectedDayDate: null, 
     
     // CACHE OTIMIZADO (Solução 1)
-    // Antes era allUsersCache (pesado), agora é communityRacesCache (leve)
     communityRacesCache: [], 
 
-    // --- OTIMIZAÇÃO DE FEED (Novo) ---
-    feedLimit: 5, // Começa carregando apenas 5 posts (muito mais rápido)
-    isFeedLoading: false, // Evita disparos duplos do scroll
-    feedSentinelObserver: null, // Referência para o observador de scroll
+    // --- OTIMIZAÇÃO DE FEED ---
+    feedLimit: 5, 
+    isFeedLoading: false, 
+    feedSentinelObserver: null, 
 
     // Variáveis temporárias de upload
     tempPostFile: null,
@@ -32,6 +31,10 @@ export const state = {
     // Cache de Dados
     allNews: [],
     admUsersCache: {}, 
+    
+    // CACHE DO PERFIL PÚBLICO (NOVO)
+    // Armazena os posts do usuário visitado para criar o "Feed Detalhado"
+    currentProfilePosts: [],
 
     // Estado de Edição de Prova (Aluno)
     editingStudentRaceIndex: null,
@@ -45,9 +48,7 @@ export const state = {
     isLoadingUsers: false,
 
     // Estado Admin Fisio
-    currentPainId: null, 
-
-    // Listeners de Notificação (para limpar ao sair)
+    currentPainId: null,
     unsubscribeUserNotif: null,
     unsubscribeAdminNotif: null,
     unsubscribeFeed: null
