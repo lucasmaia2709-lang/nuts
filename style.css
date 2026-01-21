@@ -191,15 +191,24 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 
 /* MODAIS - REVERSÃO PARA LÓGICA PADRÃO DO APP */
 .modal-overlay { 
-    position: fixed; top:0; left:0; width:100%; height:100%; 
+    position: fixed; top:0; left:0; width:100%; height:100dvh; 
     background:rgba(255,255,255,0.6); 
     z-index: 2000; 
     display: none; 
     align-items: center; justify-content: center; 
     backdrop-filter: blur(10px); 
+    /* Garante que o modal ocupe a tela toda sem ser cortado */
+    padding: 0; 
 }
 .modal-overlay.active { display: flex; animation: fadeIn 0.2s; }
 .modal-card { width: 90%; max-width: 400px; background: #FFF; border-radius: 30px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; border: 1px solid rgba(0,0,0,0.05); }
+
+/* --- CORREÇÃO DO BOTÃO 'X' NO MODAL DE IMAGEM --- */
+/* Força o botão a respeitar a área segura do topo (notch) e direita */
+#modal-video > div > button {
+    top: max(20px, env(safe-area-inset-top)) !important;
+    right: max(20px, env(safe-area-inset-right)) !important;
+}
 
 /* ESTILOS DE ADMIN */
 .admin-sidebar { width: 260px; height: 100%; background: var(--adm-sidebar); border-right: 1px solid rgba(0,0,0,0.05); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; z-index: 100; }
