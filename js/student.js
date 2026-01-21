@@ -517,6 +517,17 @@ export const student = {
         document.getElementById('prof-city').value = state.currentUser.city || '';
         document.getElementById('prof-country').value = state.currentUser.country || '';
         document.getElementById('prof-height').value = state.currentUser.height || '';
+
+        // -- NOVO: Carregar Redes Sociais --
+        const sl = state.currentUser.socialLinks || {};
+        const insta = document.getElementById('prof-social-insta');
+        const face = document.getElementById('prof-social-face');
+        const tiktok = document.getElementById('prof-social-tiktok');
+        
+        if(insta) insta.value = sl.instagram || '';
+        if(face) face.value = sl.facebook || '';
+        if(tiktok) tiktok.value = sl.tiktok || '';
+        // ----------------------------------
         
         window.app.renderWeightUI();
         window.app.toggleEditProfile(false);
@@ -650,7 +661,17 @@ export const student = {
         const city = document.getElementById('prof-city').value;
         const country = document.getElementById('prof-country').value;
         const height = document.getElementById('prof-height').value;
-        let updates = { birthDate, city, country, height };
+        
+        // -- NOVO: Capturar Redes Sociais --
+        const instagram = document.getElementById('prof-social-insta').value.trim();
+        const facebook = document.getElementById('prof-social-face').value.trim();
+        const tiktok = document.getElementById('prof-social-tiktok').value.trim();
+
+        const socialLinks = { instagram, facebook, tiktok };
+        // ----------------------------------
+
+        let updates = { birthDate, city, country, height, socialLinks };
+        
         window.app.toast("Salvando perfil...");
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), updates);
@@ -877,16 +898,19 @@ export const student = {
     },
 
     openHealthNutri: () => {
+        document.body.style.backgroundColor = '#f4f7f9'; // Fix piscada azul
         window.app.screen('view-health-nutri');
         window.app.haptic();
     },
 
     openHealthMental: () => {
+        document.body.style.backgroundColor = '#f4f7f9'; // Fix piscada azul
         window.app.screen('view-health-mental');
         window.app.haptic();
     },
 
     openHealthPhysio: () => {
+        document.body.style.backgroundColor = '#f4f7f9'; // Fix piscada azul
         window.app.screen('view-health-physio');
         window.app.loadPhysioList();
         window.app.markPainAsReadByUser();
@@ -894,6 +918,7 @@ export const student = {
     },
 
     closeHealthSubView: () => {
+        document.body.style.backgroundColor = '#f4f7f9'; // Corrigido: Mantém fundo claro (igual ao app) para evitar flash azul
         window.app.screen('view-app');
         window.app.nav('health');
         window.app.haptic();
