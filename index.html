@@ -265,7 +265,7 @@
         </div>
     </div>
 
-    <!-- TELA DE PERFIL PÚBLICO (SOCIAL) - NOVO -->
+    <!-- TELA DE PERFIL PÚBLICO (SOCIAL) -->
     <div id="view-public-profile" class="screen full-screen" style="overflow-y: auto; -webkit-overflow-scrolling: touch; background: #fff;">
         <div style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); position: sticky; top: 0; background: #fff; z-index: 10; display:flex; align-items:center;">
              <button onclick="window.app.closePublicProfile()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
@@ -287,11 +287,22 @@
 
             <!-- Galeria -->
             <div style="border-top: 1px solid #eee; padding-top: 20px; text-align: left;">
-                <h4 style="margin: 0 0 15px 0; color: var(--text-main); font-size: 16px;"><i class="fa-solid fa-camera"></i> Galeria de Treinos</h4>
+                <h4 style="margin: 0 0 15px 0; color: var(--text-main); font-size: 16px;"><i></i> Publicações</h4>
                 <div id="pp-gallery-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;">
                     <!-- Fotos injetadas via JS -->
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- TELA DE DETALHE DE POSTS (NOVA) -->
+    <div id="view-post-detail" class="screen full-screen" style="overflow-y: auto; background: #f4f7f9;">
+        <div style="padding: 10px 20px; padding-top: max(15px, env(safe-area-inset-top)); display: flex; align-items: center; position: sticky; top: 0; background: #f4f7f9; z-index: 50; border-bottom: 1px solid #eee;">
+            <button onclick="window.app.closePostDetail()" style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; font-size: 16px;">Publicações</h3>
+        </div>
+        <div id="post-detail-feed" style="padding: 0 20px 40px 20px;">
+            <!-- Posts injetados via JS -->
         </div>
     </div>
 
