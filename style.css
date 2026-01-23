@@ -20,11 +20,14 @@
     --adm-text: #1a1a1a;
     --adm-active: #eef2ff;
     --adm-primary: #1b265b; 
+    
+    /* Variável de largura máxima no Desktop */
+    --app-max-width: 480px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-/* FIX PWA: Adicionado html para garantir fundo infinito e evitar barras brancas */
+/* FIX PWA */
 html {
     background-color: #9cafcc;
     height: 100%;
@@ -33,13 +36,28 @@ html {
     overscroll-behavior: none;
 }
 
-/* Body mantém o azul base para evitar flashes brancos */
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
     background-color: #9cafcc; color: var(--text-main); 
     width: 100vw; height: 100dvh; overflow: hidden; 
     display: flex; flex-direction: column; 
-    overscroll-behavior: none; /* Reforço para iOS */
+    overscroll-behavior: none; 
+    position: relative;
+}
+
+/* BACKGROUND DEKSTOP (Só aparece em telas grandes) */
+.desktop-bg {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #2b4c7e 0%, #1b265b 100%);
+    z-index: 0;
+}
+.desktop-bg::after {
+    content: '';
+    position: absolute;
+    top:0; left:0; width:100%; height:100%;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
 h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--text-main); }
@@ -53,61 +71,50 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .logo-nuts-small { font-family: 'Cormorant Garamond', serif; font-size: 40px; color: #dbffae; font-weight: 600; }
 
 
-/* --- SCREENS --- */
+/* --- SCREENS (Estrutura Base) --- */
 .screen { 
     position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
     background-color: var(--bg); 
     display: none; 
     flex-direction: column; 
     z-index: 10; 
-    /* CORREÇÃO PWA: Padding removido daqui. Quem cuida da safe-area é o Header ou o conteúdo interno */
-    padding-top: 0; 
-    padding-bottom: 0; 
+    padding-top: 0; padding-bottom: 0; 
+    overflow: hidden; 
 }
 
-/* Telas Específicas com Fundo Azul (Landing, Login, Register) */
+/* Telas Específicas */
 #view-landing, #view-login, #view-register {
     background-color: #9cafcc !important;
-    /* CORREÇÃO DE LOGIN: Centralização e Responsividade */
     align-items: center; 
-    justify-content: center; /* Centraliza verticalmente */
-    padding: 20px; /* Garante que o conteúdo não cole na borda */
+    justify-content: center;
+    padding: 20px;
 }
 
-/* Garante que o conteúdo dentro dessas telas de login não fique esticado demais em telas grandes */
-#view-landing > *, #view-login > *, #view-register > * {
-    width: 100%;
-    max-width: 400px;
-}
+#view-landing > *, #view-login > *, #view-register > * { width: 100%; max-width: 400px; }
 
-/* Apenas a tela ativa é visível */
 .screen.active { 
     display: flex; 
     animation: fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* Telas Full Screen (Perfis, Detalhes) devem ter fundo sólido */
 .screen.full-screen { 
     z-index: 200; 
-    background-color: var(--bg) !important; /* Garante fundo sólido */
-    /* CORREÇÃO PWA: Padding removido para permitir que headers customizados encostem no topo */
-    padding-top: 0; 
-    padding-bottom: 0; 
+    background-color: var(--bg) !important;
 }
 
 .screen.detail-view { z-index: 150; background: var(--bg); padding-bottom: 0; }
 
-/* ADMIN LAYOUT */
-.admin-layout { background-color: var(--adm-bg); padding-top: 0; }
+/* ADMIN LAYOUT (Sempre Full Screen) */
+.admin-layout { background-color: var(--adm-bg); }
 .screen.active.admin-layout { flex-direction: row !important; display: flex !important; }
 
 /* HEADER */
 .app-header { 
-    /* Padding-top com max garante respeito ao notch E um mínimo estético */
     padding: 10px 20px; padding-top: max(15px, env(safe-area-inset-top)); 
     display: flex; justify-content: space-between; align-items: center; 
     background: #9cafcc; position: sticky; top: 0; 
     z-index: 50;
+    flex-shrink: 0;
 }
 
 #main-scroll { 
@@ -120,27 +127,19 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ELEMENTOS DE UI */
 .input-group { margin-bottom: 20px; width: 100%; }
 .label { display: block; font-size: 11px; font-weight: 700; color: #262262; margin-bottom: 8px; letter-spacing: 1px; }
 .input { width: 100%; padding: 18px; border-radius: var(--radius); border: 1px solid var(--border); background-color: #FFF; font-size: 16px; color: var(--text-main); outline: none; font-family: var(--font-main); transition: 0.2s; -webkit-appearance: none; box-shadow: var(--shadow); }
 .input:focus { border-color: var(--primary); }
 
 .btn { 
-    width: 100%; /* Mudado de 90% para 100% (o padding do pai agora controla a borda) */
-    margin: 20px auto; /* Auto garante a centralização */
-    padding: 18px; 
-    border-radius: var(--radius); 
-    border: none; 
-    font-size: 16px; 
-    font-weight: 700; 
-    cursor: pointer; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-family: var(--font-main); 
-    transition: 0.2s; 
-    -webkit-user-select: none; 
-    letter-spacing: 0.5px; 
+    width: 100%; margin: 20px auto; padding: 18px; 
+    border-radius: var(--radius); border: none; 
+    font-size: 16px; font-weight: 700; cursor: pointer; 
+    display: flex; align-items: center; justify-content: center; 
+    font-family: var(--font-main); transition: 0.2s; 
+    -webkit-user-select: none; letter-spacing: 0.5px; 
 }
 .btn-primary { background-color: var(--primary); color: #FFF; box-shadow: 0 5px 15px rgba(255, 138, 65, 0.4); }
 .btn-primary:active { transform: scale(0.98); }
@@ -189,7 +188,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .nav-item[data-tab="home"]:active { transform: scale(0.95); }
 .nav-item[data-tab="home"] i { font-size: 26px; transform: none !important; color: #FFF !important; }
 
-/* MODAIS - REVERSÃO PARA LÓGICA PADRÃO DO APP */
+/* MODAIS */
 .modal-overlay { 
     position: fixed; top:0; left:0; width:100%; height:100dvh; 
     background:rgba(255,255,255,0.6); 
@@ -197,15 +196,11 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     display: none; 
     align-items: center; justify-content: center; 
     backdrop-filter: blur(10px); 
-    /* Garante que o modal ocupe a tela toda sem ser cortado */
     padding: 0; 
 }
 .modal-overlay.active { display: flex; animation: fadeIn 0.2s; }
 .modal-card { width: 90%; max-width: 400px; background: #FFF; border-radius: 30px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; border: 1px solid rgba(0,0,0,0.05); }
 
-/* --- CORREÇÃO DO BOTÃO 'X' NO MODAL DE IMAGEM --- */
-/* Aumentei a área de segurança para garantir que fique bem abaixo do notch */
-/* Usamos #modal-video para ser específico ao modal de imagem/video */
 #modal-video > div > button {
     position: absolute !important;
     top: max(40px, calc(env(safe-area-inset-top) + 20px)) !important;
@@ -221,7 +216,7 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     border: 2px solid white !important;
 }
 
-/* ESTILOS DE ADMIN */
+/* ADMIN PANEL STYLES (Mantidos e Refinados) */
 .admin-sidebar { width: 260px; height: 100%; background: var(--adm-sidebar); border-right: 1px solid rgba(0,0,0,0.05); display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; z-index: 100; }
 .admin-brand { padding: 10px 0 30px 10px; border-bottom: 1px solid rgba(0,0,0,0.03); margin-bottom: 10px; }
 .admin-nav { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }
@@ -230,33 +225,27 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .admin-nav-item.active { background: var(--adm-primary); color: #FFF; box-shadow: 0 4px 12px rgba(27, 38, 91, 0.2); }
 .admin-nav-item i { font-size: 16px; width: 20px; text-align: center; }
 .admin-logout-btn { margin-top: auto; background: #fff0f0; color: var(--red); border: none; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font-main); }
-
 .admin-main { flex: 1; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--adm-bg); }
 .admin-topbar { height: 70px; background: var(--adm-sidebar); border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; flex-shrink: 0; }
 .admin-content-scroll { flex: 1; overflow-y: auto; padding: 30px; }
 .admin-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-.admin-section-header h3 { margin: 0; color: var(--text-main); font-size: 18px; }
 .admin-grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 .admin-list-simple { display: flex; flex-direction: column; gap: 10px; }
 .admin-badge { background: var(--red); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 700; }
-
 .admin-filters-bar { display: flex; gap: 15px; margin-bottom: 20px; background: #FFF; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); align-items: center; flex-wrap: wrap; }
 .adm-search-input { flex: 2; min-width: 200px; padding: 10px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
 .adm-filter-select { flex: 1; min-width: 150px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; background: #FFF; outline: none; }
-
 .admin-table-container { background: #FFF; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); overflow-x: auto; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
 .admin-table th { text-align: left; padding: 15px; background: #f8f9fa; color: #666; font-weight: 700; border-bottom: 1px solid #eee; white-space: nowrap; }
 .admin-table td { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; color: var(--text-main); vertical-align: middle; }
 .admin-table tr:hover { background-color: #fcfcfc; cursor: pointer; }
 .table-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 10px; vertical-align: middle; }
-
 .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 .status-green { background-color: var(--success); }
 .status-red { background-color: var(--red); }
 .status-orange { background-color: var(--text-sec); }
 .status-grey { background-color: #ccc; }
-
 .user-detail-header { background: #FFF; border-radius: 12px; padding: 30px; display: flex; align-items: flex-start; gap: 30px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 .ud-avatar-large { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid #f4f7f9; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 .ud-info h2 { margin: 0 0 5px 0; font-size: 24px; color: var(--text-main); }
@@ -266,18 +255,14 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .ud-stat-box small { display: block; font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
 .ud-stat-box strong { font-size: 16px; color: var(--text-main); }
 .ud-sections-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
-
 .ud-section { background: #FFF; border-radius: 12px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); margin-bottom: 20px; }
 .ud-section h3 { margin-top: 0; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; color: var(--adm-primary); }
-
 .adm-workouts-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; }
 .adm-workouts-table th { text-align: left; padding: 8px; color: #888; border-bottom: 1px solid #eee; font-size: 10px; text-transform: uppercase; }
 .adm-workouts-table td { padding: 8px; border-bottom: 1px solid #f9f9f9; color: var(--text-main); vertical-align: middle; }
 .adm-workouts-table tr:hover { background-color: #f8f9fa; }
-
 .race-workouts-container { margin-top: 10px; background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 10px; display: none; animation: fadeIn 0.3s; }
 .race-workouts-container.active { display: block; }
-
 .pain-item { background: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #eee; border-left: 4px solid #ccc; position: relative; transition: transform 0.2s; margin-bottom: 12px; }
 .pain-item:active { transform: scale(0.98); }
 .pain-item.pending { border-left-color: var(--text-sec); background: #fffbf7; }
@@ -289,239 +274,163 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
 .status-badge { padding: 3px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
 .status-badge.pending { background: #ffe0b2; color: var(--text-sec); }
 .status-badge.answered { background: #c8e6c9; color: #2e7d32; }
-
 .adm-pain-card { background: #FFF; border: 1px solid #EEE; border-radius: 12px; padding: 15px; margin-bottom: 0; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; position: relative; overflow: hidden; height: 100%; }
 .adm-pain-card.unread::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: var(--red); }
 .adm-pain-info { flex: 1; }
 .adm-pain-user { font-weight: 700; font-size: 14px; color: var(--text-main); margin-bottom: 2px; }
 .adm-pain-date { font-size: 11px; color: #888; }
 .adm-pain-msg { font-size: 13px; color: #555; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%; }
+.adm-row-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-main); transition: background 0.2s; border: 1px solid #eee; }
+.adm-row-header:hover { background: #eef2ff; border-color: var(--adm-primary); }
+.adm-nested { display: none; padding: 15px; background: #fff; border: 1px solid #eee; border-top: none; border-radius: 0 0 8px 8px; margin-top: -5px; padding-top: 15px; }
+.adm-nested.open { display: block; animation: fadeIn 0.3s; }
+.adm-btn-small { background: var(--adm-primary); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600; }
 
 /* UTILITÁRIOS E EXTRAS */
 .hidden { display: none !important; }
 .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text-main); color: #FFF; padding: 12px 24px; border-radius: 50px; font-size: 13px; opacity: 0; transition: 0.3s; z-index: 5000; pointer-events: none; text-align: center; min-width: 200px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 .header-avatar { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #FFF; cursor: pointer; border: 2px solid var(--text-main); display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text-main); box-shadow: var(--shadow); }
-
-@media (max-width: 900px) {
-    .ud-sections-grid { grid-template-columns: 1fr; }
-    .user-detail-header { flex-direction: column; align-items: center; text-align: center; }
-}
-
-@media (max-width: 768px) {
-    /* Layout Admin Fixo para Mobile */
-    .admin-layout { 
-        flex-direction: column; 
-        padding-bottom: 0 !important; 
-    }
-
-    /* Transformar Sidebar em Bottom Navbar com scroll horizontal */
-    .admin-sidebar { 
-        width: 100%; 
-        height: auto; 
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        flex-direction: row; 
-        border-right: none; 
-        border-top: 1px solid #ddd; 
-        padding: 5px; 
-        background: #FFF; 
-        justify-content: space-between; 
-        align-items: center; 
-        z-index: 1000;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-        overflow-x: auto; /* Permite scroll se tiver muitos ícones */
-    }
-
-    /* Esconde logo e info no mobile */
-    .admin-brand, .admin-user-info { display: none; }
-
-    /* Ajuste da navegação horizontal */
-    .admin-nav { 
-        flex-direction: row; 
-        width: 100%;
-        gap: 5px; 
-        padding: 0; 
-        overflow-x: auto; /* Garante que pode scrollar */
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .admin-nav-item { 
-        flex-direction: column; 
-        padding: 8px 10px; 
-        font-size: 10px; 
-        min-width: 65px; 
-        justify-content: center; 
-        text-align: center; 
-        gap: 4px; 
-        border-radius: 8px;
-        white-space: nowrap; /* Impede quebra de texto */
-    }
-
-    .admin-nav-item i { 
-        font-size: 18px; 
-        margin-bottom: 0; 
-        width: auto;
-    }
-
-    /* Botão de sair vira apenas ícone */
-    .admin-logout-btn {
-        margin: 0;
-        padding: 10px;
-        width: auto;
-        font-size: 0; /* Esconde texto 'Voltar' */
-        background: transparent;
-    }
-    .admin-logout-btn i { font-size: 18px; margin: 0; }
-
-    /* Ajuste do conteúdo principal */
-    .admin-main {
-        width: 100%;
-        height: 100%;
-        overflow: hidden; 
-        padding-bottom: 60px; /* Espaço para o menu inferior */
-    }
-    
-    .admin-topbar { 
-        height: 55px; 
-        padding: 0 15px; 
-    }
-    
-    #admin-page-title { font-size: 16px; }
-
-    .admin-content-scroll { 
-        padding: 15px; 
-        padding-bottom: 80px; /* Extra padding no final do scroll */
-    }
-
-    /* Filtros empilhados para touch */
-    .admin-filters-bar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
-
-    .adm-search-input, .adm-filter-select {
-        width: 100%;
-        flex: none;
-    }
-
-    /* Tabela Responsiva com Scroll Horizontal */
-    .admin-table-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        border: 1px solid #eee;
-    }
-    
-    .admin-table {
-        min-width: 700px; /* Força scroll horizontal */
-    }
-
-    /* Ajustes Gerais */
-    .admin-grid-list { grid-template-columns: 1fr; } /* Cards em 1 coluna */
-    
-    .user-detail-header {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        padding: 20px;
-        gap: 15px;
-    }
-    
-    .ud-info { width: 100%; }
-    
-    /* FORÇAR o alinhamento central */
-    .ud-info > div:first-child {
-        display: flex !important; /* Force flex to override inline style if needed */
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        gap: 15px;
-    }
-
-    /* O wrapper do nome/email */
-    .ud-info > div:first-child > div:first-child {
-        width: 100%;
-        text-align: center !important;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    /* Alinhamento explícito para os textos */
-    #ud-name, #ud-email, #ud-location {
-        text-align: center !important;
-        width: 100%;
-        display: block;
-    }
-    
-    /* Correção específica para o local que tem ícone e precisa ficar alinhado */
-    #ud-location {
-        display: flex !important; 
-        justify-content: center !important;
-        align-items: center !important;
-        gap: 6px;
-    }
-    
-    /* Move ações para baixo do nome */
-    #ud-actions-top {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-    }
-}
-
 .progress-container { width: 100%; background-color: rgba(255,255,255,0.6); border-radius: 12px; height: 14px; margin-top: 20px; overflow: hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05); }
 .progress-bar { height: 100%; background: #FFF; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 12px; box-shadow: 0 0 10px rgba(255,255,255, 0.4); }
 .progress-bar.colored { background: var(--success); box-shadow: none; }
 .skeleton { background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%); border-radius: 5px; background-size: 200% 100%; animation: 1.5s shine linear infinite; }
 @keyframes shine { to { background-position-x: -200%; } }
 
-/* --- ESTILOS DO ACORDEÃO (Modelos de Treino) --- */
-.adm-row-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--text-main);
-    transition: background 0.2s;
-    border: 1px solid #eee;
+
+/* ==========================================================================
+   DESKTOP & TABLET TRANSFORMATION
+   Transforma o App em um "Celular Flutuante" em telas grandes
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+    /* 1. Ativa o fundo do Desktop */
+    .desktop-bg { display: block; }
+    
+    /* 2. Container Geral do App (Simula a carcaça do celular) */
+    /* APLICA-SE A TODAS AS TELAS QUE NÃO SÃO ADMIN */
+    .screen:not(.admin-layout) {
+        /* Tamanho Fixo de Celular */
+        width: var(--app-max-width);
+        height: 92vh; /* Margem em cima e embaixo */
+        
+        /* Centralização Absoluta - AGORA VIA MARGIN PARA NÃO CONFLITAR COM ANIMACAO */
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: auto;
+        transform: none; /* Garante que não haja translate conflitante */
+        
+        /* Estética */
+        border-radius: 40px;
+        box-shadow: 0 30px 80px rgba(0,0,0,0.4), 0 0 0 10px rgba(255,255,255,0.1); /* Sombra e Borda Falsa */
+        border: 4px solid #1b265b; /* Borda fina */
+        overflow: hidden; /* Corta o conteúdo nas bordas arredondadas */
+    }
+
+    /* 3. Correção da NavBar no Desktop */
+    /* Ela precisa ficar presa dentro do container, não na janela */
+    .nav-bar {
+        position: absolute; /* Mudado de fixed para absolute */
+        width: 100%;
+        left: 0;
+        bottom: 0;
+        border-radius: 0 0 35px 35px; /* Arredonda cantos inferiores */
+        /* Removemos sombras laterais para encaixar perfeito */
+    }
+
+    /* 4. Correção de Scroll */
+    /* Garante que o scroll aconteça dentro do container */
+    #main-scroll {
+        /* A altura já é calculada pelo flex, mas garantimos aqui */
+        height: 100%;
+    }
+
+    /* 5. Modais no Desktop */
+    /* O overlay continua full screen para bloquear cliques fora */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        z-index: 5000; /* Bem acima de tudo */
+        backdrop-filter: blur(15px); /* Desfoque mais forte no desktop */
+        background: rgba(0,0,0,0.4);
+    }
+    
+    /* 6. Admin Panel FULL SCREEN */
+    /* O Admin DEVE ocupar a tela toda */
+    .screen.admin-layout {
+        position: fixed;
+        width: 100vw;
+        height: 100vh;
+        top: 0; left: 0;
+        transform: none;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+    }
+
+    /* 7. Ajuste de Toasts */
+    .toast {
+        /* Toast centralizado no "celular" ou na tela? */
+        /* Vamos deixar centralizado na tela, fica mais visível */
+        bottom: 40px;
+    }
 }
 
-.adm-row-header:hover {
-    background: #eef2ff;
-    border-color: var(--adm-primary);
+/* TABLET (Intermediário) */
+@media (min-width: 768px) and (max-width: 1023px) {
+    /* No tablet fazemos algo similar, mas ocupando mais espaço */
+    :root { --app-max-width: 600px; }
+    .desktop-bg { display: block; }
+    
+    .screen:not(.admin-layout) {
+        width: var(--app-max-width);
+        height: 95vh;
+        
+        /* Centralização via Margin (Tablet) */
+        top: 0; left: 0; right: 0; bottom: 0;
+        margin: auto;
+        transform: none;
+
+        border-radius: 30px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        border: 2px solid #333;
+    }
+    
+    .nav-bar { position: absolute; border-radius: 0 0 25px 25px; }
 }
 
-.adm-nested {
-    display: none; /* Escondido por padrão */
-    padding: 15px;
-    background: #fff;
-    border: 1px solid #eee;
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    margin-top: -5px; /* Conexão visual com o cabeçalho */
-    padding-top: 15px;
+/* Ajustes Mobile Admin (Mantidos) */
+@media (max-width: 900px) {
+    .ud-sections-grid { grid-template-columns: 1fr; }
+    .user-detail-header { flex-direction: column; align-items: center; text-align: center; }
 }
 
-.adm-nested.open {
-    display: block; /* Mostra quando tem a classe .open */
-    animation: fadeIn 0.3s;
-}
-
-.adm-btn-small {
-    background: var(--adm-primary);
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 11px;
-    cursor: pointer;
-    font-weight: 600;
+@media (max-width: 768px) {
+    .admin-layout { flex-direction: column; padding-bottom: 0 !important; }
+    .admin-sidebar { width: 100%; height: auto; position: fixed; bottom: 0; left: 0; flex-direction: row; border-right: none; border-top: 1px solid #ddd; padding: 5px; background: #FFF; justify-content: space-between; align-items: center; z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); overflow-x: auto; }
+    .admin-brand, .admin-user-info { display: none; }
+    .admin-nav { flex-direction: row; width: 100%; gap: 5px; padding: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .admin-nav-item { flex-direction: column; padding: 8px 10px; font-size: 10px; min-width: 65px; justify-content: center; text-align: center; gap: 4px; border-radius: 8px; white-space: nowrap; }
+    .admin-nav-item i { font-size: 18px; margin-bottom: 0; width: auto; }
+    .admin-logout-btn { margin: 0; padding: 10px; width: auto; font-size: 0; background: transparent; }
+    .admin-logout-btn i { font-size: 18px; margin: 0; }
+    .admin-main { width: 100%; height: 100%; overflow: hidden; padding-bottom: 60px; }
+    .admin-topbar { height: 55px; padding: 0 15px; }
+    #admin-page-title { font-size: 16px; }
+    .admin-content-scroll { padding: 15px; padding-bottom: 80px; }
+    .admin-filters-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+    .adm-search-input, .adm-filter-select { width: 100%; flex: none; }
+    .admin-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid #eee; }
+    .admin-table { min-width: 700px; }
+    .admin-grid-list { grid-template-columns: 1fr; }
+    .user-detail-header { flex-direction: column; align-items: center; text-align: center; padding: 20px; gap: 15px; }
+    .ud-info { width: 100%; }
+    .ud-info > div:first-child { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; text-align: center !important; gap: 15px; }
+    .ud-info > div:first-child > div:first-child { width: 100%; text-align: center !important; display: flex; flex-direction: column; align-items: center; }
+    #ud-name, #ud-email, #ud-location { text-align: center !important; width: 100%; display: block; }
+    #ud-location { display: flex !important; justify-content: center !important; align-items: center !important; gap: 6px; }
+    #ud-actions-top { display: flex; justify-content: center; width: 100%; }
 }
