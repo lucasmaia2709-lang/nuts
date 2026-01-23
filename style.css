@@ -39,10 +39,17 @@ html {
 body { 
     margin: 0; padding: 0; font-family: var(--font-main); 
     background-color: #9cafcc; color: var(--text-main); 
-    width: 100vw; height: 100dvh; overflow: hidden; 
+    
+    /* CORREÇÃO DO SAFE AREA (MOBILE): */
+    /* Usar fixed + inset:0 garante que o body ocupe EXATAMENTE a tela visível,
+       ignorando bugs de cálculo de altura do navegador ao abrir o teclado ou app */
+    position: fixed; 
+    inset: 0;
+    width: 100%; 
+    height: 100%;
+    
     display: flex; flex-direction: column; 
     overscroll-behavior: none; 
-    position: relative;
 }
 
 /* BACKGROUND DEKSTOP (Só aparece em telas grandes) */
@@ -58,6 +65,27 @@ body {
     position: absolute;
     top:0; left:0; width:100%; height:100%;
     background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* TELA DE BLOQUEIO DE ROTAÇÃO (MOBILE LANDSCAPE) */
+#rotate-lock-screen {
+    display: none;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #9cafcc;
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    padding: 40px;
+}
+
+/* Ativa o bloqueio APENAS em celulares deitados */
+@media screen and (max-width: 1000px) and (orientation: landscape) {
+    #rotate-lock-screen { display: flex !important; }
+    /* Esconde o app atrás */
+    #view-app, .nav-bar, .screen { visibility: hidden; }
 }
 
 h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--text-main); }
@@ -310,6 +338,10 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     /* 2. Container Geral do App (Simula a carcaça do celular) */
     /* APLICA-SE A TODAS AS TELAS QUE NÃO SÃO ADMIN */
     .screen:not(.admin-layout) {
+        /* Reset para Desktop */
+        position: absolute;
+        inset: auto; /* Remove o inset:0 do mobile */
+        
         /* Tamanho Fixo de Celular */
         width: var(--app-max-width);
         height: 92vh; /* Margem em cima e embaixo */
@@ -386,6 +418,9 @@ h1, h2, h3, h4, strong { font-weight: 700; letter-spacing: -0.5px; color: var(--
     .desktop-bg { display: block; }
     
     .screen:not(.admin-layout) {
+        position: absolute;
+        inset: auto;
+        
         width: var(--app-max-width);
         height: 95vh;
         
