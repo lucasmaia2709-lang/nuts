@@ -9,12 +9,17 @@ import { admin } from "./js/admin.js";
 // --- FIX iOS VIEWPORT HEIGHT ---
 // Função crucial para corrigir o bug de altura do Safari/PWA e App Nativo
 const fixViewportHeight = () => {
-    // Pega a altura real da janela (inner height)
-    const vh = window.innerHeight;
-    // Define na variável CSS --app-height
-    document.documentElement.style.setProperty('--app-height', `${vh}px`);
-    // Força a altura no body também
-    document.body.style.height = `${vh}px`;
+    // Só aplica o fix de altura 100% se for mobile.
+    // No desktop, o CSS controla a altura do container (92vh)
+    if(window.innerWidth < 1024) {
+        const vh = window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        document.body.style.height = `${vh}px`;
+    } else {
+        // Remove restrição no desktop para permitir que o body seja container flex
+        document.body.style.height = '100vh';
+        document.documentElement.style.removeProperty('--app-height');
+    }
 };
 
 // Executa o fix no carregamento
