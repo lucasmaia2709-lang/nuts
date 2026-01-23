@@ -12,9 +12,13 @@ const fixViewportHeight = () => {
     // Só aplica o fix de altura 100% se for mobile.
     // No desktop, o CSS controla a altura do container (92vh)
     if(window.innerWidth < 1024) {
-        const vh = window.innerHeight;
+        // Tentamos usar visualViewport se disponível (mais preciso em teclados virtuais)
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         document.documentElement.style.setProperty('--app-height', `${vh}px`);
-        document.body.style.height = `${vh}px`;
+        
+        // Em vez de forçar height fixo no body (que pode bugar com safe-areas),
+        // deixamos o CSS (fixed inset:0) lidar com o layout principal,
+        // mas setamos a variável --app-height caso algum elemento precise.
     } else {
         // Remove restrição no desktop para permitir que o body seja container flex
         document.body.style.height = '100vh';
@@ -22,17 +26,16 @@ const fixViewportHeight = () => {
     }
 };
 
-// Executa o fix no carregamento
+// Executa o fix no carregamento E REPETIDAMENTE para garantir estabilidade no PWA
 window.addEventListener('load', () => {
   fixViewportHeight();
-  // RequestAnimationFrame garante que rode após o layout inicial
-  requestAnimationFrame(fixViewportHeight);
+  setTimeout(fixViewportHeight, 100);
+  setTimeout(fixViewportHeight, 500); // Garante correção após animação de abertura
 });
 
 // Executa o fix sempre que a tela girar ou redimensionar (teclado abrir, etc)
 window.addEventListener('resize', () => {
     fixViewportHeight();
-    // Um pequeno delay ajuda em dispositivos lentos
     setTimeout(fixViewportHeight, 100);
 });
 
