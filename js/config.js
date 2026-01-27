@@ -42,4 +42,4 @@ export const C_PAIN = 'expliq_pain_v9';
 export const C_PUBLIC_RACES = 'expliq_public_races_v9';
 
 // !!! SEGURANÇA ADMIN !!!
-export const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edgarzanin@outlook.com"];
+export const ADMIN_EMAILS = ["lucas_maia9@hotmail.com","giselleguima1@hotmail.com","edgarzanin@outlook.com","jordana.coimbraa@gmail.com"];
