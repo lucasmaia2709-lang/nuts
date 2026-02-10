@@ -284,6 +284,9 @@ export const admin = {
                         <button onclick="window.app.admShowGoalWorkouts('${u.id}', ${idx})" style="flex:1; border:1px solid #ddd; background:white; padding:8px; font-size:12px; cursor:pointer; border-radius:6px; font-weight:600; color:var(--text-main); box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                             <i class="fa-solid fa-list-check"></i> Ver / Editar Treinos
                         </button>
+                        <!-- BOTÃO DE BACKUP ADICIONADO AQUI -->
+                        <button onclick="window.app.admBackupRaceAsTemplate('${u.id}', ${idx})" style="color:var(--adm-primary); border:none; background:none; cursor:pointer; padding:0 5px;" title="Salvar como Modelo"><i class="fa-solid fa-cloud-arrow-up"></i></button>
+                        
                         <button onclick="window.app.admDelRaceInline('${u.id}', ${idx})" style="color:var(--red); border:none; background:none; cursor:pointer; padding:0 10px;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                     <div id="race-workouts-${idx}" class="race-workouts-container"></div>
@@ -296,6 +299,40 @@ export const admin = {
         document.getElementById('btn-ud-add-race').onclick = () => window.app.admAddRaceInline(u.id);
         document.getElementById('ud-admin-notes').value = u.adminNotes || '';
         window.app.loadUserPainHistoryMini(u.email);
+    },
+
+    // --- NOVA FUNÇÃO DE BACKUP DE TREINO ---
+    admBackupRaceAsTemplate: async (docId, rIdx) => {
+        if(!confirm("Salvar este objetivo como um Modelo de Treino?")) return;
+        
+        try {
+            const uSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId));
+            const u = uSnap.data();
+            const race = u.races[rIdx];
+            
+            if(!race || !race.workouts || race.workouts.length === 0) return window.app.toast("Este objetivo não tem treinos.");
+
+            const templateName = `${race.name} (Backup ${u.name})`;
+            
+            // Cria cópia limpa dos treinos para o modelo (remove datas e status de concluído)
+            const cleanWorkouts = race.workouts.map(w => ({
+                title: w.title,
+                desc: w.desc || "",
+                video: w.video || "",
+                type: w.type || 'run'
+            }));
+
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_TEMPLATES), {
+                name: templateName,
+                workouts: cleanWorkouts,
+                created: Date.now()
+            });
+
+            window.app.toast("Modelo salvo com sucesso!");
+        } catch(e) {
+            console.error(e);
+            window.app.toast("Erro ao salvar modelo.");
+        }
     },
 
     admShowGoalWorkouts: (userId, raceIdx) => {
@@ -760,7 +797,7 @@ export const admin = {
                 studentEmail: state.currentAdmUser,
                 created: Date.now()
             });
-            window.app.toast("Objetivo criado!");
+
             document.getElementById('modal-adm-add-race').classList.remove('active');
             window.app.openUserDetail(state.currentAdmUser); 
         } catch (error) {
