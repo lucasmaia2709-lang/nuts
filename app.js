@@ -5,13 +5,14 @@ import { authLogic } from "./js/auth.js";
 import { student } from "./js/student.js";
 import { social } from "./js/social.js";
 import { admin } from "./js/admin.js";
+import { notifications } from "./js/notifications.js";
 
 // --- FIX iOS VIEWPORT HEIGHT ---
 // Função crucial para corrigir o bug de altura do Safari/PWA e App Nativo
 const fixViewportHeight = () => {
     // Só aplica o fix de altura 100% se for mobile.
     // No desktop, o CSS controla a altura do container (92vh)
-    if(window.innerWidth < 1024) {
+    if (window.innerWidth < 1024) {
         const vh = window.innerHeight;
         document.documentElement.style.setProperty('--app-height', `${vh}px`);
         document.body.style.height = `${vh}px`;
@@ -24,9 +25,10 @@ const fixViewportHeight = () => {
 
 // Executa o fix no carregamento
 window.addEventListener('load', () => {
-  fixViewportHeight();
-  // RequestAnimationFrame garante que rode após o layout inicial
-  requestAnimationFrame(fixViewportHeight);
+    fixViewportHeight();
+    notifications.init(); // Inicializa notificações
+    // RequestAnimationFrame garante que rode após o layout inicial
+    requestAnimationFrame(fixViewportHeight);
 });
 
 // Executa o fix sempre que a tela girar ou redimensionar (teclado abrir, etc)
@@ -57,7 +59,10 @@ window.app = {
     ...social,
 
     // Admin
-    ...admin
+    ...admin,
+
+    // Notifications
+    notificationLogic: notifications
 };
 
 // Iniciar app quando o JS carregar
