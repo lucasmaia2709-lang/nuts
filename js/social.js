@@ -7,16 +7,16 @@ export const social = {
     loadFeed: () => {
         window.app.setupFeedLoader();
         const feed = document.getElementById('social-feed');
-        if(state.unsubscribeFeed) state.unsubscribeFeed();
+        if (state.unsubscribeFeed) state.unsubscribeFeed();
 
         // Tenta ordenar pelo banco. Se falhar (erro de índice), o callback de erro capturará.
         const q = query(
-            collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), 
-            orderBy('created', 'desc'), 
+            collection(db, 'artifacts', appId, 'public', 'data', C_POSTS),
+            orderBy('created', 'desc'),
             limit(state.feedLimit)
         );
 
-        state.unsubscribeFeed = onSnapshot(q, 
+        state.unsubscribeFeed = onSnapshot(q,
             (snapshot) => {
                 snapshot.docChanges().forEach((change) => {
                     const p = { id: change.doc.id, ...change.doc.data() };
@@ -28,7 +28,16 @@ export const social = {
                         const div = document.createElement('div');
                         div.id = postElId;
                         div.innerHTML = html;
-                        feed.appendChild(div);
+
+                        // Lógica de ordenação correta:
+                        // Se newIndex for 0 (novo post), insere no topo.
+                        // Se for maior, insere na posição correta ou no fim.
+                        const index = change.newIndex;
+                        if (index !== undefined && index < feed.children.length) {
+                            feed.insertBefore(div, feed.children[index]);
+                        } else {
+                            feed.appendChild(div);
+                        }
                     }
                     if (change.type === "modified") {
                         const el = document.getElementById(postElId);
@@ -57,7 +66,7 @@ export const social = {
         const isLiked = p.likes && p.likes.includes(state.currentUser.email);
         const likeIcon = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
         const likeColor = isLiked ? 'var(--red)' : 'var(--text-main)';
-        const deleteBtn = (p.email === state.currentUser.email || ADMIN_EMAILS.includes(state.currentUser.email)) 
+        const deleteBtn = (p.email === state.currentUser.email || ADMIN_EMAILS.includes(state.currentUser.email))
             ? `<button onclick="window.app.deletePost('${p.id}')" style="border:none; background:none; color:#999; margin-left:10px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : '';
 
         const comments = p.comments || [];
@@ -69,10 +78,10 @@ export const social = {
         });
 
         const safeAvatar = p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.userName)}&background=random`;
-        
+
         // Estilo padrão para posts (Feed e Detalhe)
-        const safeImg = p.img ? `<img src="${p.img}" onclick="window.app.viewImage('${p.img}')" style="width: 100%; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; margin-bottom: 10px; cursor: pointer; border-radius: 4px;">` : '';
-        
+        const safeImg = p.img ? `<img src="${p.img}" onerror="this.style.display='none'" onclick="window.app.viewImage('${p.img}')" style="width: 100%; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; margin-bottom: 10px; cursor: pointer; border-radius: 4px;">` : '';
+
         const safeUserEmail = window.app.escape(p.email);
 
         return `
@@ -88,8 +97,6 @@ export const social = {
             ${p.text ? `<div style="padding:0 15px 15px; font-size:15px; line-height:1.5; white-space:pre-wrap;">${p.text}</div>` : ''}
             ${safeImg}
             <div style="padding:10px 15px; display:flex; align-items:center; border-top:1px solid #f0f0f0;">
-                <button onclick="window.app.toggleLike('${p.id}')" style="border:none; background:none; color:${likeColor}; font-size:18px; cursor:pointer; margin-right:5px;"><i class="${likeIcon}"></i></button>
-                <span style="font-size:14px; font-weight:600; color:var(--text-main); margin-right:20px;">${p.likes ? p.likes.length : 0}</span>
                 <i class="fa-regular fa-comment" style="font-size:18px; color:var(--text-main); margin-right:5px;"></i>
                 <span style="font-size:14px; font-weight:600; color:var(--text-main);">${comments.length}</span>
             </div>
@@ -111,14 +118,14 @@ export const social = {
             loader.style.height = '20px';
             loader.style.margin = '20px 0';
             const feed = document.getElementById('social-feed');
-            if(feed) feed.after(loader);
+            if (feed) feed.after(loader);
         }
         if (state.feedSentinelObserver) state.feedSentinelObserver.disconnect();
         state.feedSentinelObserver = new IntersectionObserver((entries) => {
             if (entries[0].isIntersecting && !state.isFeedLoading) {
                 state.isFeedLoading = true;
-                state.feedLimit += 5; 
-                window.app.loadFeed(); 
+                state.feedLimit += 5;
+                window.app.loadFeed();
             }
         }, { rootMargin: '100px' });
         state.feedSentinelObserver.observe(loader);
@@ -152,13 +159,18 @@ export const social = {
             let imgUrl = null;
             if (state.tempPostFile) {
                 imgUrl = await window.app.uploadImage(state.tempPostFile, 'posts');
+                // GRANDE MUDANÇA: Se falhar o upload, CANCELA TUDO
+                if (!imgUrl) {
+                    window.app.toast("Erro ao enviar imagem. Post cancelado.");
+                    return;
+                }
             }
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), {
                 email: state.currentUser.email,
                 userName: state.currentUser.name,
                 avatar: state.currentUser.avatar,
                 text: text,
-                img: imgUrl,
+                img: imgUrl, // Agora garantido que é null ou URL válida
                 created: Date.now(),
                 likes: [],
                 comments: []
@@ -175,6 +187,7 @@ export const social = {
     },
 
     toggleLike: async (postId) => {
+        return; // Desabilitado temporariamente
         if (!state.currentUser) return;
         const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
         const postSnap = await getDoc(postRef);
@@ -194,7 +207,7 @@ export const social = {
         // Pega o input correto (seja do feed principal ou do detalhe)
         const input = document.getElementById(`input-comment-${postId}${suffix}`);
         if (!input) return;
-        
+
         const text = input.value.trim();
         if (!text) return;
         const newComment = {
@@ -212,10 +225,10 @@ export const social = {
         if (!confirm("Apagar comentário?")) return;
         const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
         const postSnap = await getDoc(postRef);
-        if(postSnap.exists()) {
+        if (postSnap.exists()) {
             const comments = postSnap.data().comments || [];
             const commentToDelete = comments.find(c => c.timestamp === timestamp);
-            if(commentToDelete) {
+            if (commentToDelete) {
                 await updateDoc(postRef, { comments: arrayRemove(commentToDelete) });
                 window.app.toast("Comentário removido.");
             }
@@ -226,45 +239,45 @@ export const social = {
         if (confirm("Tem certeza que deseja apagar este post?")) {
             const postRef = doc(db, 'artifacts', appId, 'public', 'data', C_POSTS, postId);
             const p = await getDoc(postRef);
-            if(p.exists() && p.data().img) {
+            if (p.exists() && p.data().img) {
                 await window.app.deleteFile(p.data().img);
             }
             await deleteDoc(postRef);
             window.app.toast("Post apagado.");
             const el = document.getElementById(`post-${postId}`);
-            if(el) el.remove();
+            if (el) el.remove();
         }
     },
 
     viewImage: (url) => {
         const container = document.getElementById('video-container');
         const modalInner = document.querySelector('#modal-video > div');
-        
-        if(modalInner) {
+
+        if (modalInner) {
             modalInner.style.cssText = 'aspect-ratio: unset; max-width: 100vw; max-height: 100vh; width: 100%; height: 100%; background: transparent; box-shadow: none; border-radius: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 20px;';
         }
 
         container.style.cssText = 'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;';
 
         container.innerHTML = `<img src="${url}" style="width: 100%; max-width: 600px; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">`;
-        
+
         document.getElementById('modal-video').classList.add('active');
     },
 
     loadNews: () => {
         const container = document.getElementById('news-feed');
         container.innerHTML = '<div class="skeleton" style="height:100px; margin-bottom:10px;"></div>';
-        
+
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
             container.innerHTML = '';
-            if(snap.empty) {
+            if (snap.empty) {
                 container.innerHTML = '<p style="text-align:center; color:#999; margin-top:20px;">Nenhuma novidade ainda.</p>';
                 return;
             }
             const news = [];
-            snap.forEach(d => news.push({id: d.id, ...d.data()}));
-            news.sort((a,b) => b.created - a.created);
-            
+            snap.forEach(d => news.push({ id: d.id, ...d.data() }));
+            news.sort((a, b) => b.created - a.created);
+
             news.forEach(n => {
                 const imgHtml = n.img ? `<div style="height:180px; background:url('${n.img}') center/cover;"></div>` : '';
                 container.innerHTML += `
@@ -274,16 +287,16 @@ export const social = {
                         <div class="news-date">${new Date(n.created).toLocaleDateString()}</div>
                         <h3 class="news-title">${window.app.formatText(n.title)}</h3>
                     </div>
-                </div>`; 
+                </div>`;
             });
         });
     },
 
     openNewsDetail: (id) => {
         const n = state.allNews.find(item => item.id === id);
-        if(!n) return;
+        if (!n) return;
         const imgContainer = document.getElementById('news-det-img-container');
-        if(n.img) {
+        if (n.img) {
             imgContainer.style.backgroundImage = `url('${n.img}')`;
             imgContainer.style.display = 'block';
         } else {
@@ -306,7 +319,7 @@ export const social = {
     },
 
     // --- PERFIL PÚBLICO & NAVEGAÇÃO DE POSTS ---
-    
+
     openPublicProfile: async (targetEmail) => {
         document.getElementById('pp-avatar').src = '';
         document.getElementById('pp-name').innerText = 'Carregando...';
@@ -314,36 +327,36 @@ export const social = {
         document.getElementById('pp-social-links').innerHTML = '';
         const grid = document.getElementById('pp-gallery-grid');
         grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:#999; margin-top:20px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando fotos...</p>';
-        
+
         window.app.screen('view-public-profile');
         document.body.style.backgroundColor = '#FFFFFF';
 
         try {
             // 1. Busca Usuário
-            if(!targetEmail) throw new Error("Email inválido");
-            
+            if (!targetEmail) throw new Error("Email inválido");
+
             const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, targetEmail);
             const userSnap = await getDoc(userDocRef);
-            
+
             if (userSnap.exists()) {
                 const u = userSnap.data();
-                
+
                 const avatarUrl = u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`;
                 document.getElementById('pp-avatar').src = avatarUrl;
                 document.getElementById('pp-name').innerText = u.name;
-                
+
                 const city = u.city || 'Cidade não informada';
                 const country = u.country ? `, ${u.country}` : '';
                 document.getElementById('pp-location').innerHTML = `<i class="fa-solid fa-location-dot"></i> <span>${city}${country}</span>`;
 
                 const sl = u.socialLinks || {};
                 let socialHtml = '';
-                
+
                 const makeLink = (url, icon, color) => {
                     let finalUrl = url;
                     if (!url.startsWith('http')) {
-                        if (icon.includes('instagram')) finalUrl = `https://instagram.com/${url.replace('@','')}`;
-                        else if (icon.includes('tiktok')) finalUrl = `https://tiktok.com/@${url.replace('@','')}`;
+                        if (icon.includes('instagram')) finalUrl = `https://instagram.com/${url.replace('@', '')}`;
+                        else if (icon.includes('tiktok')) finalUrl = `https://tiktok.com/@${url.replace('@', '')}`;
                         else finalUrl = `https://${url}`;
                     }
                     return `<a href="${finalUrl}" target="_blank" style="font-size: 24px; color: ${color}; text-decoration: none;"><i class="${icon}"></i></a>`;
@@ -359,19 +372,19 @@ export const social = {
                 document.getElementById('pp-social-links').innerHTML = socialHtml;
             } else {
                 document.getElementById('pp-name').innerText = 'Usuário não encontrado';
-                grid.innerHTML = ''; 
+                grid.innerHTML = '';
                 return;
             }
 
             // 2. Busca Galeria (SEM ORDER BY) para evitar erros de índice
             const q = query(
-                collection(db, 'artifacts', appId, 'public', 'data', C_POSTS), 
+                collection(db, 'artifacts', appId, 'public', 'data', C_POSTS),
                 where("email", "==", targetEmail)
             );
-            
+
             const querySnapshot = await getDocs(q);
             grid.innerHTML = '';
-            
+
             let posts = [];
             querySnapshot.forEach((doc) => {
                 posts.push({ id: doc.id, ...doc.data() });
@@ -379,10 +392,10 @@ export const social = {
 
             // Ordena em memória
             posts.sort((a, b) => b.created - a.created);
-            
+
             // Armazena posts no estado para navegação posterior
             state.currentProfilePosts = posts;
-            
+
             let photoCount = 0;
             posts.forEach((p) => {
                 // Renderiza todas as fotos, mas ao clicar abre o Post Detail
@@ -390,7 +403,7 @@ export const social = {
                     photoCount++;
                     const div = document.createElement('div');
                     // Formato Retrato (4:5) para o grid
-                    div.style.aspectRatio = '4/5'; 
+                    div.style.aspectRatio = '4/5';
                     div.style.backgroundImage = `url('${p.img}')`;
                     div.style.backgroundSize = 'cover';
                     div.style.backgroundPosition = 'center';
@@ -423,14 +436,14 @@ export const social = {
     openPostDetail: (startPostId) => {
         const container = document.getElementById('post-detail-feed');
         container.innerHTML = ''; // Limpa anterior
-        
+
         // Renderiza todos os posts desse usuário
         state.currentProfilePosts.forEach(p => {
             // Adiciona sufixo '_detail' para evitar IDs duplicados com o feed principal
             const html = window.app.createPostCardHTML(p, '_detail');
             const div = document.createElement('div');
             // ID único para scroll
-            div.id = `detail-post-${p.id}`; 
+            div.id = `detail-post-${p.id}`;
             div.innerHTML = html;
             container.appendChild(div);
         });

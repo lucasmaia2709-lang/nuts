@@ -1,16 +1,17 @@
 /// Este arquivo armazena as variáveis globais que são compartilhadas entre módulos
 export const state = {
     currentUser: null,
+    hasShownSplash: false,
     currentMonth: new Date(),
-    selectedDayDate: null, 
-    
+    selectedDayDate: null,
+
     // CACHE OTIMIZADO (Solução 1)
-    communityRacesCache: [], 
+    communityRacesCache: [],
 
     // --- OTIMIZAÇÃO DE FEED ---
-    feedLimit: 5, 
-    isFeedLoading: false, 
-    feedSentinelObserver: null, 
+    feedLimit: 5,
+    isFeedLoading: false,
+    feedSentinelObserver: null,
 
     // Variáveis temporárias de upload
     tempPostFile: null,
@@ -27,11 +28,11 @@ export const state = {
     isEditingTemplate: false,
     currentTemplateId: null,
     editingWorkoutIndex: null,
-    
+
     // Cache de Dados
     allNews: [],
-    admUsersCache: {}, 
-    
+    admUsersCache: {},
+
     // CACHE DO PERFIL PÚBLICO (NOVO)
     // Armazena os posts do usuário visitado para criar o "Feed Detalhado"
     currentProfilePosts: [],
@@ -40,8 +41,8 @@ export const state = {
     editingStudentRaceIndex: null,
 
     // Estado de Conclusão de Treino (Aluno)
-    pendingFinishWorkoutTitle: null, 
-    selectedPainLevel: null, 
+    pendingFinishWorkoutTitle: null,
+    selectedPainLevel: null,
 
     // Variáveis de Paginação Admin
     lastVisibleUser: null,
@@ -51,5 +52,6 @@ export const state = {
     currentPainId: null,
     unsubscribeUserNotif: null,
     unsubscribeAdminNotif: null,
-    unsubscribeFeed: null
+    unsubscribeFeed: null,
+    painHistoryCache: []
 };

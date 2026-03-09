@@ -1,69 +1,69 @@
-import { doc, updateDoc, addDoc, getDocs, query, collection, onSnapshot, where, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { db, appId, C_USERS, C_PAIN, C_QUOTES, C_NEWS, C_VIDEOS, C_PUBLIC_RACES, CF_WORKER_URL, ADMIN_EMAILS } from "./config.js";
+import { doc, updateDoc, addDoc, getDocs, query, collection, onSnapshot, where, writeBatch, deleteDoc, orderBy, limit, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { db, appId, C_USERS, C_PAIN, C_QUOTES, C_NEWS, C_VIDEOS, C_PHYSIO_TIPS, C_PUBLIC_RACES, C_CHALLENGES, C_LIVES, C_CONFIG, C_MENTAL, CF_WORKER_URL, ADMIN_EMAILS } from "./config.js";
 import { state } from "./state.js";
 
 // Lógica de Calendário, Treinos, Perfil e Saúde
 export const student = {
     // --- CALENDÁRIO ---
     changeMonth: (dir) => { state.currentMonth.setMonth(state.currentMonth.getMonth() + dir); window.app.renderCalendar(); },
-    
+
     renderCalendar: () => {
-        if(!state.currentUser) return;
+        if (!state.currentUser) return;
         const y = state.currentMonth.getFullYear();
         const m = state.currentMonth.getMonth();
         const firstDay = new Date(y, m, 1).getDay();
-        const daysInMonth = new Date(y, m+1, 0).getDate();
-        
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+
         document.getElementById('cal-month-title').innerText = state.currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(' de ', ' ');
-        
+
         const grid = document.getElementById('calendar-days');
         grid.innerHTML = '';
-        
-        const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
+
+        const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length - 1] : null;
         const workouts = activeRace ? activeRace.workouts : [];
         const notes = state.currentUser.notes || {};
         const todayStr = new Date().toLocaleDateString('en-CA'); // Formato YYYY-MM-DD local
 
-        for(let i=0; i<firstDay; i++) { grid.innerHTML += `<div class="cal-cell other-month"></div>`; }
-        for(let d=1; d<=daysInMonth; d++) {
+        for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="cal-cell other-month"></div>`; }
+        for (let d = 1; d <= daysInMonth; d++) {
             // Constrói data manualmente para evitar timezone bugs
-            const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const isToday = dateStr === todayStr;
             let cellClass = 'cal-cell';
-            if(isToday) cellClass += ' today';
+            if (isToday) cellClass += ' today';
             let dotHtml = '';
-            
+
             const scheduled = workouts.find(w => w.scheduledDate === dateStr);
             const doneHere = workouts.find(w => w.done && w.completedAt === dateStr);
             const isMyRaceDay = activeRace && activeRace.date === dateStr;
-            
+
             // Inicializa modalData sempre com array vazio para garantir estrutura
-            let modalData = { studentRaces: [] }; 
+            let modalData = { studentRaces: [] };
 
             if (scheduled) {
-                 cellClass += ' has-workout'; 
-                 dotHtml += `<div class="cal-dot"></div>`;
-                 // Ao mesclar dados do treino, mantemos studentRaces limpo para popular abaixo
-                 modalData = { ...scheduled, studentRaces: [] }; 
-                 if(scheduled.done) cellClass += ' done';
+                cellClass += ' has-workout';
+                dotHtml += `<div class="cal-dot"></div>`;
+                // Ao mesclar dados do treino, mantemos studentRaces limpo para popular abaixo
+                modalData = { ...scheduled, studentRaces: [] };
+                if (scheduled.done) cellClass += ' done';
             }
-            else if(doneHere) { 
-                 cellClass += ' done'; 
-                 dotHtml += `<div class="cal-dot"></div>`; 
-                 modalData = { ...doneHere, studentRaces: [] }; 
-            } 
-            
-            if(notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
+            else if (doneHere) {
+                cellClass += ' done';
+                dotHtml += `<div class="cal-dot"></div>`;
+                modalData = { ...doneHere, studentRaces: [] };
+            }
+
+            if (notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
 
             // Marcador da MINHA PROVA
             if (isMyRaceDay) {
                 dotHtml += `<div class="cal-race-marker" style="background:var(--text-sec); border:1px solid #fff; z-index:2;" title="Minha Prova"></div>`;
                 // Adiciona a própria prova ao modalData para aparecer no detalhe do dia
-                modalData.studentRaces.push({ 
-                    studentName: "Você", 
+                modalData.studentRaces.push({
+                    studentName: "Você",
                     raceName: activeRace.name,
                     studentEmail: state.currentUser.email,
-                    date: dateStr 
+                    date: dateStr
                 });
             }
 
@@ -74,13 +74,13 @@ export const student = {
                     if (race.studentEmail !== state.currentUser.email && race.date === dateStr) {
                         hasStudentRace = true;
                         // Garante fallback para evitar "undefined"
-                        const sName = race.studentName || 'Aluno'; 
+                        const sName = race.studentName || 'Aluno';
                         const rName = race.raceName || 'Prova';
-                        modalData.studentRaces.push({ 
-                            studentName: sName, 
+                        modalData.studentRaces.push({
+                            studentName: sName,
                             raceName: rName,
                             studentEmail: race.studentEmail,
-                            date: dateStr 
+                            date: dateStr
                         });
                     }
                 });
@@ -88,9 +88,22 @@ export const student = {
                     dotHtml += `<div class="cal-race-marker" title="Prova de aluno"></div>`;
                 }
             }
-            
+
+            // MARCADOR DE DESAFIO CONCLUÍDO
+            const completedChallenges = state.currentUser.completedChallenges || [];
+            if (completedChallenges.includes(dateStr)) {
+                // Adds a small green dot to the bottom-left of the cell.
+                dotHtml += `<div class="cal-challenge-dot" style="position:absolute; bottom:4px; left:4px; width:6px; height:6px; border-radius:50%; background-color:#2ecc71;" title="Desafio Concluído"></div>`;
+                // Add relative positioning to the cell itself if not already there via CSS
+                if (!cellClass.includes('relative-cell')) {
+                    cellClass += ' relative-cell';
+                }
+            }
+
             const el = document.createElement('div');
             el.className = cellClass;
+            // The style ensures relative positioning works for the absolute dot
+            el.style.position = 'relative';
             el.innerText = d;
             el.innerHTML += dotHtml;
             // Deep copy seguro para o onclick
@@ -106,28 +119,28 @@ export const student = {
         document.getElementById('day-det-title').innerText = `Dia ${dateStr.split('-').reverse().join('/')}`;
         let content = '';
 
-        if(workoutData && (workoutData.title || workoutData.desc)) {
+        if (workoutData && (workoutData.title || workoutData.desc)) {
             content += `<div style="background:#f5f5f5; padding:15px; border-radius:10px; margin-bottom:15px;">
                 <h4 style="margin:0 0 5px 0;">${workoutData.title}</h4>
                 <p style="margin:0; font-size:13px; color:#666;">${workoutData.desc}</p>
                 ${workoutData.done ? '<strong style="color:var(--success); font-size:12px;">Concluído</strong>' : '<span style="color:var(--orange); font-size:12px;">Pendente</span>'}
             </div>`;
-        } else if (!workoutData || (!workoutData.title && (!workoutData.studentRaces || workoutData.studentRaces.length === 0))) { 
-            content += `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`; 
+        } else if (!workoutData || (!workoutData.title && (!workoutData.studentRaces || workoutData.studentRaces.length === 0))) {
+            content += `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`;
         }
 
         // Renderiza lista de provas de outros alunos E a própria prova se houver
         if (workoutData && workoutData.studentRaces && workoutData.studentRaces.length > 0) {
             content += `<div style="margin-top:15px;">
                 <h4 style="font-size:14px; color:var(--primary); margin-bottom:10px;">Provas Marcadas:</h4>`;
-            
+
             const isAdmin = ADMIN_EMAILS.includes(state.currentUser.email);
 
             workoutData.studentRaces.forEach(race => {
                 const isMe = race.studentName === 'Você';
                 const bg = isMe ? '#fff3e0' : '#fff'; // Destaque laranja claro se for minha prova
                 const border = isMe ? 'var(--primary)' : '#eee';
-                
+
                 // Verifica se pode apagar (Dono ou Admin)
                 // Se for Admin, pode apagar QUALQUER prova (inclusive as órfãs)
                 let deleteBtn = '';
@@ -158,14 +171,14 @@ export const student = {
     deletePublicRaceEntry: async (studentEmail, raceName, raceDate, force = false) => {
         let msg = "Remover esta prova do calendário público?";
         if (force) msg += " (Como Admin, você pode apagar registros órfãos).";
-        
-        if(!confirm(msg)) return;
+
+        if (!confirm(msg)) return;
         window.app.toast("Apagando...");
         try {
             // Se o studentEmail estiver undefined ou vazio (provas muito antigas ou bugadas), tentamos buscar só por nome e data se for Admin
             let q;
             if ((!studentEmail || studentEmail === 'undefined') && force) {
-                 q = query(
+                q = query(
                     collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
                     where("raceName", "==", raceName),
                     where("date", "==", raceDate)
@@ -186,15 +199,15 @@ export const student = {
                 batch.delete(d.ref);
                 count++;
             });
-            
+
             if (count > 0) {
                 await batch.commit();
                 window.app.toast(count > 1 ? `${count} cópias removidas!` : "Prova removida!");
             } else {
                 // Tenta uma busca mais genérica se for admin e falhou a busca exata
                 if (force && count === 0) {
-                     window.app.toast("Tentando busca forçada...");
-                     const qForce = query(
+                    window.app.toast("Tentando busca forçada...");
+                    const qForce = query(
                         collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
                         where("date", "==", raceDate),
                         where("raceName", "==", raceName)
@@ -216,10 +229,10 @@ export const student = {
                     window.app.toast("Nenhum registro encontrado.");
                 }
             }
-            
+
             document.getElementById('modal-day-detail').classList.remove('active');
             // O listener onSnapshot no auth.js atualizará o calendário automaticamente
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             window.app.toast("Erro ao apagar.");
         }
@@ -228,7 +241,7 @@ export const student = {
     saveDayNote: async () => {
         const note = document.getElementById('day-det-note').value;
         const notes = state.currentUser.notes || {};
-        if(note.trim() === '') delete notes[state.selectedDayDate];
+        if (note.trim() === '') delete notes[state.selectedDayDate];
         else notes[state.selectedDayDate] = note;
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { notes });
         window.app.toast("Nota salva!");
@@ -236,14 +249,14 @@ export const student = {
         window.app.renderCalendar();
     },
 
-    renderHome: () => { window.app.renderCalendar(); window.app.renderTodayCard(); window.app.loadQuote(); window.app.loadHomeNews(); },
+    renderHome: () => { window.app.renderCalendar(); window.app.renderTodayCard(); window.app.renderChallengeCard(); window.app.renderLiveCard(); window.app.loadQuote(); window.app.loadHomeNews(); },
 
     loadHomeNews: () => {
         const container = document.getElementById('home-latest-news');
         container.innerHTML = `<h3 style="font-size: 16px; margin: 0 0 15px;">Última Novidade</h3><div class="skeleton" style="width:100%; height:200px; border-radius:12px;"></div>`;
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
-            const news = []; snap.forEach(d => news.push({id: d.id, ...d.data()})); news.sort((a,b) => b.created - a.created);
-            if(news.length > 0) {
+            const news = []; snap.forEach(d => news.push({ id: d.id, ...d.data() })); news.sort((a, b) => b.created - a.created);
+            if (news.length > 0) {
                 const n = news[0];
                 container.innerHTML = `
                     <h3 style="font-size: 16px; margin: 0 0 15px;">Última Novidade</h3>
@@ -254,17 +267,17 @@ export const student = {
                             <h3 class="news-title" style="font-size:16px;">${window.app.formatText(n.title)}</h3>
                         </div>
                     </div>`;
-                    state.allNews = news; 
+                state.allNews = news;
             } else { container.innerHTML = ''; }
         });
     },
 
     loadQuote: () => {
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s)=>{
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s) => {
             const quotes = [];
-            s.forEach(d=>quotes.push(d.data().text));
-            if(quotes.length>0) {
-                document.getElementById('daily-quote').innerText = quotes[Math.floor(Math.random()*quotes.length)];
+            s.forEach(d => quotes.push(d.data().text));
+            if (quotes.length > 0) {
+                document.getElementById('daily-quote').innerText = quotes[Math.floor(Math.random() * quotes.length)];
             } else {
                 document.getElementById('daily-quote').innerText = "O único treino ruim é aquele que não aconteceu.";
             }
@@ -277,7 +290,7 @@ export const student = {
         document.getElementById('modal-strength-videos').classList.add('active');
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
             list.innerHTML = '';
-            if(snap.empty) {
+            if (snap.empty) {
                 list.innerHTML = '<p style="text-align:center; color:#666;">Nenhum vídeo cadastrado.</p>';
                 return;
             }
@@ -295,42 +308,42 @@ export const student = {
 
     // --- TREINOS ---
     renderTodayCard: (specificWorkout = null) => {
-        const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
-        if(!activeRace || activeRace.workouts.length === 0) { 
+        const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length - 1] : null;
+        if (!activeRace || activeRace.workouts.length === 0) {
             document.getElementById('today-workout-card').innerHTML = `
                 <div class="card" style="text-align:center; padding:40px 20px;">
                     <i class="fa-regular fa-clock" style="font-size:40px; color:var(--primary); margin-bottom:20px; opacity:0.8;"></i>
                     <p style="font-size:16px; color:var(--text-sec); font-weight:500;">Aguardando seu professor lançar os treinos...</p>
-                </div>`; 
-            return; 
+                </div>`;
+            return;
         }
-        
+
         const todayStr = new Date().toISOString().split('T')[0];
         let target = specificWorkout;
         if (!target) target = activeRace.workouts.find(w => w.scheduledDate === todayStr);
         if (!target) target = activeRace.workouts.find(w => w.done && w.completedAt === todayStr);
         if (!target) target = activeRace.workouts.find(w => !w.done && (!w.scheduledDate || w.scheduledDate >= todayStr));
-        
+
         const container = document.getElementById('today-workout-card');
         const totalW = activeRace.workouts.length;
         const doneW = activeRace.workouts.filter(w => w.done).length;
         const pct = totalW > 0 ? (doneW / totalW) * 100 : 0;
-        
+
         let raceDateDisplay = 'Sem Data';
-        if(activeRace.date) {
+        if (activeRace.date) {
             const p = activeRace.date.split('-');
-            if(p.length === 3) raceDateDisplay = `${p[2]}/${p[1]}/${p[0]}`;
+            if (p.length === 3) raceDateDisplay = `${p[2]}/${p[1]}/${p[0]}`;
         }
 
         let cardHtml = '';
-        
+
         const safeTitle = target ? window.app.escape(target.title) : '';
         const safeVideo = target && target.video ? window.app.escape(target.video) : '';
-        
-        if(target) {
+
+        if (target) {
             const doneBtn = target.done ? `<button class="btn" style="background:rgba(255,255,255,0.2); color:#FFF; flex:1; cursor:default;" disabled><i class="fa-solid fa-check"></i> Feito</button>` : `<button onclick="window.app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); flex:1;">Concluir</button>`;
             let dateDisplay = "";
-            if(target.scheduledDate) {
+            if (target.scheduledDate) {
                 const dParts = target.scheduledDate.split('-');
                 dateDisplay = `<span style="font-size:12px; color:rgba(255,255,255,0.7); margin-left:8px; font-weight:400;">${dParts[2]}/${dParts[1]}</span>`;
             }
@@ -360,7 +373,7 @@ export const student = {
         } else {
             cardHtml = `<div class="card" style="text-align:center; color:var(--success); padding:40px;"><i class="fa-solid fa-circle-check" style="font-size:48px; margin-bottom:15px;"></i><br><strong style="font-size:18px;">Todos os treinos concluídos!</strong></div>`;
         }
-        
+
         container.innerHTML = cardHtml + `
             <div style="margin-top:20px; font-size:12px; display:flex; justify-content:space-between; color:var(--text-sec); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;"><span>${doneW}/${totalW} Treinos</span> <span>Meta: ${raceDateDisplay}</span></div>
             <div class="progress-container"><div class="progress-bar" style="width:${pct}%"></div></div>
@@ -369,60 +382,109 @@ export const student = {
 
     finishWorkout: (wTitle) => {
         state.pendingFinishWorkoutTitle = wTitle;
-        state.selectedPainLevel = null;
-        document.getElementById('workout-feedback-text').value = '';
-        window.app.renderPainScale();
+        state.postPainSelected = {}; // { "Pés": 5, "Lombar": 2 }
+        document.getElementById('post-pain-notes').value = '';
+
+        // Reset view
+        document.getElementById('pain-question-view').classList.remove('hidden');
+        document.getElementById('pain-detail-view').classList.add('hidden');
+
+        // Uncheck all
+        document.querySelectorAll('#post-pain-loc input').forEach(i => i.checked = false);
+        document.getElementById('post-pain-intensities').innerHTML = '';
+
         document.getElementById('modal-finish-workout').classList.add('active');
     },
 
-    renderPainScale: () => {
-        const container = document.getElementById('pain-scale-container');
-        container.innerHTML = '';
-        for(let i=0; i<=7; i++) {
-            const isActive = i === state.selectedPainLevel;
-            const bg = isActive ? 'var(--primary)' : '#FFF';
-            const color = isActive ? '#FFF' : 'var(--text-main)';
-            const border = isActive ? 'none' : '1px solid #CCC';
-            
-            container.innerHTML += `
-            <button onclick="window.app.setPainLevel(${i})" style="width:35px; height:35px; border-radius:50%; border:${border}; background:${bg}; color:${color}; font-weight:600; cursor:pointer;">${i}</button>
-            `;
+    setPainAnswer: (hasPain) => {
+        if (!hasPain) {
+            // Se não teve dor, já pula para o mental health
+            window.app.confirmFinishWorkoutWithoutPain();
+        } else {
+            // Se teve, mostra detalhes
+            document.getElementById('pain-question-view').classList.add('hidden');
+            document.getElementById('pain-detail-view').classList.remove('hidden');
         }
     },
 
-    setPainLevel: (lvl) => {
-        state.selectedPainLevel = lvl;
-        window.app.renderPainScale();
+    togglePostPainLocation: (loc) => {
+        if (state.postPainSelected[loc] !== undefined) {
+            delete state.postPainSelected[loc];
+        } else {
+            state.postPainSelected[loc] = 3; // default intensity
+        }
+        window.app.renderPostPainIntensities();
+    },
+
+    renderPostPainIntensities: () => {
+        const container = document.getElementById('post-pain-intensities');
+        container.innerHTML = '';
+
+        Object.keys(state.postPainSelected).forEach(loc => {
+            const currentVal = state.postPainSelected[loc];
+            let buttonsHtml = '';
+            for (let i = 1; i <= 10; i++) {
+                const activeStyle = i <= currentVal ? 'background:var(--adm-primary); color:white;' : 'background:#eee; color:#666;';
+                buttonsHtml += `<button onclick="window.app.setPostPainIntensity('${loc}', ${i})" style="border:none; border-radius:4px; padding:5px; font-size:10px; cursor:pointer; flex:1; ${activeStyle}">${i}</button>`;
+            }
+
+            container.innerHTML += `
+                <div style="background:#f9f9f9; padding:10px; border-radius:10px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                        <strong style="font-size:13px;">${loc}</strong>
+                        <span style="font-size:12px; color:var(--adm-primary); font-weight:700;">Nível ${currentVal}</span>
+                    </div>
+                    <div style="display:flex; gap:3px;">${buttonsHtml}</div>
+                </div>
+            `;
+        });
+    },
+
+    setPostPainIntensity: (loc, val) => {
+        state.postPainSelected[loc] = val;
+        window.app.renderPostPainIntensities();
+    },
+
+    confirmFinishWorkoutWithoutPain: async () => {
+        await window.app.completeWorkoutProcess(null);
     },
 
     confirmFinishWorkout: async () => {
         if (!state.pendingFinishWorkoutTitle) return;
-        const notes = document.getElementById('workout-feedback-text').value.trim();
-        
-        if (state.selectedPainLevel === null) return window.app.toast("Selecione o nível de dor.");
-        if (state.selectedPainLevel > 0 && !notes) return window.app.toast("Descreva o que doeu (Obrigatório para dor > 0).");
+        const locations = Object.keys(state.postPainSelected);
+        if (locations.length === 0) return window.app.toast("Selecione onde sentiu dor ou clique em 'Não' no início.");
 
+        const notes = document.getElementById('post-pain-notes').value.trim();
+        const painData = {
+            locations: state.postPainSelected,
+            notes: notes
+        };
+
+        await window.app.completeWorkoutProcess(painData);
+    },
+
+    completeWorkoutProcess: async (painData) => {
         const races = [...state.currentUser.races];
         const rIdx = races.length - 1;
         const wIdx = races[rIdx].workouts.findIndex(w => w.title === state.pendingFinishWorkoutTitle && !w.done);
-        
-        if(wIdx > -1) {
+
+        if (wIdx > -1) {
             races[rIdx].workouts[wIdx].done = true;
             races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
-            
-            if (state.selectedPainLevel > 0 || notes) {
+
+            if (painData) {
                 races[rIdx].workouts[wIdx].feedback = {
-                    painLevel: state.selectedPainLevel,
-                    notes: notes,
+                    ...painData,
                     timestamp: Date.now()
                 };
 
+                // Envia para a fisio
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), {
                     email: state.currentUser.email,
                     userName: state.currentUser.name,
                     workoutTitle: state.pendingFinishWorkoutTitle,
-                    painLevel: state.selectedPainLevel,
-                    notes: notes,
+                    painDetails: painData.locations,
+                    notes: painData.notes,
                     timestamp: Date.now(),
                     readByAdmin: false,
                     responded: false,
@@ -432,27 +494,59 @@ export const student = {
             }
 
             state.currentUser.races = races;
-            
-            window.app.renderHome(); 
-            if(!document.getElementById('tab-workouts').classList.contains('hidden')) {
+            window.app.renderHome();
+            if (!document.getElementById('tab-workouts').classList.contains('hidden')) {
                 window.app.renderWorkoutsList();
             }
-            
+
             window.app.toast("Treino concluído! Bom descanso.");
             window.app.haptic();
+
+            // Fecha pain modal e não abre mais mental health automaticamente
             document.getElementById('modal-finish-workout').classList.remove('active');
-            
+
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
         }
     },
 
+    saveMentalHealth: async (mood, emoji) => {
+        try {
+            const mentalData = {
+                mood,
+                emoji,
+                timestamp: Date.now(),
+                email: state.currentUser.email,
+                userName: state.currentUser.name
+            };
+
+            // 1. Atualiza no perfil do aluno (o card que o usuário pediu)
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), {
+                lastMental: mentalData
+            });
+
+            // 2. Registra na nova coleção do log (igual fisio)
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_MENTAL), mentalData);
+
+            window.app.toast("Fico feliz em saber! Continue assim.");
+            document.getElementById('modal-mental-health').classList.remove('active');
+
+            // Atualiza o estado local e re-renderiza para mostrar no card se necessário
+            state.currentUser.lastMental = mentalData;
+            window.app.renderHome();
+
+        } catch (err) {
+            console.error(err);
+            window.app.toast("Erro ao salvar feedback mental.");
+        }
+    },
+
     renderWorkoutsList: () => {
-        const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length-1] : null;
+        const activeRace = (state.currentUser.races && state.currentUser.races.length) ? state.currentUser.races[state.currentUser.races.length - 1] : null;
         const list = document.getElementById('workouts-list');
-        
-        if(!activeRace) { list.innerHTML = ''; return; }
+
+        if (!activeRace) { list.innerHTML = ''; return; }
         const pendingCount = activeRace.workouts.filter(w => !w.done).length;
-        
+
         list.innerHTML = `
         <div class="card" style="background:var(--primary); color:#FFF; margin-bottom:25px; padding:25px; display:flex; align-items:center; justify-content:space-between;">
             <div>
@@ -463,19 +557,21 @@ export const student = {
         </div>`;
 
         const todayStr = new Date().toISOString().split('T')[0];
+        let firstPendingIdx = -1;
 
         activeRace.workouts.forEach((w, i) => {
+            if (!w.done && firstPendingIdx === -1) firstPendingIdx = i;
             const color = w.done ? 'var(--success)' : '#E0E0E0';
             const icon = w.done ? 'fa-circle-check' : 'fa-circle';
             const safeVideo = w.video ? window.app.escape(w.video) : '';
             const safeTitle = window.app.escape(w.title);
-            
+
             let dateBadge = '';
-            if(w.scheduledDate) {
-                 const dParts = w.scheduledDate.split('-');
-                 dateBadge = `<span style="font-size:10px; color:#FFF; background:var(--primary); padding:2px 6px; border-radius:6px; margin-left:8px; font-weight:600;">${dParts[2]}/${dParts[1]}</span>`;
+            if (w.scheduledDate) {
+                const dParts = w.scheduledDate.split('-');
+                dateBadge = `<span style="font-size:10px; color:#FFF; background:var(--primary); padding:2px 6px; border-radius:6px; margin-left:8px; font-weight:600;">${dParts[2]}/${dParts[1]}</span>`;
             }
-            
+
             let videoBtn = '';
             if (w.type === 'strength' || w.title.toLowerCase().includes('fortalecimento')) {
                 videoBtn = `<button onclick="window.app.openStrengthVideosModal()" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell" style="color:var(--primary);"></i> Ver Exercícios</button>`;
@@ -484,11 +580,11 @@ export const student = {
             }
 
             let finishBtn = '';
-            if(!w.done && (!w.scheduledDate || w.scheduledDate <= todayStr)) {
+            if (!w.done && (!w.scheduledDate || w.scheduledDate <= todayStr)) {
                 finishBtn = `<button onclick="event.stopPropagation(); window.app.finishWorkout('${safeTitle}')" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; margin-right: 8px;"><i class="fa-solid fa-check"></i> Concluir</button>`;
             }
 
-            list.innerHTML += `<div class="card" style="display:flex; align-items:flex-start; gap: 15px; opacity: ${w.done?0.6:1}; padding:20px;">
+            list.innerHTML += `<div id="workout-item-${i}" class="card" style="display:flex; align-items:flex-start; gap: 15px; opacity: ${w.done ? 0.6 : 1}; padding:20px;">
                 <div style="color:${color}; font-size:24px; margin-top:2px;"><i class="fa-solid ${icon}"></i></div>
                 <div style="flex:1;">
                     <h4 style="margin:0; font-size:16px;">${w.title} ${dateBadge}</h4>
@@ -500,19 +596,26 @@ export const student = {
                 </div>
             </div>`;
         });
+
+        if (firstPendingIdx !== -1) {
+            setTimeout(() => {
+                const el = document.getElementById(`workout-item-${firstPendingIdx}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
     },
 
     // --- PERFIL ---
     openProfile: () => {
-        if(!state.currentUser) return;
+        if (!state.currentUser) return;
         window.app.screen('view-profile');
-        
+
         document.getElementById('profile-name-big').innerText = state.currentUser.name;
         document.getElementById('profile-email-big').innerText = state.currentUser.email.toLowerCase();
         const img = document.getElementById('profile-img-big');
-        if(state.currentUser.avatar) { img.src=state.currentUser.avatar; img.style.display='block'; }
-        else { img.style.display='none'; }
-        
+        if (state.currentUser.avatar) { img.src = state.currentUser.avatar; img.style.display = 'block'; }
+        else { img.style.display = 'none'; }
+
         document.getElementById('prof-birth').value = state.currentUser.birthDate || '';
         document.getElementById('prof-city').value = state.currentUser.city || '';
         document.getElementById('prof-country').value = state.currentUser.country || '';
@@ -523,48 +626,46 @@ export const student = {
         const insta = document.getElementById('prof-social-insta');
         const face = document.getElementById('prof-social-face');
         const tiktok = document.getElementById('prof-social-tiktok');
-        
-        if(insta) insta.value = sl.instagram || '';
-        if(face) face.value = sl.facebook || '';
-        if(tiktok) tiktok.value = sl.tiktok || '';
+
+        if (insta) insta.value = sl.instagram || '';
+        if (face) face.value = sl.facebook || '';
+        if (tiktok) tiktok.value = sl.tiktok || '';
         // ----------------------------------
-        
+
         window.app.renderWeightUI();
         window.app.toggleEditProfile(false);
+
+        // -- NOVO: Mostrar card de questionário se estiver faltando --
+        const promo = document.getElementById('profile-onboarding-promo');
+        if (promo) {
+            promo.style.display = (!state.currentUser.onboarding || Object.keys(state.currentUser.onboarding).length === 0) ? 'block' : 'none';
+        }
 
         const hList = document.getElementById('profile-history');
         hList.innerHTML = '';
         (state.currentUser.races || []).forEach((r, i) => {
-            const done = r.workouts.filter(w=>w.done).length;
+            const done = r.workouts.filter(w => w.done).length;
             const total = r.workouts.length;
-            const pct = total > 0 ? Math.round((done/total)*100) : 0;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
             const dateStr = r.date ? new Date(r.date).toLocaleDateString() : 'Sem data';
 
             hList.innerHTML += `
-            <div style="margin-bottom:15px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;">
-                    <div>
-                        <strong style="font-size:14px;">${r.name}</strong>
-                        <button onclick="window.app.openEditRaceDate(${i})" style="border:none; background:none; color:var(--text-sec); cursor:pointer; font-size:12px; margin-left:5px;"><i class="fa-solid fa-pencil"></i></button>
-                        <div style="font-size:11px; color:#888;">${dateStr}</div>
+                <div style="margin-bottom:15px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;">
+                        <div>
+                            <strong style="font-size:14px;">${r.name}</strong>
+                            <button onclick="window.app.openEditRaceDate(${i})" style="border:none; background:none; color:var(--text-sec); cursor:pointer; font-size:12px; margin-left:5px;"><i class="fa-solid fa-pencil"></i></button>
+                            <div style="font-size:11px; color:#888;">${dateStr}</div>
+                        </div>
+                        <span style="font-size:12px; font-weight:600; color:var(--primary);">${pct}%</span>
                     </div>
-                    <span style="font-size:12px; font-weight:600; color:var(--primary);">${pct}%</span>
-                </div>
-                <div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
-                    <div style="width:${pct}%; height:100%; background:var(--primary);"></div>
-                </div>
-            </div>`;
+                    <div style="height:6px; background:#eee; border-radius:3px; overflow:hidden;">
+                        <div style="width:${pct}%; height:100%; background:var(--primary);"></div>
+                    </div>
+                </div>`;
         });
-
-        const btnAddRace = document.getElementById('btn-add-race');
-        if(btnAddRace) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const hasActiveGoal = (state.currentUser.races || []).some(r => r.date >= todayStr);
-            if (hasActiveGoal) btnAddRace.style.display = 'none';
-            else btnAddRace.style.display = 'block';
-        }
     },
-    
+
     openEditRaceDate: (index) => {
         if (!state.currentUser || !state.currentUser.races || !state.currentUser.races[index]) return;
         state.editingStudentRaceIndex = index;
@@ -577,29 +678,29 @@ export const student = {
         if (state.editingStudentRaceIndex === null || !state.currentUser) return;
         const newDate = document.getElementById('edit-race-date-input').value;
         if (!newDate) return window.app.toast("Selecione uma data.");
-        
+
         const races = state.currentUser.races;
         const raceToUpdate = races[state.editingStudentRaceIndex];
         const raceName = raceToUpdate.name;
-        
+
         // Guarda a data antiga para poder apagar da coleção pública
         const oldDate = raceToUpdate.date;
-        
+
         // Atualiza a data no objeto local
         raceToUpdate.date = newDate;
-        
+
         window.app.toast("Atualizando data...");
         try {
             // 1. Atualiza no perfil do Usuário (Documento Completo)
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
-            
+
             // 2. Sincronização com Coleção Pública (para calendário)
             const q = query(
-                collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES), 
+                collection(db, 'artifacts', appId, 'public', 'data', C_PUBLIC_RACES),
                 where("studentEmail", "==", state.currentUser.email),
                 where("raceName", "==", raceName)
             );
-            
+
             const querySnapshot = await getDocs(q);
             const batch = writeBatch(db);
             let hasChanges = false;
@@ -629,11 +730,11 @@ export const student = {
 
             window.app.toast("Data atualizada!");
             document.getElementById('modal-edit-date').classList.remove('active');
-            
+
             // Força atualização visual imediata de todos os componentes
-            window.app.renderHome(); 
-            window.app.renderCalendar(); 
-            window.app.openProfile(); 
+            window.app.renderHome();
+            window.app.renderCalendar();
+            window.app.openProfile();
             window.app.haptic();
         } catch (e) {
             console.error("Erro ao salvar data:", e);
@@ -656,12 +757,12 @@ export const student = {
     },
 
     saveProfile: async () => {
-        if(!state.currentUser) return;
+        if (!state.currentUser) return;
         const birthDate = document.getElementById('prof-birth').value;
         const city = document.getElementById('prof-city').value;
         const country = document.getElementById('prof-country').value;
         const height = document.getElementById('prof-height').value;
-        
+
         // -- NOVO: Capturar Redes Sociais --
         const instagram = document.getElementById('prof-social-insta').value.trim();
         const facebook = document.getElementById('prof-social-face').value.trim();
@@ -671,7 +772,7 @@ export const student = {
         // ----------------------------------
 
         let updates = { birthDate, city, country, height, socialLinks };
-        
+
         window.app.toast("Salvando perfil...");
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), updates);
@@ -686,11 +787,11 @@ export const student = {
     },
 
     renderWeightUI: () => {
-        if(!state.currentUser) return;
+        if (!state.currentUser) return;
         let history = state.currentUser.weightHistory || [];
         history = history.filter(h => h.value !== undefined && h.value !== null && !isNaN(h.value));
-        history.sort((a,b) => new Date(b.date) - new Date(a.date));
-        
+        history.sort((a, b) => new Date(b.date) - new Date(a.date));
+
         const displayEl = document.getElementById('display-current-weight');
         if (history.length > 0) {
             const currentWeight = history[0].value;
@@ -701,16 +802,16 @@ export const student = {
 
         const listContainer = document.getElementById('weight-history-list');
         listContainer.innerHTML = '';
-        if(history.length === 0) {
+        if (history.length === 0) {
             listContainer.innerHTML = '<p style="text-align:center; color:#999; font-size:12px; margin-top:10px;">Nenhum registro.</p>';
         } else {
             history.forEach(h => {
                 const dateStr = new Date(h.date).toLocaleDateString();
                 listContainer.innerHTML += `
-                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #eee; font-size:14px; color:var(--text-main);">
+    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #eee; font-size:14px; color:var(--text-main);" >
                     <span>${dateStr}</span>
                     <strong>${h.value} kg</strong>
-                </div>`;
+                </div> `;
             });
         }
     },
@@ -723,7 +824,7 @@ export const student = {
 
     saveNewWeight: async () => {
         const val = parseFloat(document.getElementById('new-weight-input').value);
-        if(!val || isNaN(val)) return window.app.toast("Digite um peso válido.");
+        if (!val || isNaN(val)) return window.app.toast("Digite um peso válido.");
 
         const newEntry = {
             date: new Date().toISOString(),
@@ -732,32 +833,32 @@ export const student = {
 
         let history = state.currentUser.weightHistory || [];
         history.push(newEntry);
-        
+
         try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { 
-                weightHistory: history 
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), {
+                weightHistory: history
             });
             state.currentUser.weightHistory = history;
             window.app.renderWeightUI();
             document.getElementById('modal-add-weight').classList.remove('active');
             window.app.toast("Peso registrado!");
             window.app.haptic();
-        } catch(e) {
+        } catch (e) {
             console.error(e);
             window.app.toast("Erro ao salvar peso.");
         }
     },
 
     closeProfile: () => window.app.screen('view-app'),
-    
+
     uploadAvatar: async (input) => {
-        if(input.files && input.files[0]) {
+        if (input.files && input.files[0]) {
             window.app.toast("Trocando foto...");
-            if(state.currentUser.avatar) {
+            if (state.currentUser.avatar) {
                 await window.app.deleteFile(state.currentUser.avatar);
             }
             const imgUrl = await window.app.uploadImage(input.files[0], 'avatars');
-            if(imgUrl) {
+            if (imgUrl) {
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { avatar: imgUrl });
                 window.app.toast("Foto atualizada!");
                 window.app.openProfile();
@@ -766,20 +867,20 @@ export const student = {
     },
 
     showAddRaceModal: () => document.getElementById('modal-add-race').classList.add('active'),
-    
+
     addStudentRace: async () => {
         const name = document.getElementById('new-race-name').value;
         const distEl = document.getElementById('new-race-dist');
-        const dist = distEl ? parseFloat(distEl.value) : 10; 
+        const dist = distEl ? parseFloat(distEl.value) : 10;
         const timeEl = document.getElementById('new-race-est-time');
         const estTime = timeEl ? timeEl.value : "Não informado";
         const date = document.getElementById('new-race-date').value;
 
-        if(!name || !date) return window.app.toast("Preencha o nome e data.");
+        if (!name || !date) return window.app.toast("Preencha o nome e data.");
 
         const today = new Date();
         const raceDateObj = new Date(date);
-        
+
         const startDateObj = new Date();
         startDateObj.setDate(today.getDate() + 1);
         const startDateStr = startDateObj.toISOString().split('T')[0];
@@ -789,7 +890,7 @@ export const student = {
 
         window.app.toast("Seu professor está criando seu treino...");
         const btn = document.querySelector('#modal-add-race button.btn-primary');
-        if(btn) { btn.disabled = true; btn.innerText = "Gerando..."; }
+        if (btn) { btn.disabled = true; btn.innerText = "Gerando..."; }
 
         try {
             const response = await fetch(CF_WORKER_URL, {
@@ -801,7 +902,7 @@ export const student = {
                     estTime: estTime,
                     startDate: startDateStr,
                     raceDate: date,
-                    strengthVideo: "" 
+                    strengthVideo: ""
                 })
             });
 
@@ -810,14 +911,14 @@ export const student = {
                 try {
                     const errorJson = await response.json();
                     errorDetails = errorJson.error || JSON.stringify(errorJson);
-                } catch(e) {
+                } catch (e) {
                     errorDetails = await response.text();
                 }
-                throw new Error(`Worker Error: ${errorDetails}`);
+                throw new Error(`Worker Error: ${errorDetails} `);
             }
 
             const aiWorkoutsRaw = await response.json();
-            
+
             if (!Array.isArray(aiWorkoutsRaw)) {
                 if (aiWorkoutsRaw.error) throw new Error(aiWorkoutsRaw.error);
                 throw new Error("Formato inválido recebido da IA.");
@@ -826,27 +927,27 @@ export const student = {
             const generatedWorkouts = aiWorkoutsRaw.map(w => ({
                 title: w.title,
                 desc: w.desc,
-                video: w.video || "", 
+                video: w.video || "",
                 done: false,
                 scheduledDate: w.date,
-                type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run') 
+                type: w.type || (w.title.toLowerCase().includes('fortalecimento') ? 'strength' : 'run')
             }));
 
             if (generatedWorkouts.length === 0) throw new Error("Erro ao gerar seu treino.");
 
             const races = state.currentUser.races || [];
-            races.push({ 
-                name, 
-                date, 
+            races.push({
+                name,
+                date,
                 targetDistance: dist,
                 estimatedTime: estTime,
-                workouts: generatedWorkouts, 
-                created: new Date().toISOString() 
+                workouts: generatedWorkouts,
+                created: new Date().toISOString()
             });
 
             // 1. Atualiza documento do aluno (pesado)
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
-            
+
             // 2. OTIMIZAÇÃO SOLUÇÃO 1: Cria registro leve na coleção pública
             // Previne duplicação: apaga provas anteriores com mesmo nome/email
             const qDup = query(
@@ -887,13 +988,13 @@ export const student = {
             console.error("ERRO:", error);
             window.app.toast("Erro: " + error.message);
         } finally {
-            if(btn) { btn.disabled = false; btn.innerText = "Criar"; }
+            if (btn) { btn.disabled = false; btn.innerText = "Criar"; }
         }
     },
 
     // --- SAÚDE ---
     loadHealthTab: () => {
-        if(!state.currentUser) return;
+        if (!state.currentUser) return;
         window.app.setupUserNotifications(state.currentUser.email);
     },
 
@@ -904,9 +1005,80 @@ export const student = {
     },
 
     openHealthMental: () => {
-        document.body.style.backgroundColor = '#f4f7f9'; // Fix piscada azul
+        document.body.style.backgroundColor = '#f4f7f9';
         window.app.screen('view-health-mental');
+        window.app.loadMentalHistory();
         window.app.haptic();
+    },
+
+    loadMentalHistory: () => {
+        if (!state.currentUser) return;
+        const list = document.getElementById('mental-history-list');
+        const latest = state.currentUser.lastMental;
+
+        // Update top card
+        if (latest) {
+            document.getElementById('latest-mood-emoji').innerText = latest.emoji || '--';
+            document.getElementById('latest-mood-label').innerText = latest.mood || '--';
+            document.getElementById('latest-mood-date').innerText = new Date(latest.timestamp).toLocaleDateString();
+        }
+
+        // Load list
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_MENTAL),
+            where("email", "==", state.currentUser.email),
+            orderBy("timestamp", "desc"),
+            limit(20)
+        );
+
+        getDocs(q).then((snapshot) => {
+            if (snapshot.empty && !latest) {
+                list.innerHTML = '<p style="text-align: center; color: #999; font-size: 13px; padding: 20px;">Nenhum registro encontrado.</p>';
+                return;
+            }
+            list.innerHTML = '';
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const dateStr = new Date(d.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                list.innerHTML += `
+                    <div class="card" style="display:flex; align-items:center; gap:15px; padding:15px; margin-bottom:10px;">
+                        <span style="font-size:30px;">${d.emoji}</span>
+                        <div>
+                            <strong style="display:block; font-size:15px; color:var(--text-main);">${d.mood}</strong>
+                            <span style="font-size:12px; color:var(--text-sec);">${dateStr}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }).catch(err => {
+            console.error("Erro ao carregar mental history:", err);
+            // Se o erro for falta de índice, tenta carregar sem o orderBy e ordena no JS
+            if (err.code === 'failed-precondition') {
+                const qSimple = query(collection(db, 'artifacts', appId, 'public', 'data', C_MENTAL),
+                    where("email", "==", state.currentUser.email),
+                    limit(50)
+                );
+                getDocs(qSimple).then(snap => {
+                    let items = [];
+                    snap.forEach(d => items.push(d.data()));
+                    items.sort((a, b) => b.timestamp - a.timestamp);
+                    list.innerHTML = '';
+                    items.forEach(d => {
+                        const dateStr = new Date(d.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        list.innerHTML += `
+                            <div class="card" style="display:flex; align-items:center; gap:15px; padding:15px; margin-bottom:10px;">
+                                <span style="font-size:30px;">${d.emoji}</span>
+                                <div>
+                                    <strong style="display:block; font-size:15px; color:var(--text-main);">${d.mood}</strong>
+                                    <span style="font-size:12px; color:var(--text-sec);">${dateStr}</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                });
+            } else {
+                list.innerHTML = '<p style="text-align: center; color: var(--red); font-size: 13px; padding: 20px;">Erro ao carregar histórico.</p>';
+            }
+        });
     },
 
     openHealthPhysio: () => {
@@ -917,6 +1089,75 @@ export const student = {
         window.app.haptic();
     },
 
+    openPhysioTipsModal: async () => {
+        document.getElementById('modal-physio-tips').classList.add('active');
+        const list = document.getElementById('physio-tips-list');
+        list.innerHTML = '<p style="text-align:center; padding:20px;">Carregando pastas...</p>';
+
+        try {
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PHYSIO_TIPS), orderBy('created', 'desc'));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                list.innerHTML = '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Nenhuma dica cadastrada ainda.</p>';
+                return;
+            }
+
+            // Populate cache
+            state.physioTipsCache = [];
+            snap.forEach(d => {
+                const data = d.data();
+                data.id = d.id;
+                state.physioTipsCache.push(data);
+            });
+
+            // Group by category
+            const categories = [...new Set(state.physioTipsCache.map(t => t.category || 'Geral'))];
+
+            list.innerHTML = '';
+            categories.forEach(cat => {
+                const safeCatName = window.app.escape(cat);
+                list.innerHTML += `
+    <div onclick="window.app.openPhysioCategory('${safeCatName}')" style="background:#f9f9f9; padding:20px 15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #eee; cursor:pointer;" >
+                    <div style="display:flex; align-items:center; gap: 15px;">
+                        <i class="fa-solid fa-folder" style="color:var(--primary); font-size: 24px;"></i>
+                        <strong style="color:var(--text-main); font-size:16px;">${cat}</strong>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="color:#ccc;"></i>
+                </div> `;
+            });
+        } catch (e) {
+            console.error(e);
+            list.innerHTML = '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Erro ao carregar dicas.</p>';
+        }
+    },
+
+    openPhysioCategory: (categoryName) => {
+        const list = document.getElementById('physio-tips-list');
+        list.innerHTML = `
+    <button onclick="window.app.openPhysioTipsModal()" style="border:none; background:none; color:var(--text-main); font-weight:600; cursor:pointer; margin-bottom: 15px; display:flex; align-items:center; gap: 5px;" >
+        <i class="fa-solid fa-arrow-left"></i> Voltar
+        </button> `;
+
+        const tips = state.physioTipsCache.filter(t => (t.category || 'Geral') === categoryName);
+
+        if (tips.length === 0) {
+            list.innerHTML += '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Nenhum vídeo nesta pasta.</p>';
+            return;
+        }
+
+        tips.forEach(tip => {
+            const safeLink = window.app.escape(tip.link);
+            list.innerHTML += `
+    <div style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #eee;" >
+                <div>
+                    <strong style="color:var(--text-main); font-size:15px;">${tip.title}</strong>
+                </div>
+                <button onclick="window.app.playVideo('${safeLink}')" class="btn" style="background:var(--primary); color:white; border-radius:20px; padding:8px 15px; font-size:12px; width:auto; margin:0;"><i class="fa-solid fa-play"></i> Assistir</button>
+            </div> `;
+        });
+    },
+
     closeHealthSubView: () => {
         document.body.style.backgroundColor = '#f4f7f9'; // Corrigido: Mantém fundo claro (igual ao app) para evitar flash azul
         window.app.screen('view-app');
@@ -925,66 +1166,284 @@ export const student = {
     },
 
     loadPhysioList: () => {
-        if(!state.currentUser) return;
+        if (!state.currentUser) return;
         const list = document.getElementById('health-pain-list');
         list.innerHTML = '<p class="skeleton" style="height:50px;"></p>';
 
-        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN),
             where("email", "==", state.currentUser.email)
         );
 
         getDocs(q).then((snapshot) => {
-            if(snapshot.empty) {
+            if (snapshot.empty) {
                 list.innerHTML = '<p style="text-align: center; color: #999; font-size: 13px; padding: 20px;">Nenhum registro de dor.</p>';
                 return;
             }
 
-            let painItems = [];
-            snapshot.forEach(d => painItems.push(d.data()));
-            painItems.sort((a,b) => b.timestamp - a.timestamp); 
-            painItems = painItems.slice(0, 20); 
+            state.painHistoryCache = [];
+            snapshot.forEach(d => {
+                const data = d.data();
+                data.id = d.id;
+                state.painHistoryCache.push(data);
+            });
+
+            state.painHistoryCache.sort((a, b) => b.timestamp - a.timestamp);
+            const painItems = state.painHistoryCache.slice(0, 20);
 
             list.innerHTML = '';
-            painItems.forEach(item => {
+            painItems.forEach((item, index) => {
                 const statusClass = item.responded ? 'answered' : 'pending';
                 const statusText = item.responded ? 'Respondido' : 'Pendente';
                 const dateStr = new Date(item.timestamp).toLocaleDateString();
 
-                let responseHtml = '';
-                if(item.response) {
-                    responseHtml = `
-                    <div class="pain-response-box">
-                        <strong><i class="fa-solid fa-user-doctor"></i> Fisio Respondeu:</strong>
-                        ${item.response}
-                    </div>`;
+                let painSummary = '';
+                if (item.painDetails) {
+                    painSummary = Object.entries(item.painDetails)
+                        .map(([loc, score]) => `${loc} (${score})`)
+                        .join(', ');
+                } else {
+                    painSummary = `Nível ${item.painLevel || 0}/7`;
                 }
 
                 list.innerHTML += `
-                <div class="pain-item ${statusClass}">
+                <div class="pain-item ${statusClass}" onclick="window.app.openStudentPainDetail(${index})" style="cursor:pointer;">
                     <div class="pain-header">
                         <span>${dateStr} - ${item.workoutTitle}</span>
                         <span class="status-badge ${statusClass}">${statusText}</span>
                     </div>
                     <p class="pain-desc">
-                        <strong>Nível ${item.painLevel}/7:</strong> ${item.notes}
+                        <strong>${painSummary}</strong><br>
+                        <small style="color:#888;">${item.notes || 'Sem observações'}</small>
                     </p>
-                    ${responseHtml}
-                </div>`;
+                    ${item.responded ? `<div style="font-size:11px; color:var(--success); font-weight:700; margin-top:5px;"><i class="fa-solid fa-comment-dots"></i> Ver resposta da Fisio</div>` : ''}
+                </div> `;
             });
         });
     },
 
+    openStudentPainDetail: (index) => {
+        const item = state.painHistoryCache[index];
+        if (!item) return;
+
+        const content = document.getElementById('student-pain-detail-content');
+        const dateStr = new Date(item.timestamp).toLocaleString();
+
+        let detailHtml = `
+            <div style="margin-bottom:15px; padding-bottom:15px; border-bottom: 1px dashed #eee;">
+                <p><strong>Data:</strong> ${dateStr}</p>
+                <p><strong>Treino:</strong> ${item.workoutTitle}</p>
+            </div>
+            <div style="margin-bottom:15px;">
+                <p><strong>Relato de Dor:</strong></p>
+                <ul style="margin:5px 0; padding-left:20px;">
+        `;
+
+        if (item.painDetails) {
+            Object.entries(item.painDetails).forEach(([loc, score]) => {
+                detailHtml += `<li>${loc}: Intensidade ${score}/10</li>`;
+            });
+        } else {
+            detailHtml += `<li>Intensidade Geral: ${item.painLevel || 0}/7</li>`;
+        }
+
+        detailHtml += `</ul>
+            <p style="margin-top:10px;"><strong>Observações:</strong><br>${item.notes || 'Nenhuma'}</p>
+        </div>`;
+
+        if (item.responded) {
+            detailHtml += `
+                <div style="background:#f0fff4; padding:15px; border-radius:12px; border-left:4px solid var(--success); margin-top:15px;">
+                    <p style="color:#2e7d32; font-weight:700; font-size:12px; text-transform:uppercase; margin-bottom:5px;">
+                        <i class="fa-solid fa-user-doctor"></i> Resposta da Fisio:
+                    </p>
+                    <p style="color:var(--text-main);">${item.response}</p>
+                </div>
+            `;
+        } else {
+            detailHtml += `
+                <div style="background:#fffbf7; padding:15px; border-radius:12px; border-left:4px solid var(--text-sec); margin-top:15px;">
+                    <p style="color:var(--text-sec); font-weight:700; font-size:12px; text-transform:uppercase;">
+                        <i class="fa-solid fa-clock"></i> Aguardando avaliação da fisioterapia
+                    </p>
+                </div>
+            `;
+        }
+
+        content.innerHTML = detailHtml;
+        document.getElementById('modal-student-pain-detail').classList.add('active');
+        window.app.haptic();
+    },
+
     markPainAsReadByUser: async () => {
-        if(!state.currentUser) return;
-        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN), 
+        if (!state.currentUser) return;
+        const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PAIN),
             where("email", "==", state.currentUser.email)
         );
         const snapshot = await getDocs(q);
         snapshot.forEach(async (d) => {
             const data = d.data();
-            if(data.readByUser === false && data.response != null) {
+            if (data.readByUser === false && data.response != null) {
                 await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PAIN, d.id), { readByUser: true });
             }
         });
     },
+
+    // --- NOVOS CARDS HOME ---
+
+    renderChallengeCard: async () => {
+        const container = document.getElementById('today-challenge-card');
+        container.innerHTML = '';
+
+        try {
+            // Busca o desafio que engloba o dia de hoje
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            const q = query(
+                collection(db, 'artifacts', appId, 'public', 'data', C_CHALLENGES),
+                where('startDate', '<=', todayStr),
+                orderBy('startDate', 'desc')
+            );
+
+            const snap = await getDocs(q);
+
+            let activeChallenge = null;
+
+            // Filtra no cliente para garantir que endDate >= today
+            snap.forEach(d => {
+                const data = d.data();
+                if (!activeChallenge && data.endDate >= todayStr) {
+                    activeChallenge = data;
+                }
+            });
+
+            if (!activeChallenge) return;
+
+            const todayTask = activeChallenge.tasks.find(t => t.date === todayStr);
+
+            if (todayTask) {
+                // Formatação do tempo: "00:00:32" -> "32s", "00:01:00" -> "1m", "00:01:30" -> "1m 30s"
+                let displayTask = todayTask.task;
+                if (/^(\d{2}):(\d{2})$/.test(displayTask) || /^(\d{2}):(\d{2}):(\d{2})$/.test(displayTask)) {
+                    let parts = displayTask.split(':').map(Number);
+                    let m = 0, s = 0;
+                    if (parts.length === 3) { m = parts[1]; s = parts[2]; } // HH:MM:SS (ignorando HH por enquanto)
+                    else { m = parts[0]; s = parts[1]; } // MM:SS
+
+                    let formattedTime = [];
+                    if (m > 0) formattedTime.push(`${m}m`);
+                    if (s > 0 || m === 0) formattedTime.push(`${s}s`);
+                    displayTask = formattedTime.join(' ');
+                }
+
+                // Verifica se já foi concluído hoje
+                const completedChallenges = state.currentUser.completedChallenges || [];
+                const isDone = completedChallenges.includes(todayStr);
+
+                const btnHtml = isDone
+                    ? `<button disabled style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 15px; opacity: 0.7;"><i class="fa-solid fa-check"></i> Concluído</button>`
+                    : `<button onclick="window.app.completeChallenge('${todayStr}')" style="background: white; color: #FF5E62; border: none; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">Feito <i class="fa-solid fa-check"></i></button>`;
+
+                container.innerHTML = `
+    <h3 style="font-size: 18px; margin: 10px 0 15px; color:var(--text-main);">Desafio do mês</h3>
+    <div style="background: linear-gradient(135deg, #FF9966 0%, #FF5E62 100%); border-radius: 15px; padding: 20px; color: white; box-shadow: 0 4px 15px rgba(255, 94, 98, 0.3); position: relative; overflow: hidden; margin-bottom: 20px;" >
+                    <div style="position: relative; z-index: 1;">
+                        <h4 style="margin: 0 0 10px 0; font-size: 14px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">
+                            <i class="fa-solid fa-fire"></i> ${activeChallenge.name || 'Desafio do Dia'}
+                        </h4>
+                        <p style="margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4;">Hoje: ${displayTask}</p>
+                        ${btnHtml}
+                    </div>
+                    <i class="fa-solid fa-trophy" style="position: absolute; right: -10px; bottom: -20px; font-size: 80px; opacity: 0.2; transform: rotate(-15deg);"></i>
+                </div> `;
+            }
+
+        } catch (e) {
+            console.error("Erro desafio", e);
+        }
+    },
+
+    completeChallenge: async (dateStr) => {
+        if (!state.currentUser) return;
+        const currentCompleted = state.currentUser.completedChallenges || [];
+        if (!currentCompleted.includes(dateStr)) {
+            currentCompleted.push(dateStr);
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), {
+                    completedChallenges: currentCompleted
+                });
+                state.currentUser.completedChallenges = currentCompleted;
+                window.app.toast("Desafio concluído! 🎉");
+                window.app.renderChallengeCard();
+                window.app.renderCalendar();
+                window.app.haptic();
+            } catch (err) {
+                console.error("Erro ao completar desafio", err);
+                window.app.toast("Erro ao salvar.");
+            }
+        }
+    },
+
+    renderLiveCard: async () => {
+        const container = document.getElementById('next-live-card');
+        container.innerHTML = '';
+
+        try {
+            // Busca a próxima live (data >= agora - 2h)
+            const now = new Date();
+            const twoHoursAgo = new Date(now.getTime() - 7200000);
+
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_LIVES), orderBy('date', 'asc'));
+            const snap = await getDocs(q);
+
+            if (snap.empty) return;
+
+            let nextLive = null;
+
+            // Encontra a primeira live que ainda não "passou muito"
+            for (const doc of snap.docs) {
+                const l = doc.data();
+                const lDate = new Date(l.date);
+                if (lDate > twoHoursAgo) {
+                    nextLive = l;
+                    break;
+                }
+            }
+
+            if (nextLive) {
+                const liveDate = new Date(nextLive.date);
+                const day = liveDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+                const time = liveDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                let icon = '<i class="fa-brands fa-youtube" style="font-size: 24px;"></i>';
+                let bg = '#FF0000';
+                let platformText = 'Live Mentoria';
+
+                if (nextLive.platform === 'instagram') {
+                    icon = '<i class="fa-brands fa-instagram" style="font-size: 24px;"></i>';
+                    bg = '#E1306C';
+                    platformText = 'Live Instagram';
+                } else if (nextLive.platform === 'zoom') {
+                    icon = '<i class="fa-solid fa-video" style="font-size: 24px;"></i>';
+                    bg = '#2D8CFF';
+                    platformText = 'Live Zoom/Meet';
+                }
+
+                container.innerHTML = `
+    <h3 style="font-size: 18px; margin: 10px 0 15px; color:var(--text-main);">Próxima aula de fortalecimento</h3>
+    <div style="background: #fff; border-radius: 15px; padding: 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 20px;" >
+                    <div style="background: ${bg}; color: white; width: 50px; height: 50px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                        ${icon}
+                    </div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 14px; color: var(--text-main);">Próxima ${platformText}</h4>
+                        <div style="color: var(--primary); font-weight: 700; font-size: 16px; margin-top: 2px;">
+                            ${day} às ${time}
+                        </div>
+                    </div>
+                </div> `;
+            }
+        } catch (e) {
+            console.error("Erro live", e);
+        }
+    }
 };
