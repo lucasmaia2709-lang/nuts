@@ -31,15 +31,6 @@
 * {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-    font-family: 'Georgia', serif !important;
-}
-
-/* Permitir que logotipos usem as suas próprias fontes */
-.logo-were,
-.logo-nuts,
-.logo-nuts-small,
-.news-title {
-    font-family: inherit !important;
 }
 
 /* FIX PWA */
