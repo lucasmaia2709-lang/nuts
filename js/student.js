@@ -326,51 +326,43 @@ export const student = {
         });
     },
 
-    openStrengthVideosModal: () => {
+    closeStrengthVideosPage: () => {
+        window.app.screen('view-app');
+    },
+
+    openStrengthVideosPage: () => {
         const list = document.getElementById('strength-video-list');
-        list.innerHTML = '<p style="text-align:center; color:#666;">Carregando...</p>';
-        document.getElementById('modal-strength-videos').classList.add('active');
+        list.className = ""; // clear previous classes if any
+        list.style.display = "grid";
+        list.style.gridTemplateColumns = "1fr 1fr";
+        list.style.gap = "15px";
+        list.innerHTML = '<p style="text-align:center; color:#666; grid-column: span 2;">Carregando...</p>';
+        window.app.screen('view-strength-videos');
+
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
             list.innerHTML = '';
             if (snap.empty) {
-                list.innerHTML = '<p style="text-align:center; color:#666;">Nenhum vídeo cadastrado.</p>';
+                list.innerHTML = '<p style="text-align:center; color:#666; grid-column: span 2;">Nenhum vídeo cadastrado.</p>';
                 return;
             }
 
-            const videosByMuscle = {};
+            let videosHtml = '';
             snap.forEach(d => {
                 const v = d.data();
-                const muscle = v.muscle || "Geral";
-                if (!videosByMuscle[muscle]) videosByMuscle[muscle] = [];
-                videosByMuscle[muscle].push(v);
-            });
+                const safeLink = window.app.escape(v.link);
+                const coverImg = v.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
 
-            Object.keys(videosByMuscle).sort().forEach(muscle => {
-                const videos = videosByMuscle[muscle];
-                let carouselHtml = '';
-
-                videos.forEach(v => {
-                    const safeLink = window.app.escape(v.link);
-                    const coverImg = v.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
-
-                    carouselHtml += `
-                    <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')">
-                        <img src="${coverImg}" class="video-thumb-img" alt="${v.title}">
-                        <div class="video-thumb-overlay">
-                            <h4 class="video-thumb-title">${v.title}</h4>
-                        </div>
-                        <div class="video-thumb-play"><i class="fa-solid fa-play"></i></div>
-                    </div>`;
-                });
-
-                list.innerHTML += `
-                <div class="video-row-container">
-                    <div class="video-row-title">${muscle}</div>
-                    <div class="video-carousel">
-                        ${carouselHtml}
+                videosHtml += `
+                <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')" style="margin: 0;">
+                    <img src="${coverImg}" class="video-thumb-img" alt="${v.title}">
+                    <div class="video-thumb-overlay">
+                        <h4 class="video-thumb-title">${v.title}</h4>
                     </div>
+                    <div class="video-thumb-play"><i class="fa-solid fa-play"></i></div>
                 </div>`;
             });
+
+            list.innerHTML = videosHtml;
         });
     },
 
@@ -418,7 +410,7 @@ export const student = {
 
             let actionBtn = '';
             if (target.type === 'strength' || target.title.toLowerCase().includes('fortalecimento')) {
-                actionBtn = `<button onclick="window.app.openStrengthVideosModal()" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-dumbbell"></i> Ver Exercícios</button>`;
+                actionBtn = `<button onclick="window.app.openStrengthVideosPage()" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-dumbbell"></i> Ver Exercícios</button>`;
             } else if (safeVideo) {
                 actionBtn = `<button onclick="window.app.playVideo('${safeVideo}')" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-play"></i> Vídeo</button>`;
             }
@@ -651,7 +643,7 @@ export const student = {
 
             let videoBtn = '';
             if (w.type === 'strength' || w.title.toLowerCase().includes('fortalecimento')) {
-                videoBtn = `<button onclick="window.app.openStrengthVideosModal()" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell" style="color:var(--primary);"></i> Ver Exercícios</button>`;
+                videoBtn = `<button onclick="window.app.openStrengthVideosPage()" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell" style="color:var(--primary);"></i> Ver Exercícios</button>`;
             } else if (safeVideo) {
                 videoBtn = `<button onclick="window.app.playVideo('${safeVideo}')" style="border:1px solid var(--secondary); background:transparent; color:var(--text-main); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-play" style="color:var(--primary);"></i> Vídeo</button>`;
             }
