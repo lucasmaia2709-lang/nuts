@@ -594,19 +594,9 @@
                     </div>
                     <div id="calendar-days" class="calendar-grid"></div>
                 </div>
-                <div style="padding: 20px;">
-                    <div class="card"
-                        style="background: #9cafcc;color: var(--text-main); border: none; padding: 30px; text-align: center; margin-bottom: 20px;">
-                        <h3 style="font-size: 14px; margin: 0 0 20px; opacity: 0.7; color:var(--text-main);">Motivação
-                            do Dia</h3>
-                        <p id="daily-quote"
-                            style="font-size: 20px; margin: 20px 0 10px; line-height: 1.4; color:var(--text-main);">
-                            Carregando...</p>
-                    </div>
-                </div>
+
                 <div style="padding: 0 20px;">
-                    <h3 style="font-size: 18px; margin: 10px 0 15px; color:var(--text-main);">Treino de Hoje</h3>
-                    <div id="today-workout-card"></div>
+                    <div id="next-live-card" style="margin-top: 20px;"></div>
 
                     <div class="card" onclick="document.getElementById('modal-mental-health').classList.add('active')"
                         style="margin-top: 20px; background: linear-gradient(135deg, #1b265b 0%, #3a4b91 100%); color: #fff; border: none; padding: 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
@@ -622,9 +612,22 @@
                         </div>
                         <i class="fa-solid fa-chevron-right" style="color: rgba(255,255,255,0.5);"></i>
                     </div>
+                </div>
 
+                <div style="padding: 20px;">
+                    <div class="card"
+                        style="background: #9cafcc;color: var(--text-main); border: none; padding: 30px; text-align: center; margin-bottom: 20px;">
+                        <h3 style="font-size: 14px; margin: 0 0 20px; opacity: 0.7; color:var(--text-main);">Motivação
+                            do Dia</h3>
+                        <p id="daily-quote"
+                            style="font-size: 20px; margin: 20px 0 10px; line-height: 1.4; color:var(--text-main);">
+                            Carregando...</p>
+                    </div>
+                </div>
+                <div style="padding: 0 20px;">
+                    <h3 style="font-size: 18px; margin: 10px 0 15px; color:var(--text-main);">Treino de Hoje</h3>
+                    <div id="today-workout-card"></div>
                     <div id="today-challenge-card" style="margin-top: 20px;"></div>
-                    <div id="next-live-card" style="margin-top: 20px;"></div>
                     <div id="home-latest-news" style="margin-top: 30px;"></div>
                 </div>
             </div>
@@ -975,6 +978,23 @@
         </div>
     </div>
 
+    <div id="view-strength-videos" class="screen full-screen" style="overflow-y: auto; background: #fdfdfd;">
+        <div
+            style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
+            <button onclick="window.app.closeStrengthVideosPage()"
+                style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i
+                    class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; color: var(--primary);">Fortalecimento</h3>
+        </div>
+        <div style="padding: 20px;">
+            <p style="font-size: 14px; color: var(--text-sec); margin-bottom: 20px;">Selecione um exercício para
+                assistir:</p>
+            <div id="strength-video-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <p style="text-align:center; padding:20px; grid-column: span 2;">Carregando...</p>
+            </div>
+        </div>
+    </div>
+
     <div id="view-health-mental" class="screen full-screen" style="overflow-y: auto;">
         <div
             style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
@@ -1040,22 +1060,7 @@
         </div>
     </div>
 
-    <!-- Modal de Vídeos de Fortalecimento (QUE ESTAVA FALTANDO) -->
-    <div id="modal-strength-videos" class="modal-overlay">
-        <div class="modal-card">
-            <h3 style="color:var(--text-main);">Vídeos de Apoio</h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Selecione um exercício para assistir:</p>
-            <div id="strength-video-list" style="max-height: 300px; overflow-y: auto;">
-                <p style="text-align:center; padding:20px;">Carregando...</p>
-            </div>
-            <div style="margin-top: 15px; text-align: right;">
-                <button onclick="document.getElementById('modal-strength-videos').classList.remove('active')"
-                    class="btn btn-outline">Fechar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Orientações da Fisio Removido (Agora é uma página inteira) -->
+    <!-- Modal Orientações da Fisio e Modal Vídeos de Apoio Removidos (Agora são páginas inteiras) -->
 
     <div id="modal-day-detail" class="modal-overlay">
         <div class="modal-card">
