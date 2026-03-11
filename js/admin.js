@@ -747,6 +747,15 @@ export const admin = {
             img.style.display = 'block';
         }
     },
+    previewVideoImg: (input) => {
+        if (input.files && input.files[0]) {
+            state.tempVideoFile = input.files[0];
+            const url = URL.createObjectURL(state.tempVideoFile);
+            const img = document.getElementById('video-preview');
+            img.src = url;
+            img.style.display = 'block';
+        }
+    },
     postNews: async () => {
         const title = document.getElementById('news-title').value;
         const body = document.getElementById('news-body').value;
@@ -765,10 +774,64 @@ export const admin = {
         window.app.toast("Notícia publicada!");
         window.app.admTab('news');
     },
+
+    previewEditNewsImg: (input) => {
+        if (input.files && input.files[0]) {
+            state.tempEditNewsFile = input.files[0];
+            const url = URL.createObjectURL(state.tempEditNewsFile);
+            const img = document.getElementById('edit-news-preview');
+            img.src = url;
+            img.style.display = 'block';
+        }
+    },
+    openEditNews: async (id) => {
+        state.currentEditNewsId = id;
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_NEWS, id));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        document.getElementById('edit-news-title').value = d.title || '';
+        document.getElementById('edit-news-body').value = d.body || '';
+        const img = document.getElementById('edit-news-preview');
+        if (d.img) {
+            img.src = d.img;
+            img.style.display = 'block';
+        } else {
+            img.style.display = 'none';
+        }
+        state.tempEditNewsFile = null;
+        document.getElementById('edit-news-file').value = '';
+        document.getElementById('modal-edit-news').classList.add('active');
+    },
+    saveEditNews: async () => {
+        const id = state.currentEditNewsId;
+        const title = document.getElementById('edit-news-title').value;
+        const body = document.getElementById('edit-news-body').value;
+        if (!title || !body) return window.app.toast('Preencha título e corpo');
+
+        const btn = document.getElementById('btn-save-news');
+        if (btn) btn.disabled = true;
+
+        let updateData = { title, body };
+
+        if (state.tempEditNewsFile) {
+            window.app.toast("A fazer upload da imagem...");
+            try {
+                updateData.img = await window.app.uploadImage(state.tempEditNewsFile, 'news');
+            } catch (e) {
+                console.error("Erro upload:", e);
+                window.app.toast("Erro no upload.");
+            }
+        }
+
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_NEWS, id), updateData);
+        if (btn) btn.disabled = false;
+        document.getElementById('modal-edit-news').classList.remove('active');
+        window.app.toast("Notícia atualizada!");
+    },
     admLoadNewsHistory: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_NEWS), (snap) => {
             const div = document.getElementById('adm-news-history'); div.innerHTML = '';
-            snap.forEach(d => { div.innerHTML += `<div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; background:white; margin-bottom:5px; border-radius:10px;"><span>${d.data().title}</span><button onclick=\"window.app.admDeleteNews('${d.id}')\" style=\"color:red; border:none; background:none; cursor:pointer;\"><i class="fa-solid fa-trash"></i></button></div>`; });
+            snap.forEach(d => { div.innerHTML += `<div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; background:white; margin-bottom:5px; border-radius:10px;"><span>${d.data().title}</span><div><button onclick="window.app.openEditNews('${d.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; margin-right:10px;"><i class="fa-solid fa-pencil"></i></button><button onclick=\"window.app.admDeleteNews('${d.id}')\" style=\"color:red; border:none; background:none; cursor:pointer;\"><i class="fa-solid fa-trash"></i></button></div></div>`; });
         });
     },
     admDeleteNews: async (id) => {
@@ -781,26 +844,73 @@ export const admin = {
     },
     postQuote: async () => {
         const text = document.getElementById('adm-quote-text').value; if (!text) return;
-        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES)), { text, created: Date.now() });
+        const author = document.getElementById('adm-quote-author').value || 'Desconhecido';
+        await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES)), { text, author, created: Date.now() });
         document.getElementById('adm-quote-text').value = '';
+        document.getElementById('adm-quote-author').value = '';
     },
     admLoadQuotes: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s) => {
             const l = document.getElementById('adm-quotes-list'); l.innerHTML = '';
-            s.forEach(d => { l.innerHTML += `<div style="padding:15px; border-bottom:1px solid #eee; background:white; border-radius:10px; margin-bottom:5px; display:flex; justify-content:space-between;"><span>"${d.data().text}"</span> <button onclick="window.app.admDelQuote('${d.id}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div>` });
+            s.forEach(d => {
+                const data = d.data();
+                const authorDisplay = data.author ? ` - ${data.author}` : '';
+                l.innerHTML += `<div style="padding:15px; border-bottom:1px solid #eee; background:white; border-radius:10px; margin-bottom:5px; display:flex; justify-content:space-between;"><span>"${data.text}"<br><small style="color:#888;">${authorDisplay}</small></span><div><button onclick="window.app.openEditQuote('${d.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; margin-right:10px;"><i class="fa-solid fa-pencil"></i></button><button onclick="window.app.admDelQuote('${d.id}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div></div>`
+            });
         });
+    },
+    openEditQuote: async (id) => {
+        state.currentEditQuoteId = id;
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        document.getElementById('edit-quote-text').value = d.text || '';
+        document.getElementById('edit-quote-author').value = d.author || '';
+        document.getElementById('modal-edit-quote').classList.add('active');
+    },
+    saveEditQuote: async () => {
+        const id = state.currentEditQuoteId;
+        const text = document.getElementById('edit-quote-text').value;
+        const author = document.getElementById('edit-quote-author').value || 'Desconhecido';
+        if (!text) return window.app.toast('Frase obrigatória');
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id), { text, author });
+        document.getElementById('modal-edit-quote').classList.remove('active');
+        window.app.toast('Frase atualizada!');
     },
     admDelQuote: async (id) => { window.app.showConfirm('Apagar frase?', async () => await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_QUOTES, id))); },
     admAddStrengthVideo: async () => {
         const title = document.getElementById('adm-video-title').value;
+        const muscleInput = document.getElementById('adm-video-muscle').value.trim();
+        const muscle = muscleInput || "Geral";
         const link = document.getElementById('adm-video-link').value;
         if (!title || !link) return window.app.toast("Preencha título e link");
+
+        let imgUrl = null;
+        if (state.tempVideoFile) {
+            window.app.toast("A fazer upload da capa...");
+            const uploadBtn = document.querySelector('#adm-content-videos button.btn-primary');
+            if (uploadBtn) uploadBtn.disabled = true;
+            try {
+                imgUrl = await window.app.uploadImage(state.tempVideoFile, 'videos');
+            } catch (e) {
+                console.error("Erro no upload da capa:", e);
+                window.app.toast("Erro no upload da capa.");
+            }
+            if (uploadBtn) uploadBtn.disabled = false;
+        }
+
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS)), {
-            title, link, created: Date.now()
+            title, muscle, link, coverImg: imgUrl, created: Date.now()
         });
         window.app.toast("Vídeo cadastrado!");
         document.getElementById('adm-video-title').value = '';
+        document.getElementById('adm-video-muscle').value = '';
         document.getElementById('adm-video-link').value = '';
+        state.tempVideoFile = null;
+        document.getElementById('video-preview').style.display = 'none';
+
+        const fileInput = document.getElementById('video-file');
+        if (fileInput) fileInput.value = '';
     },
     admLoadStrengthVideos: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
@@ -809,20 +919,107 @@ export const admin = {
             snap.forEach(d => {
                 const v = d.data();
                 const safeLink = window.app.escape(v.link);
+                const coverHtml = v.coverImg ? `<img src="${v.coverImg}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
+                const muscleText = v.muscle ? ` <span style="font-size:11px; color:#888; background:#eee; padding:2px 6px; border-radius:10px; margin-left:5px;">${v.muscle}</span>` : '';
+
                 list.innerHTML += `
                 <div style="background:#fff; border-bottom:1px solid #eee; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:5px;">
-                    <div>
-                        <strong style="color:var(--text-main);">${v.title}</strong><br>
-                        <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
+                    <div style="display:flex; align-items:center;">
+                        ${coverHtml}
+                        <div>
+                            <strong style="color:var(--text-main);">${v.title}</strong>${muscleText}<br>
+                            <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
+                        </div>
                     </div>
-                    <button onclick="window.app.admDeleteStrengthVideo('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-trash"></i></button>
+                    <div>
+                        <button onclick="window.app.openEditVideo('${d.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-pencil"></i></button>
+                        <button onclick="window.app.admDeleteStrengthVideo('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
                 </div>`;
             });
         });
     },
+
+    previewEditVideoImg: (input) => {
+        if (input.files && input.files[0]) {
+            state.tempEditVideoFile = input.files[0];
+            const url = URL.createObjectURL(state.tempEditVideoFile);
+            const img = document.getElementById('edit-video-preview');
+            img.src = url;
+            img.style.display = 'block';
+        }
+    },
+    openEditVideo: async (id) => {
+        state.currentEditVideoId = id;
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_VIDEOS, id));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        document.getElementById('edit-video-title').value = d.title || '';
+        document.getElementById('edit-video-muscle').value = d.muscle || '';
+        document.getElementById('edit-video-link').value = d.link || '';
+
+        const img = document.getElementById('edit-video-preview');
+        if (d.coverImg) {
+            img.src = d.coverImg;
+            img.style.display = 'block';
+        } else {
+            img.style.display = 'none';
+        }
+
+        state.tempEditVideoFile = null;
+        document.getElementById('edit-video-file').value = '';
+        document.getElementById('modal-edit-video').classList.add('active');
+    },
+    saveEditStrengthVideo: async () => {
+        const id = state.currentEditVideoId;
+        const title = document.getElementById('edit-video-title').value;
+        const muscleInput = document.getElementById('edit-video-muscle').value.trim();
+        const muscle = muscleInput || "Geral";
+        const link = document.getElementById('edit-video-link').value;
+        if (!title || !link) return window.app.toast("Preencha título e link");
+
+        const btn = document.getElementById('btn-save-video');
+        if (btn) btn.disabled = true;
+
+        let updateData = { title, muscle, link };
+
+        if (state.tempEditVideoFile) {
+            window.app.toast("A fazer upload da capa...");
+            try {
+                updateData.coverImg = await window.app.uploadImage(state.tempEditVideoFile, 'videos');
+            } catch (e) {
+                console.error("Erro upload:", e);
+                window.app.toast("Erro no upload.");
+            }
+        }
+
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_VIDEOS, id), updateData);
+        if (btn) btn.disabled = false;
+        document.getElementById('modal-edit-video').classList.remove('active');
+        window.app.toast("Vídeo atualizado!");
+    },
     admDeleteStrengthVideo: async (id) => {
         if (confirm("Apagar vídeo?")) {
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_VIDEOS, id));
+        }
+    },
+
+    previewPhysioTipImg: (input) => {
+        if (input.files && input.files[0]) {
+            state.tempPhysioFile = input.files[0];
+            const url = URL.createObjectURL(state.tempPhysioFile);
+            const img = document.getElementById('physiotip-preview');
+            img.src = url;
+            img.style.display = 'block';
+        }
+    },
+    previewEditPhysioTipImg: (input) => {
+        if (input.files && input.files[0]) {
+            state.tempEditPhysioFile = input.files[0];
+            const url = URL.createObjectURL(state.tempEditPhysioFile);
+            const img = document.getElementById('edit-physiotip-preview');
+            img.src = url;
+            img.style.display = 'block';
         }
     },
 
@@ -832,13 +1029,33 @@ export const admin = {
         const title = document.getElementById('adm-physiotip-title').value;
         const link = document.getElementById('adm-physiotip-link').value;
         if (!title || !link) return window.app.toast("Preencha o título e o link");
+
+        let imgUrl = null;
+        if (state.tempPhysioFile) {
+            window.app.toast("A fazer upload da capa...");
+            const uploadBtn = document.querySelector('#adm-content-physiotips button.btn-primary');
+            if (uploadBtn) uploadBtn.disabled = true;
+            try {
+                imgUrl = await window.app.uploadImage(state.tempPhysioFile, 'physiotips');
+            } catch (e) {
+                console.error("Erro no upload da capa:", e);
+                window.app.toast("Erro no upload da capa.");
+            }
+            if (uploadBtn) uploadBtn.disabled = false;
+        }
+
         await setDoc(doc(collection(db, 'artifacts', appId, 'public', 'data', C_PHYSIO_TIPS)), {
-            category, title, link, created: Date.now()
+            category, title, link, coverImg: imgUrl, created: Date.now()
         });
         window.app.toast("Orientação cadastrada!");
         document.getElementById('adm-physiotip-category').value = '';
         document.getElementById('adm-physiotip-title').value = '';
         document.getElementById('adm-physiotip-link').value = '';
+        state.tempPhysioFile = null;
+        document.getElementById('physiotip-preview').style.display = 'none';
+
+        const fileInput = document.getElementById('physiotip-file');
+        if (fileInput) fileInput.value = '';
     },
     admLoadPhysioTips: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_PHYSIO_TIPS), (snap) => {
@@ -847,16 +1064,76 @@ export const admin = {
             snap.forEach(d => {
                 const v = d.data();
                 const safeLink = window.app.escape(v.link);
+                const coverHtml = v.coverImg ? `<img src="${v.coverImg}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
+
                 list.innerHTML += `
                 <div style="background:#fff; border-bottom:1px solid #eee; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:5px;">
-                    <div>
-                        <strong style="color:var(--text-main);">${v.category ? `[${v.category}] ` : ''}${v.title}</strong><br>
-                        <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
+                    <div style="display:flex; align-items:center;">
+                        ${coverHtml}
+                        <div>
+                            <strong style="color:var(--text-main);">${v.category ? `[${v.category}] ` : ''}${v.title}</strong><br>
+                            <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
+                        </div>
                     </div>
-                    <button onclick="window.app.admDeletePhysioTip('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-trash"></i></button>
+                    <div>
+                        <button onclick="window.app.openEditPhysioTip('${d.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-pencil"></i></button>
+                        <button onclick="window.app.admDeletePhysioTip('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
                 </div>`;
             });
         });
+    },
+    openEditPhysioTip: async (id) => {
+        state.currentEditPhysioTipId = id;
+        const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PHYSIO_TIPS, id));
+        if (!snap.exists()) return;
+        const d = snap.data();
+        document.getElementById('edit-physiotip-category').value = d.category || '';
+        document.getElementById('edit-physiotip-title').value = d.title || '';
+        document.getElementById('edit-physiotip-link').value = d.link || '';
+
+        const img = document.getElementById('edit-physiotip-preview');
+        if (d.coverImg) {
+            img.src = d.coverImg;
+            img.style.display = 'block';
+        } else {
+            img.style.display = 'none';
+        }
+
+        state.tempEditPhysioFile = null;
+        document.getElementById('edit-physiotip-file').value = '';
+
+        document.getElementById('modal-edit-physiotip').classList.add('active');
+    },
+    saveEditPhysioTip: async () => {
+        const id = state.currentEditPhysioTipId;
+        const categoryInput = document.getElementById('edit-physiotip-category').value.trim();
+        const category = categoryInput || "Geral";
+        const title = document.getElementById('edit-physiotip-title').value;
+        const link = document.getElementById('edit-physiotip-link').value;
+
+        if (!title || !link) return window.app.toast("Preencha título e link");
+
+        const btn = document.getElementById('btn-save-physiotip');
+        if (btn) btn.disabled = true;
+
+        let updateData = { category, title, link };
+
+        if (state.tempEditPhysioFile) {
+            window.app.toast("A fazer upload da capa...");
+            try {
+                updateData.coverImg = await window.app.uploadImage(state.tempEditPhysioFile, 'physiotips');
+            } catch (e) {
+                console.error("Erro upload:", e);
+                window.app.toast("Erro no upload.");
+            }
+        }
+
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_PHYSIO_TIPS, id), updateData);
+        if (btn) btn.disabled = false;
+
+        document.getElementById('modal-edit-physiotip').classList.remove('active');
+        window.app.toast("Orientação atualizada!");
     },
     admDeletePhysioTip: async (id) => {
         if (confirm("Apagar orientação da fisio?")) {

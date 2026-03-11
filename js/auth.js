@@ -336,13 +336,18 @@ export const authLogic = {
                     // Busca frase aleatória
                     getDocs(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES)).then(snap => {
                         const quotes = [];
-                        snap.forEach(d => quotes.push(d.data().text));
+                        snap.forEach(d => {
+                            const data = d.data();
+                            const authorStr = data.author && data.author !== 'Desconhecido' ? `\n- ${data.author}` : '';
+                            quotes.push(`"${data.text}"${authorStr}`);
+                        });
                         const textEl = document.getElementById('splash-quote-text');
 
                         if (quotes.length > 0) {
-                            textEl.innerText = quotes[Math.floor(Math.random() * quotes.length)];
+                            const dayIndex = Math.floor(new Date().setHours(0, 0, 0, 0) / 86400000);
+                            textEl.innerText = quotes[dayIndex % quotes.length];
                         } else {
-                            textEl.innerText = "O único treino ruim é aquele que não aconteceu.";
+                            textEl.innerText = "\"O único treino ruim é aquele que não aconteceu.\"";
                         }
 
                         // Fade in start (HTML opacity 0 default, adding class / style)

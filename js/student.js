@@ -129,6 +129,43 @@ export const student = {
             content += `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`;
         }
 
+        const completedChallenges = state.currentUser.completedChallenges || [];
+        if (completedChallenges.includes(dateStr)) {
+            // Se tem desafio concluído neste dia, busca os dados do desafio correspondente.
+            window.app.getChallengeForDate(dateStr, (activeChallenge) => {
+                let challengeDesc = "Desafio do Dia";
+                if (activeChallenge) {
+                    let taskTime = '';
+                    const task = activeChallenge.tasks.find(t => t.date === dateStr);
+                    if (task && task.task) {
+                        let displayTask = task.task;
+                        if (/^(\d{2}):(\d{2})$/.test(displayTask) || /^(\d{2}):(\d{2}):(\d{2})$/.test(displayTask)) {
+                            let parts = displayTask.split(':').map(Number);
+                            let m = 0, s = 0;
+                            if (parts.length === 3) { m = parts[1]; s = parts[2]; } else { m = parts[0]; s = parts[1]; }
+                            let formattedTime = [];
+                            if (m > 0) formattedTime.push(`${m}m`);
+                            if (s > 0 || m === 0) formattedTime.push(`${s}s`);
+                            taskTime = formattedTime.join(' ');
+                        } else {
+                            taskTime = displayTask;
+                        }
+                    }
+                    challengeDesc = `${activeChallenge.name || 'Desafio do Dia'}, concluído` + (taskTime ? ` com o tempo de ${taskTime}` : '');
+                }
+                const chCardHtml = `<div style="background:#e8f8f5; border:1px solid #2ecc71; padding:10px; border-radius:8px; margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                    <div style="background:#fff; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                        <i class="fa-solid fa-trophy" style="color:#2ecc71; font-size:14px;"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin:0; font-size:14px; color:#27ae60;">Desafio Concluído!</h4>
+                        <p style="margin:0; font-size:12px; color:#666;">${challengeDesc}</p>
+                    </div>
+                </div>`;
+                document.getElementById('day-det-content').insertAdjacentHTML('beforeend', chCardHtml);
+            });
+        }
+
         // Renderiza lista de provas de outros alunos E a própria prova se houver
         if (workoutData && workoutData.studentRaces && workoutData.studentRaces.length > 0) {
             content += `<div style="margin-top:15px;">
@@ -275,11 +312,16 @@ export const student = {
     loadQuote: () => {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_QUOTES), (s) => {
             const quotes = [];
-            s.forEach(d => quotes.push(d.data().text));
+            s.forEach(d => {
+                const data = d.data();
+                const authorStr = data.author && data.author !== 'Desconhecido' ? `\n- ${data.author}` : '';
+                quotes.push(`"${data.text}"${authorStr}`);
+            });
             if (quotes.length > 0) {
-                document.getElementById('daily-quote').innerText = quotes[Math.floor(Math.random() * quotes.length)];
+                const dayIndex = Math.floor(new Date().setHours(0, 0, 0, 0) / 86400000);
+                document.getElementById('daily-quote').innerText = quotes[dayIndex % quotes.length];
             } else {
-                document.getElementById('daily-quote').innerText = "O único treino ruim é aquele que não aconteceu.";
+                document.getElementById('daily-quote').innerText = "\"O único treino ruim é aquele que não aconteceu.\"";
             }
         });
     },
@@ -294,13 +336,39 @@ export const student = {
                 list.innerHTML = '<p style="text-align:center; color:#666;">Nenhum vídeo cadastrado.</p>';
                 return;
             }
+
+            const videosByMuscle = {};
             snap.forEach(d => {
                 const v = d.data();
-                const safeLink = window.app.escape(v.link);
+                const muscle = v.muscle || "Geral";
+                if (!videosByMuscle[muscle]) videosByMuscle[muscle] = [];
+                videosByMuscle[muscle].push(v);
+            });
+
+            Object.keys(videosByMuscle).sort().forEach(muscle => {
+                const videos = videosByMuscle[muscle];
+                let carouselHtml = '';
+
+                videos.forEach(v => {
+                    const safeLink = window.app.escape(v.link);
+                    const coverImg = v.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
+
+                    carouselHtml += `
+                    <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')">
+                        <img src="${coverImg}" class="video-thumb-img" alt="${v.title}">
+                        <div class="video-thumb-overlay">
+                            <h4 class="video-thumb-title">${v.title}</h4>
+                        </div>
+                        <div class="video-thumb-play"><i class="fa-solid fa-play"></i></div>
+                    </div>`;
+                });
+
                 list.innerHTML += `
-                <div style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:600; font-size:14px;">${v.title}</span>
-                    <button onclick="window.app.playVideo('${safeLink}')" style="background:var(--primary); color:#FFF; border:none; width:30px; height:30px; border-radius:50%; cursor:pointer;"><i class="fa-solid fa-play" style="font-size:12px;"></i></button>
+                <div class="video-row-container">
+                    <div class="video-row-title">${muscle}</div>
+                    <div class="video-carousel">
+                        ${carouselHtml}
+                    </div>
                 </div>`;
             });
         });
@@ -511,6 +579,15 @@ export const student = {
 
     saveMentalHealth: async (mood, emoji) => {
         try {
+            // Verifica se já registrou no mesmo dia
+            if (state.currentUser.lastMental && state.currentUser.lastMental.timestamp) {
+                const lastDate = new Date(state.currentUser.lastMental.timestamp).toISOString().split('T')[0];
+                const today = new Date().toISOString().split('T')[0];
+                if (lastDate === today) {
+                    return window.app.toast("Você já registrou como está se sentindo hoje! Obrigado!");
+                }
+            }
+
             const mentalData = {
                 mood,
                 emoji,
@@ -1089,73 +1166,68 @@ export const student = {
         window.app.haptic();
     },
 
-    openPhysioTipsModal: async () => {
-        document.getElementById('modal-physio-tips').classList.add('active');
-        const list = document.getElementById('physio-tips-list');
-        list.innerHTML = '<p style="text-align:center; padding:20px;">Carregando pastas...</p>';
+    openPhysioTipsPage: async () => {
+        window.app.screen('view-physiotips-page');
+        const content = document.getElementById('physio-page-content');
+        content.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Carregando...</p>';
 
         try {
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_PHYSIO_TIPS), orderBy('created', 'desc'));
             const snap = await getDocs(q);
 
             if (snap.empty) {
-                list.innerHTML = '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Nenhuma dica cadastrada ainda.</p>';
+                content.innerHTML = '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Nenhuma dica cadastrada ainda.</p>';
                 return;
             }
 
-            // Populate cache
-            state.physioTipsCache = [];
+            const tips = [];
             snap.forEach(d => {
                 const data = d.data();
                 data.id = d.id;
-                state.physioTipsCache.push(data);
+                tips.push(data);
             });
 
-            // Group by category
-            const categories = [...new Set(state.physioTipsCache.map(t => t.category || 'Geral'))];
+            const tipsByCategory = {};
+            tips.forEach(t => {
+                const cat = t.category || "Geral";
+                if (!tipsByCategory[cat]) tipsByCategory[cat] = [];
+                tipsByCategory[cat].push(t);
+            });
 
-            list.innerHTML = '';
-            categories.forEach(cat => {
-                const safeCatName = window.app.escape(cat);
-                list.innerHTML += `
-    <div onclick="window.app.openPhysioCategory('${safeCatName}')" style="background:#f9f9f9; padding:20px 15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #eee; cursor:pointer;" >
-                    <div style="display:flex; align-items:center; gap: 15px;">
-                        <i class="fa-solid fa-folder" style="color:var(--primary); font-size: 24px;"></i>
-                        <strong style="color:var(--text-main); font-size:16px;">${cat}</strong>
+            content.innerHTML = '';
+
+            for (const [catName, catTips] of Object.entries(tipsByCategory)) {
+                let htmlCards = '';
+                catTips.forEach(tip => {
+                    const safeLink = window.app.escape(tip.link);
+                    const coverImg = tip.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
+                    htmlCards += `
+                    <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')">
+                        <img src="${coverImg}" class="video-thumb-img" alt="${tip.title}">
+                        <div class="video-thumb-overlay">
+                            <h4 class="video-thumb-title">${tip.title}</h4>
+                        </div>
+                        <div class="video-thumb-play"><i class="fa-solid fa-play"></i></div>
+                    </div>`;
+                });
+
+                content.innerHTML += `
+                <div class="video-row-container">
+                    <h4 class="video-row-title">${catName}</h4>
+                    <div class="video-carousel">
+                        ${htmlCards}
                     </div>
-                    <i class="fa-solid fa-chevron-right" style="color:#ccc;"></i>
-                </div> `;
-            });
+                </div>`;
+            }
         } catch (e) {
             console.error(e);
-            list.innerHTML = '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Erro ao carregar dicas.</p>';
+            content.innerHTML = '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Erro ao carregar dicas.</p>';
         }
     },
 
-    openPhysioCategory: (categoryName) => {
-        const list = document.getElementById('physio-tips-list');
-        list.innerHTML = `
-    <button onclick="window.app.openPhysioTipsModal()" style="border:none; background:none; color:var(--text-main); font-weight:600; cursor:pointer; margin-bottom: 15px; display:flex; align-items:center; gap: 5px;" >
-        <i class="fa-solid fa-arrow-left"></i> Voltar
-        </button> `;
-
-        const tips = state.physioTipsCache.filter(t => (t.category || 'Geral') === categoryName);
-
-        if (tips.length === 0) {
-            list.innerHTML += '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Nenhum vídeo nesta pasta.</p>';
-            return;
-        }
-
-        tips.forEach(tip => {
-            const safeLink = window.app.escape(tip.link);
-            list.innerHTML += `
-    <div style="background:#f9f9f9; padding:15px; border-radius:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #eee;" >
-                <div>
-                    <strong style="color:var(--text-main); font-size:15px;">${tip.title}</strong>
-                </div>
-                <button onclick="window.app.playVideo('${safeLink}')" class="btn" style="background:var(--primary); color:white; border-radius:20px; padding:8px 15px; font-size:12px; width:auto; margin:0;"><i class="fa-solid fa-play"></i> Assistir</button>
-            </div> `;
-        });
+    closePhysioTipsPage: () => {
+        window.app.screen('view-health-physio');
+        window.app.haptic();
     },
 
     closeHealthSubView: () => {
@@ -1290,34 +1362,35 @@ export const student = {
 
     // --- NOVOS CARDS HOME ---
 
+    getChallengeForDate: async (dateStr, callback) => {
+        try {
+            const q = query(
+                collection(db, 'artifacts', appId, 'public', 'data', C_CHALLENGES),
+                where('startDate', '<=', dateStr),
+                orderBy('startDate', 'desc')
+            );
+            const snap = await getDocs(q);
+            let activeChallenge = null;
+            snap.forEach(d => {
+                const data = d.data();
+                if (!activeChallenge && data.endDate >= dateStr) {
+                    activeChallenge = data;
+                }
+            });
+            callback(activeChallenge);
+        } catch (e) {
+            console.error("Erro getChallengeForDate", e);
+            callback(null);
+        }
+    },
+
     renderChallengeCard: async () => {
         const container = document.getElementById('today-challenge-card');
         container.innerHTML = '';
 
-        try {
-            // Busca o desafio que engloba o dia de hoje
-            const todayStr = new Date().toISOString().split('T')[0];
-
-            const q = query(
-                collection(db, 'artifacts', appId, 'public', 'data', C_CHALLENGES),
-                where('startDate', '<=', todayStr),
-                orderBy('startDate', 'desc')
-            );
-
-            const snap = await getDocs(q);
-
-            let activeChallenge = null;
-
-            // Filtra no cliente para garantir que endDate >= today
-            snap.forEach(d => {
-                const data = d.data();
-                if (!activeChallenge && data.endDate >= todayStr) {
-                    activeChallenge = data;
-                }
-            });
-
+        const todayStr = new Date().toISOString().split('T')[0];
+        window.app.getChallengeForDate(todayStr, (activeChallenge) => {
             if (!activeChallenge) return;
-
             const todayTask = activeChallenge.tasks.find(t => t.date === todayStr);
 
             if (todayTask) {
@@ -1356,10 +1429,7 @@ export const student = {
                     <i class="fa-solid fa-trophy" style="position: absolute; right: -10px; bottom: -20px; font-size: 80px; opacity: 0.2; transform: rotate(-15deg);"></i>
                 </div> `;
             }
-
-        } catch (e) {
-            console.error("Erro desafio", e);
-        }
+        });
     },
 
     completeChallenge: async (dateStr) => {
@@ -1416,16 +1486,16 @@ export const student = {
 
                 let icon = '<i class="fa-brands fa-youtube" style="font-size: 24px;"></i>';
                 let bg = '#FF0000';
-                let platformText = 'Live Mentoria';
+                let platformText = "WE'RE nuts";
 
                 if (nextLive.platform === 'instagram') {
                     icon = '<i class="fa-brands fa-instagram" style="font-size: 24px;"></i>';
                     bg = '#E1306C';
-                    platformText = 'Live Instagram';
+                    platformText = 'Instagram';
                 } else if (nextLive.platform === 'zoom') {
                     icon = '<i class="fa-solid fa-video" style="font-size: 24px;"></i>';
                     bg = '#2D8CFF';
-                    platformText = 'Live Zoom/Meet';
+                    platformText = 'Zoom/Meet';
                 }
 
                 container.innerHTML = `
@@ -1435,7 +1505,7 @@ export const student = {
                         ${icon}
                     </div>
                     <div>
-                        <h4 style="margin: 0; font-size: 14px; color: var(--text-main);">Próxima ${platformText}</h4>
+                        <h4 style="margin: 0; font-size: 14px; color: var(--text-main);">Ao vivo no ${platformText}</h4>
                         <div style="color: var(--primary); font-weight: 700; font-size: 16px; margin-top: 2px;">
                             ${day} às ${time}
                         </div>
