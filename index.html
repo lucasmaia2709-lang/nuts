@@ -943,7 +943,7 @@
         <div style="padding: 20px;">
             <div class="card"
                 style="margin-bottom: 25px; padding: 25px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: none; text-align: center; cursor: pointer;"
-                onclick="window.app.openPhysioTipsModal()">
+                onclick="window.app.openPhysioTipsPage()">
                 <i class="fa-solid fa-notes-medical"
                     style="font-size: 40px; color: var(--primary); margin-bottom: 15px;"></i>
                 <h3 style="margin: 0; color: var(--primary); font-size: 20px;">Orientações da Fisio</h3>
@@ -953,8 +953,25 @@
                     style="margin-top: 15px; width: auto; padding: 8px 25px; border-radius: 20px;">Acessar
                     Orientações</button>
             </div>
-            <h4 style="margin: 0 0 15px 0; color: var(--text-main);">Histórico de Relatos</h4>
-            <div id="health-pain-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            <div onclick="const list = document.getElementById('health-pain-list'); const icon = document.getElementById('pain-list-icon'); if(list.style.display === 'none'){ list.style.display = 'flex'; icon.classList.replace('fa-chevron-down', 'fa-chevron-up'); } else { list.style.display = 'none'; icon.classList.replace('fa-chevron-up', 'fa-chevron-down'); }"
+                style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                <h4 style="margin: 0; color: var(--text-main); font-size: 16px;">Histórico de Relatos</h4>
+                <i id="pain-list-icon" class="fa-solid fa-chevron-down" style="color: var(--primary);"></i>
+            </div>
+            <div id="health-pain-list" style="display: none; flex-direction: column; gap: 10px;"></div>
+        </div>
+    </div>
+
+    <div id="view-physiotips-page" class="screen full-screen" style="overflow-y: auto;">
+        <div
+            style="padding: 20px; padding-top: max(20px, env(safe-area-inset-top)); display: flex; align-items: center; background: #FFF; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 50;">
+            <button onclick="window.app.closePhysioTipsPage()"
+                style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i
+                    class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="margin:0; color: var(--primary);">Orientações da Fisio</h3>
+        </div>
+        <div id="physio-page-content" style="padding: 20px;">
+            <p style="text-align:center; padding:20px;">Carregando...</p>
         </div>
     </div>
 
@@ -1038,21 +1055,7 @@
         </div>
     </div>
 
-    <!-- Modal Orientações da Fisio -->
-    <div id="modal-physio-tips" class="modal-overlay">
-        <div class="modal-card">
-            <h3 style="color:var(--primary);">Orientações da Fisio</h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Selecione o local da dor para ver as
-                orientações:</p>
-            <div id="physio-tips-list" style="max-height: 300px; overflow-y: auto;">
-                <p style="text-align:center; padding:20px;">Carregando...</p>
-            </div>
-            <div style="margin-top: 15px; text-align: right;">
-                <button onclick="document.getElementById('modal-physio-tips').classList.remove('active')"
-                    class="btn btn-outline">Fechar</button>
-            </div>
-        </div>
-    </div>
+    <!-- Modal Orientações da Fisio Removido (Agora é uma página inteira) -->
 
     <div id="modal-day-detail" class="modal-overlay">
         <div class="modal-card">
@@ -1458,6 +1461,89 @@
         </div>
     </div>
 
+    <!-- MODAIS DE EDIÇÃO -->
+    <div id="modal-edit-quote" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Editar Frase</h3>
+            <textarea id="edit-quote-text" class="input"
+                style="height:80px; resize:none; margin-bottom:10px;"></textarea>
+            <input id="edit-quote-author" class="input" placeholder="Autor" style="margin-bottom:15px;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.saveEditQuote()" class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-edit-quote').classList.remove('active')"
+                    class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edit-news" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Editar Notícia</h3>
+            <input id="edit-news-title" class="input" placeholder="Título" style="margin-bottom:10px;">
+            <textarea id="edit-news-body" class="input"
+                style="height:120px; resize:none; margin-bottom:10px;"></textarea>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                <button onclick="document.getElementById('edit-news-file').click()" class="btn btn-outline"
+                    style="width:auto; margin:0; font-size:12px;"><i class="fa-solid fa-image"></i> Alterar
+                    Imagem</button>
+            </div>
+            <input type="file" id="edit-news-file" hidden onchange="window.app.previewEditNewsImg(this)">
+            <img id="edit-news-preview"
+                style="width:100%; height:150px; object-fit:cover; display:none; margin-bottom:15px; border-radius:10px;">
+            <div style="display:flex; gap:10px;">
+                <button id="btn-save-news" onclick="window.app.saveEditNews()" class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-edit-news').classList.remove('active')"
+                    class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edit-physiotip" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Editar Orientação da Fisio</h3>
+            <input id="edit-physiotip-category" class="input" placeholder="Categoria" style="margin-bottom:10px;">
+            <input id="edit-physiotip-title" class="input" placeholder="Título / Músculo" style="margin-bottom:10px;">
+            <input id="edit-physiotip-link" class="input" placeholder="Link do Vídeo" style="margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                <button onclick="document.getElementById('edit-physiotip-file').click()" class="btn btn-outline"
+                    style="width:auto; margin:0; font-size:12px;"><i class="fa-solid fa-image"></i> Alterar
+                    Capa</button>
+            </div>
+            <input type="file" id="edit-physiotip-file" hidden onchange="window.app.previewEditPhysioTipImg(this)">
+            <img id="edit-physiotip-preview"
+                style="width:100%; height:150px; object-fit:cover; display:none; margin-bottom:15px; border-radius:10px;">
+            <div style="display:flex; gap:10px;">
+                <button id="btn-save-physiotip" onclick="window.app.saveEditPhysioTip()"
+                    class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-edit-physiotip').classList.remove('active')"
+                    class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edit-video" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Editar Vídeo</h3>
+            <input id="edit-video-title" class="input" placeholder="Título" style="margin-bottom:10px;">
+            <input id="edit-video-muscle" class="input" placeholder="Músculo" style="margin-bottom:10px;">
+            <input id="edit-video-link" class="input" placeholder="Link do Vídeo" style="margin-bottom:15px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                <button onclick="document.getElementById('edit-video-file').click()" class="btn btn-outline"
+                    style="width:auto; margin:0; font-size:12px;"><i class="fa-solid fa-image"></i> Alterar
+                    Capa</button>
+            </div>
+            <input type="file" id="edit-video-file" hidden onchange="window.app.previewEditVideoImg(this)">
+            <img id="edit-video-preview"
+                style="width:100%; height:150px; object-fit:cover; display:none; margin-bottom:15px; border-radius:10px;">
+            <div style="display:flex; gap:10px;">
+                <button id="btn-save-video" onclick="window.app.saveEditStrengthVideo()"
+                    class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-edit-video').classList.remove('active')"
+                    class="btn btn-outline">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- PAINEL ADMIN REDESENHADO (NOVO) -->
     <div id="view-admin" class="screen full-screen admin-layout">
 
@@ -1677,6 +1763,8 @@
                     <div class="card" style="max-width:600px;">
                         <textarea id="adm-quote-text" class="input" placeholder="Digite a frase do dia..."
                             style="margin-bottom:15px; resize:none;"></textarea>
+                        <input id="adm-quote-author" class="input" placeholder="Autor (Opcional)"
+                            style="margin-bottom:15px;">
                         <button onclick="window.app.postQuote()" class="btn btn-primary"
                             style="width:100%; margin:0;">Adicionar Frase</button>
                     </div>
@@ -1690,8 +1778,19 @@
                     <div class="card" style="max-width:600px;">
                         <input id="adm-video-title" class="input" placeholder="Título do Exercício"
                             style="margin-bottom:10px;">
+                        <input id="adm-video-muscle" class="input" placeholder="Músculo (ex: Pernas, Abdômen, Peito)"
+                            style="margin-bottom:10px;">
                         <input id="adm-video-link" class="input" placeholder="Link do Vídeo (Youtube/etc)"
                             style="margin-bottom:15px;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                            <button onclick="document.getElementById('video-file').click()" class="btn btn-outline"
+                                style="width:auto; margin:0; font-size:12px;"><i class="fa-solid fa-image"></i>
+                                Adicionar Foto de Capa</button>
+                            <span style="font-size:11px; color:#888;">Opcional (para miniatura)</span>
+                        </div>
+                        <input type="file" id="video-file" hidden onchange="window.app.previewVideoImg(this)">
+                        <img id="video-preview"
+                            style="width:100%; height:150px; object-fit:cover; display:none; margin-bottom:15px; border-radius:10px;">
                         <button onclick="window.app.admAddStrengthVideo()" class="btn btn-primary"
                             style="width:100%; margin:0;">Cadastrar Vídeo</button>
                     </div>
@@ -1709,6 +1808,14 @@
                             style="margin-bottom:10px;">
                         <input id="adm-physiotip-link" class="input" placeholder="Link do Vídeo (Youtube/etc)"
                             style="margin-bottom:15px;">
+                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
+                            <button onclick="document.getElementById('physiotip-file').click()" class="btn btn-outline"
+                                style="width:auto; margin:0; font-size:12px;"><i class="fa-solid fa-image"></i>
+                                Adicionar Foto de Capa</button>
+                        </div>
+                        <input type="file" id="physiotip-file" hidden onchange="window.app.previewPhysioTipImg(this)">
+                        <img id="physiotip-preview"
+                            style="width:100%; height:150px; object-fit:cover; display:none; margin-bottom:15px; border-radius:10px;">
                         <button onclick="window.app.admAddPhysioTip()" class="btn btn-primary"
                             style="width:100%; margin:0;">Cadastrar Orientação</button>
                     </div>
