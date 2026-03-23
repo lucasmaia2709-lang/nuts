@@ -21,7 +21,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700;800&family=Cormorant+Garamond:wght@300;400;500&family=Major+Mono+Display&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&family=Major+Mono+Display&display=swap"
         rel="stylesheet">
 
     <link rel="stylesheet" href="style.css?v=12">
@@ -76,7 +76,7 @@
             <span class="logo-nuts">nuts</span>
         </div>
         <p id="splash-quote-text"
-            style="color: #fff; font-size: 22px; line-height: 1.5; font-weight: 300; opacity: 0; transition: opacity 2s ease-in-out;">
+            style="color: #fff; font-size: 22px; line-height: 1.5; font-weight: 300; opacity: 0; transition: opacity 2s ease-in-out; text-align: center; width: 100%;">
             Carregando...
         </p>
     </div>
@@ -598,7 +598,8 @@
                 <div style="padding: 0 20px;">
                     <div id="next-live-card" style="margin-top: 20px;"></div>
 
-                    <div class="card" onclick="document.getElementById('modal-mental-health').classList.add('active')"
+                    <div id="mood-checkin-card" class="card"
+                        onclick="document.getElementById('modal-mental-health').classList.add('active')"
                         style="margin-top: 20px; background: linear-gradient(135deg, #1b265b 0%, #3a4b91 100%); color: #fff; border: none; padding: 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 15px;">
                             <div
@@ -606,8 +607,7 @@
                                 <i class="fa-solid fa-face-smile" style="font-size: 20px; color: #dbffae;"></i>
                             </div>
                             <div>
-                                <h3 style="margin:0; font-size: 16px; color: #dbffae;">Como você está se sentindo hoje?
-                                </h3>
+                                <h3 style="margin:0; font-size: 16px; color: #dbffae;">Mood Check-In</h3>
                             </div>
                         </div>
                         <i class="fa-solid fa-chevron-right" style="color: rgba(255,255,255,0.5);"></i>
@@ -620,7 +620,7 @@
                         <h3 style="font-size: 14px; margin: 0 0 20px; opacity: 0.7; color:var(--text-main);">Motivação
                             do Dia</h3>
                         <p id="daily-quote"
-                            style="font-size: 20px; margin: 20px 0 10px; line-height: 1.4; color:var(--text-main);">
+                            style="font-size: 20px; margin: 20px 0 10px; line-height: 1.4; color:var(--text-main); text-align: center; width: 100%;">
                             Carregando...</p>
                     </div>
                 </div>
@@ -638,20 +638,21 @@
                 <div id="workouts-list"></div>
             </div>
 
-            <!-- ABA SAÚDE -->
+            <!-- ABA ESPECIALISTAS -->
             <div id="tab-health" class="tab-content hidden" style="padding: 0 20px;">
-                <h2 style="margin: 20px 0; color:var(--text-main);">Minha Saúde</h2>
-                <div class="card" onclick="window.app.openHealthNutri()"
+                <h2 style="margin: 20px 0; color:var(--text-main);">Especialistas</h2>
+                <div class="card" onclick="window.app.openStrengthVideosPage()"
                     style="cursor: pointer; transition: transform 0.2s; margin-bottom: 15px;">
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 15px;">
                             <div
                                 style="width: 50px; height: 50px; background: #e0f2f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #009688; font-size: 20px;">
-                                <i class="fa-solid fa-carrot"></i>
+                                <i class="fa-solid fa-person-running"></i>
                             </div>
                             <div>
-                                <h3 style="margin:0; font-size: 18px; color: var(--text-main);">Meu Nutri</h3>
-                                <p style="margin:0; font-size: 12px; color: var(--text-sec);">Dieta e suplementação</p>
+                                <h3 style="margin:0; font-size: 18px; color: var(--text-main);">Treinador</h3>
+                                <p style="margin:0; font-size: 12px; color: var(--text-sec);">Fortalecimento e técnica
+                                </p>
                             </div>
                         </div>
                         <i class="fa-solid fa-chevron-right" style="color: #ccc;"></i>
@@ -666,7 +667,7 @@
                                 <i class="fa-solid fa-user-doctor"></i>
                             </div>
                             <div>
-                                <h3 style="margin:0; font-size: 18px; color: var(--text-main);">Meu Fisio</h3>
+                                <h3 style="margin:0; font-size: 18px; color: var(--text-main);">Fisio</h3>
                                 <p style="margin:0; font-size: 12px; color: var(--text-sec);">Relatos e tratamentos</p>
                             </div>
                         </div>
@@ -717,7 +718,7 @@
             <button class="nav-item" onclick="window.app.nav('social')" data-tab="social"><i
                     class="fa-solid fa-users"></i></button>
             <button class="nav-item" onclick="window.app.nav('health')" data-tab="health" style="position: relative;"><i
-                    class="fa-solid fa-heart-pulse"></i><span id="nav-badge-health" class="hidden"
+                    class="fa-solid fa-dumbbell"></i><span id="nav-badge-health" class="hidden"
                     style="position: absolute; top: 5px; right: 25%; width: 8px; height: 8px; background: var(--red); border-radius: 50%; border: 1px solid white;"></span></button>
             <button class="nav-item active" onclick="window.app.nav('home')" data-tab="home"><i
                     class="fa-solid fa-house"></i></button>
@@ -837,7 +838,7 @@
                 <p style="font-size: 11px; color: #999; margin-top: 10px;">Esta ação é permanente e remove todos os seus
                     dados.</p>
                 <div style="text-align:center; margin-top:30px;">
-                    <p style="font-size: 11px; color: #999; margin: 0; opacity: 0.7;">App: Versão 2.0.0</p>
+                    <p style="font-size: 11px; color: #999; margin: 0; opacity: 0.7;">App: Versão 2.0.1</p>
                 </div>
             </div>
         </div>
@@ -941,7 +942,7 @@
             <button onclick="window.app.closeHealthSubView()"
                 style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i
                     class="fa-solid fa-arrow-left"></i></button>
-            <h3 style="margin:0; color: var(--primary);">Meu Fisio</h3>
+            <h3 style="margin:0; color: var(--primary);">Fisio</h3>
         </div>
         <div style="padding: 20px;">
             <div class="card"
@@ -956,7 +957,7 @@
                     style="margin-top: 15px; width: auto; padding: 8px 25px; border-radius: 20px;">Acessar
                     Orientações</button>
             </div>
-            <div onclick="const list = document.getElementById('health-pain-list'); const icon = document.getElementById('pain-list-icon'); if(list.style.display === 'none'){ list.style.display = 'flex'; icon.classList.replace('fa-chevron-down', 'fa-chevron-up'); } else { list.style.display = 'none'; icon.classList.replace('fa-chevron-up', 'fa-chevron-down'); }"
+            <div onclick="var list = document.getElementById('health-pain-list'); var icon = document.getElementById('pain-list-icon'); if(list.style.display === 'none'){ list.style.display = 'flex'; icon.classList.replace('fa-chevron-down', 'fa-chevron-up'); } else { list.style.display = 'none'; icon.classList.replace('fa-chevron-up', 'fa-chevron-down'); }"
                 style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                 <h4 style="margin: 0; color: var(--text-main); font-size: 16px;">Histórico de Relatos</h4>
                 <i id="pain-list-icon" class="fa-solid fa-chevron-down" style="color: var(--primary);"></i>
@@ -984,11 +985,11 @@
             <button onclick="window.app.closeStrengthVideosPage()"
                 style="border:none; background:none; font-size:24px; cursor:pointer; color:var(--text-main); margin-right: 15px;"><i
                     class="fa-solid fa-arrow-left"></i></button>
-            <h3 style="margin:0; color: var(--primary);">Fortalecimento</h3>
+            <h3 style="margin:0; color: var(--primary);">Treinador</h3>
         </div>
         <div style="padding: 20px;">
-            <p style="font-size: 14px; color: var(--text-sec); margin-bottom: 20px;">Selecione um exercício para
-                assistir:</p>
+            <p style="font-size: 14px; color: var(--text-sec); margin-bottom: 20px;">Vídeos de fortalecimento e técnica:
+            </p>
             <div id="strength-video-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <p style="text-align:center; padding:20px; grid-column: span 2;">Carregando...</p>
             </div>
@@ -1005,18 +1006,31 @@
         </div>
         <div style="padding: 20px;">
             <div id="mental-health-status" class="card"
-                style="margin-bottom: 25px; padding: 25px; background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border: none; text-align: center;">
-                <div id="latest-mood-display">
-                    <p style="color: #6a1b9a; font-size: 14px; margin-bottom: 15px;">Como você tem se sentido:</p>
-                    <span id="latest-mood-emoji" style="font-size: 60px; display: block; margin-bottom: 10px;">--</span>
-                    <h3 id="latest-mood-label" style="margin: 0; color: #6a1b9a; font-size: 24px;">--</h3>
-                    <p id="latest-mood-date" style="font-size: 12px; color: #6a1b9a; opacity: 0.7; margin-top: 5px;">--
+                style="margin-bottom: 25px; padding: 25px; background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border: none; text-align: center; display: flex; gap: 10px;">
+                <div id="latest-mood-display" style="flex: 1;">
+                    <p style="color: #6a1b9a; font-size: 13px; margin-bottom: 15px;">Mood Check-In:</p>
+                    <span id="latest-mood-emoji" style="font-size: 50px; display: block; margin-bottom: 10px;">--</span>
+                    <h3 id="latest-mood-label" style="margin: 0; color: #6a1b9a; font-size: 20px;">--</h3>
+                    <p id="latest-mood-date" style="font-size: 11px; color: #6a1b9a; opacity: 0.7; margin-top: 5px;">--
                     </p>
+                </div>
+                <div id="latest-post-workout-mood-display"
+                    style="flex: 1; border-left: 1px solid rgba(106, 27, 154, 0.2); padding-left: 10px;">
+                    <p style="color: #6a1b9a; font-size: 13px; margin-bottom: 15px;">Pós Corrida:</p>
+                    <span id="latest-post-workout-mood-emoji"
+                        style="font-size: 50px; display: block; margin-bottom: 10px;">--</span>
+                    <h3 id="latest-post-workout-mood-label" style="margin: 0; color: #6a1b9a; font-size: 20px;">--</h3>
+                    <p id="latest-post-workout-mood-date"
+                        style="font-size: 11px; color: #6a1b9a; opacity: 0.7; margin-top: 5px;">--</p>
                 </div>
             </div>
 
-            <h4 style="margin: 0 0 15px 0; color: var(--text-main);">Histórico de Bem-estar</h4>
-            <div id="mental-history-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <div onclick="var mlist = document.getElementById('mental-history-list'); var micon = document.getElementById('mental-list-icon'); if(mlist.style.display === 'none'){ mlist.style.display = 'flex'; micon.classList.replace('fa-chevron-down', 'fa-chevron-up'); } else { mlist.style.display = 'none'; micon.classList.replace('fa-chevron-up', 'fa-chevron-down'); }"
+                style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; margin-bottom:15px; background:#fff; padding:15px; border-radius:12px; border:1px solid #eee;">
+                <h4 style="margin: 0; color: var(--text-main);">Histórico de Bem-estar</h4>
+                <i id="mental-list-icon" class="fa-solid fa-chevron-down" style="color:#999;"></i>
+            </div>
+            <div id="mental-history-list" style="display: none; flex-direction: column; gap: 10px;">
                 <!-- Injetado via JS -->
                 <p style="text-align:center; padding:20px; color:#999; font-size:13px;">Nenhum registro encontrado.</p>
             </div>
@@ -1087,6 +1101,21 @@
         </div>
     </div>
 
+    <!-- MODAL PARABÉNS (PÓS TREINO) -->
+    <div id="modal-workout-congrats" class="modal-overlay">
+        <div class="modal-card" style="text-align: center; padding: 40px 30px; border-radius: 40px;">
+            <div
+                style="width: 80px; height: 80px; background: #dbffae; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px auto; box-shadow: 0 10px 20px rgba(219, 255, 174, 0.3);">
+                <i class="fa-solid fa-trophy" style="font-size: 40px; color: #1b265b;"></i>
+            </div>
+            <h2 style="font-size: 32px; color: var(--text-main); line-height: 1.2; margin-bottom: 10px;">Parabéns!</h2>
+            <p style="font-size: 18px; color: var(--text-sec); font-weight: 500; margin-bottom: 30px;">Você venceu hoje.
+            </p>
+            <button onclick="window.app.closeCongratsModal()" class="btn btn-primary"
+                style="margin-top: 10px;">Continuar</button>
+        </div>
+    </div>
+
     <div id="modal-finish-workout" class="modal-overlay">
         <div class="modal-card">
             <h3 style="color:var(--text-main); text-align:center;">Como foi o treino?</h3>
@@ -1096,9 +1125,9 @@
                     desconforto durante o treino?</p>
                 <div style="display:flex; gap:15px;">
                     <button onclick="window.app.setPainAnswer(true)" class="btn btn-primary"
-                        style="flex:1; background:#e74c3c;">Sim, senti</button>
-                    <button onclick="window.app.setPainAnswer(false)" class="btn btn-outline" style="flex:1;">Não, tudo
-                        bem</button>
+                        style="flex:1; background:#e74c3c;">Sim</button>
+                    <button onclick="window.app.setPainAnswer(false)" class="btn btn-outline"
+                        style="flex:1;">Não</button>
                 </div>
             </div>
 
@@ -1200,6 +1229,64 @@
             </div>
 
             <button onclick="document.getElementById('modal-mental-health').classList.remove('active')"
+                class="btn btn-text" style="color:#fff; margin-top:20px; width:100%; opacity:0.7;">Pular agora</button>
+        </div>
+    </div>
+
+    <!-- NOVO: Modal Mood Pós-Corrida -->
+    <div id="modal-post-workout-mood" class="modal-overlay">
+        <div class="modal-card" style="background: linear-gradient(135deg, #FF7A00 0%, #FFB800 100%); border:none;">
+            <h3 style="color:#fff; text-align:center; font-family:'Raleway';">Treino Concluído!</h3>
+            <p style="color:#fff; text-align:center; font-size:18px; margin-bottom:30px;">Mood : Pós Corrida</p>
+
+            <div class="mood-grid">
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Feliz', '😊')">
+                    <span class="mood-emoji">😊</span>
+                    <span class="mood-label">Feliz</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Animado', '😋')">
+                    <span class="mood-emoji">😋</span>
+                    <span class="mood-label">Animado</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Grato', '😍')">
+                    <span class="mood-emoji">😍</span>
+                    <span class="mood-label">Grato</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Relaxado', '😌')">
+                    <span class="mood-emoji">😌</span>
+                    <span class="mood-label">Relaxado</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Contente', '🙂')">
+                    <span class="mood-emoji">🙂</span>
+                    <span class="mood-label">Contente</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Incerto', '😕')">
+                    <span class="mood-emoji">😕</span>
+                    <span class="mood-label">Incerto</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Entediado', '😐')">
+                    <span class="mood-emoji">😐</span>
+                    <span class="mood-label">Entediado</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Ansioso', '😬')">
+                    <span class="mood-emoji">😬</span>
+                    <span class="mood-label">Ansioso</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Irritado', '😤')">
+                    <span class="mood-emoji">😤</span>
+                    <span class="mood-label">Irritado</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Estressado', '😫')">
+                    <span class="mood-emoji">😫</span>
+                    <span class="mood-label">Estressado</span>
+                </div>
+                <div class="mood-card" onclick="window.app.savePostWorkoutMood('Triste', '😔')">
+                    <span class="mood-emoji">😔</span>
+                    <span class="mood-label">Triste</span>
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('modal-post-workout-mood').classList.remove('active')"
                 class="btn btn-text" style="color:#fff; margin-top:20px; width:100%; opacity:0.7;">Pular agora</button>
         </div>
     </div>
@@ -1453,6 +1540,29 @@
                 <h3 style="color:var(--text-main); margin:0;">Histórico Mental</h3>
                 <button onclick="document.getElementById('modal-adm-mental-history').classList.remove('active')"
                     style="border:none; background:none; font-size:20px; cursor:pointer; color:#999;">&times;</button>
+            </div>
+
+            <!-- NOVO: Resumo Lado a Lado -->
+            <div id="adm-mental-health-summary"
+                style="display: flex; gap: 10px; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border-radius: 12px; text-align: center;">
+                <div id="adm-latest-mood-display" style="flex: 1;">
+                    <p style="color: #6a1b9a; font-size: 13px; margin-bottom: 15px; margin-top: 0">Mood Check-In:</p>
+                    <span id="adm-latest-mood-emoji"
+                        style="font-size: 40px; display: block; margin-bottom: 10px;">--</span>
+                    <h3 id="adm-latest-mood-label" style="margin: 0; color: #6a1b9a; font-size: 16px;">--</h3>
+                    <p id="adm-latest-mood-date"
+                        style="font-size: 11px; color: #6a1b9a; opacity: 0.7; margin-top: 5px; margin-bottom: 0;">--</p>
+                </div>
+                <div id="adm-latest-post-workout-mood-display"
+                    style="flex: 1; border-left: 1px solid rgba(106, 27, 154, 0.2); padding-left: 10px;">
+                    <p style="color: #6a1b9a; font-size: 13px; margin-bottom: 15px; margin-top: 0">Pós Corrida:</p>
+                    <span id="adm-latest-post-workout-mood-emoji"
+                        style="font-size: 40px; display: block; margin-bottom: 10px;">--</span>
+                    <h3 id="adm-latest-post-workout-mood-label" style="margin: 0; color: #6a1b9a; font-size: 16px;">--
+                    </h3>
+                    <p id="adm-latest-post-workout-mood-date"
+                        style="font-size: 11px; color: #6a1b9a; opacity: 0.7; margin-top: 5px; margin-bottom: 0;">--</p>
+                </div>
             </div>
             <div id="adm-mental-history-list"
                 style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;">
@@ -1863,6 +1973,10 @@
                         <label class="label">Nome do Desafio</label>
                         <input type="text" id="adm-challenge-name" class="input" placeholder="Ex: Desafio de Verão"
                             style="margin-bottom:10px;">
+
+                        <label class="label">Link do Vídeo Explicativo (Opcional)</label>
+                        <input type="text" id="adm-challenge-video" class="input"
+                            placeholder="URL do vídeo no YouTube ou Instagram" style="margin-bottom:15px;">
 
                         <div style="display:flex; gap:10px; margin-bottom:15px;">
                             <div style="flex:1;">
