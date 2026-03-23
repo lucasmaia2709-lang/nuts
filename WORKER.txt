@@ -1,0 +1,124 @@
+export default {
+  async fetch(request, env) {
+    // 1. Configuração de CORS (Permite acesso de qualquer lugar)
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
+
+    // 2. Rota para interceptar as imagens bloqueadas da Vodafone (Proxy)
+    if (request.method === "GET") {
+      const url = new URL(request.url);
+      const targetUrl = url.searchParams.get("url");
+      
+      if (targetUrl && targetUrl.includes("firebasestorage.googleapis.com")) {
+         // Repassa a requisição idêntica ao Google Firebase, usando o Cloudflare como escudo
+         const response = await fetch(targetUrl, {
+           headers: {
+             "User-Agent": "NutsApp-Cloudflare-Bot/1.0"
+           }
+         });
+         
+         // Retorna a imagem puxada para o aplicativo com os cabeçalhos de CORS ok
+         return new Response(response.body, {
+           status: response.status,
+           headers: {
+             ...corsHeaders,
+             "Content-Type": response.headers.get("Content-Type") || "image/jpeg",
+             "Cache-Control": "public, max-age=86400" // Cache otimizado para não pesar
+           }
+         });
+      }
+    }
+
+    // 3. Responde ao "preflight" do navegador imediatamente
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    if (request.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: corsHeaders });
+    }
+
+    try {
+      const body = await request.json();
+      const { name, dist, estTime, startDate, raceDate, level, trainingDays, longRunDay, injuries } = body;
+
+      // 3. Validação da Chave de API
+      if (!env.GEMINI_API_KEY) {
+        throw new Error("ERRO FATAL: A variável GEMINI_API_KEY não foi configurada nas Settings do Cloudflare.");
+      }
+
+      const systemPrompt = `
+        Atue como um treinador de corrida profissional.
+        Crie uma planilha de treinos diários de ${startDate} até ${raceDate} para prova de ${dist}km (${name}).
+        Ritmo atual: ${estTime}.
+        
+        PERFIL DO CORREDOR:
+        - Nível de Experiência: ${level || 'Não informado'}
+        - Dias disponíveis para treino na semana: ${(trainingDays || []).join(', ')}
+        - Dia preferido para o Longão: ${longRunDay || 'Domingo'}
+        - Histórico de Lesões ou Limitações: ${injuries || 'Nenhum'}
+
+        Siga o Ciclo ABC: A (Corrida), B (Fortalecimento), C (Descanso).
+        Treinos de Fortalecimento sugeridos: Flexão de joelho e quadril com elastico, Elevação pelvica alternando as pernas, rotação de tornozelo, passada para traz, agachamento lateral, agachamento, flexão de tornozelo, saltos com uma perna, equilibrio unilateral e saltos laterais curtos.
+
+        REGRAS CRÍTICAS DE ADAPTAÇÃO:
+        - Respeite rigorosamente os dias de treino selecionados: ${(trainingDays || []).join(', ')}. Os dias NÃO selecionados DEVEM ser Descanso.
+        - O Treino Longão DEVE sempre cair no dia selecionado: ${longRunDay || 'Domingo'}.
+        - Adapte o volume (km ou tempo) baseado no Nível: ${level || 'Não informado'}.
+        - EVITE prescrever treinos que sobrecarreguem o atleta caso ele possua histórico de lesão ou limitação: "${injuries || 'Nenhum'}".
+        
+        FORMATAÇÃO DE SAÍDA:
+        1. Responda APENAS o JSON puro.
+        2. Formato do array: [{"date": "YYYY-MM-DD", "title": "...", "desc": "...", "type": "run"}]
+      `;
+
+      // 4. Chamada à API do Gemini
+      const modelVersion = "gemini-2.5-flash"; 
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent?key=${env.GEMINI_API_KEY}`;
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: systemPrompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            response_mime_type: "application/json" // Força resposta JSON limpa
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        if (response.status === 404) {
+             throw new Error(`Modelo não encontrado (${modelVersion}). Verifique se sua API Key tem acesso ao Gemini.`);
+        }
+        throw new Error(`Gemini API Error (${response.status}): ${errText}`);
+      }
+
+      const data = await response.json();
+      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!rawText) throw new Error("A IA não retornou texto.");
+
+      // 5. Limpeza de Segurança (Remove Markdown se houver)
+      rawText = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+
+      // Testa o JSON antes de enviar
+      const parsedJSON = JSON.parse(rawText);
+
+      return new Response(JSON.stringify(parsedJSON), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+  },
+};
