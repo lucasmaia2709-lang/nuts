@@ -185,7 +185,7 @@ export const admin = {
             const tr = document.createElement('tr');
             tr.onclick = () => window.app.openUserDetail(u.id);
             tr.innerHTML = `
-                <td><img src="${avatar}" class="table-avatar"></td>
+                <td><img src="${window.app.getSafeUrl(avatar)}" class="table-avatar"></td>
                 <td>
                     <div style="font-weight:600; color:var(--text-main);">${u.name}</div>
                     <div style="font-size:11px; color:#999;">${u.email}</div>
@@ -230,7 +230,7 @@ export const admin = {
         detailView.classList.remove('hidden');
         detailView.scrollTop = 0;
 
-        document.getElementById('ud-img').src = u.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name);
+        document.getElementById('ud-img').src = window.app.getSafeUrl(u.avatar) || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name);
         document.getElementById('ud-name').innerText = u.name;
         document.getElementById('ud-email').innerText = u.email;
         document.getElementById('ud-age').innerText = u.birthDate ? (new Date().getFullYear() - new Date(u.birthDate).getFullYear()) : '--';
@@ -793,7 +793,7 @@ export const admin = {
         document.getElementById('edit-news-body').value = d.body || '';
         const img = document.getElementById('edit-news-preview');
         if (d.img) {
-            img.src = d.img;
+            img.src = window.app.getSafeUrl(d.img);
             img.style.display = 'block';
         } else {
             img.style.display = 'none';
@@ -919,7 +919,7 @@ export const admin = {
             snap.forEach(d => {
                 const v = d.data();
                 const safeLink = window.app.escape(v.link);
-                const coverHtml = v.coverImg ? `<img src="${v.coverImg}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
+                const coverHtml = v.coverImg ? `<img src="${window.app.getSafeUrl(v.coverImg)}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
                 const muscleText = v.muscle ? ` <span style="font-size:11px; color:#888; background:#eee; padding:2px 6px; border-radius:10px; margin-left:5px;">${v.muscle}</span>` : '';
 
                 list.innerHTML += `
@@ -960,7 +960,7 @@ export const admin = {
 
         const img = document.getElementById('edit-video-preview');
         if (d.coverImg) {
-            img.src = d.coverImg;
+            img.src = window.app.getSafeUrl(d.coverImg);
             img.style.display = 'block';
         } else {
             img.style.display = 'none';
@@ -1064,7 +1064,7 @@ export const admin = {
             snap.forEach(d => {
                 const v = d.data();
                 const safeLink = window.app.escape(v.link);
-                const coverHtml = v.coverImg ? `<img src="${v.coverImg}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
+                const coverHtml = v.coverImg ? `<img src="${window.app.getSafeUrl(v.coverImg)}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
 
                 list.innerHTML += `
                 <div style="background:#fff; border-bottom:1px solid #eee; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:5px;">
@@ -1094,7 +1094,7 @@ export const admin = {
 
         const img = document.getElementById('edit-physiotip-preview');
         if (d.coverImg) {
-            img.src = d.coverImg;
+            img.src = window.app.getSafeUrl(d.coverImg);
             img.style.display = 'block';
         } else {
             img.style.display = 'none';
@@ -1482,6 +1482,7 @@ export const admin = {
 
     saveChallenge: async () => {
         const name = document.getElementById('adm-challenge-name').value;
+        const videoLink = document.getElementById('adm-challenge-video').value.trim();
         const start = document.getElementById('adm-challenge-start').value;
         const end = document.getElementById('adm-challenge-end').value;
         const inputs = document.querySelectorAll('.challenge-day-input');
@@ -1508,6 +1509,7 @@ export const admin = {
             startDate: start,
             endDate: end,
             tasks: tasks,
+            videoLink: videoLink,
             created: Date.now()
         });
 
@@ -1520,6 +1522,7 @@ export const admin = {
         document.getElementById('adm-challenge-start').value = '';
         document.getElementById('adm-challenge-end').value = '';
         document.getElementById('adm-challenge-name').value = '';
+        document.getElementById('adm-challenge-video').value = '';
     },
 
     deleteChallenge: async (id) => {
@@ -1569,6 +1572,30 @@ export const admin = {
         const list = document.getElementById('adm-mental-history-list');
         list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">Carregando histórico...</p>';
 
+        const latest = u.lastMental;
+        const latestPostWorkout = u.lastPostWorkoutMood;
+        const todayStr = new Date().toLocaleDateString('pt-BR');
+
+        if (latest && new Date(latest.timestamp).toLocaleDateString('pt-BR') === todayStr) {
+            document.getElementById('adm-latest-mood-emoji').innerText = latest.emoji || '--';
+            document.getElementById('adm-latest-mood-label').innerText = latest.mood || '--';
+            document.getElementById('adm-latest-mood-date').innerText = new Date(latest.timestamp).toLocaleDateString('pt-BR');
+        } else {
+            document.getElementById('adm-latest-mood-emoji').innerText = '--';
+            document.getElementById('adm-latest-mood-label').innerText = '--';
+            document.getElementById('adm-latest-mood-date').innerText = '--';
+        }
+
+        if (latestPostWorkout && new Date(latestPostWorkout.timestamp).toLocaleDateString('pt-BR') === todayStr) {
+            document.getElementById('adm-latest-post-workout-mood-emoji').innerText = latestPostWorkout.emoji || '--';
+            document.getElementById('adm-latest-post-workout-mood-label').innerText = latestPostWorkout.mood || '--';
+            document.getElementById('adm-latest-post-workout-mood-date').innerText = new Date(latestPostWorkout.timestamp).toLocaleDateString('pt-BR');
+        } else {
+            document.getElementById('adm-latest-post-workout-mood-emoji').innerText = '--';
+            document.getElementById('adm-latest-post-workout-mood-label').innerText = '--';
+            document.getElementById('adm-latest-post-workout-mood-date').innerText = '--';
+        }
+
         try {
             const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_MENTAL),
                 where("email", "==", u.email),
@@ -1584,17 +1611,37 @@ export const admin = {
             }
 
             list.innerHTML = '';
+
+            // Agrupar por data
+            const groups = {};
             snap.forEach(doc => {
                 const d = doc.data();
-                const dateStr = new Date(d.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const dateKey = new Date(d.timestamp).toLocaleDateString('pt-BR');
+                if (!groups[dateKey]) groups[dateKey] = { daily: null, post: null };
+                if (d.type === 'post-workout') groups[dateKey].post = d;
+                else groups[dateKey].daily = d;
+            });
+
+            const renderMood = (m, label) => {
+                if (!m) return `<div style="flex:1; background:#f9f9f9; padding:8px; border-radius:10px; border:1px dashed #ddd; text-align:center; min-height:40px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:9px;">${label}</small><div style="color:#ddd">-</div></div>`;
+                return `
+                    <div style="flex:1; background:#fff; padding:8px; border-radius:10px; border:1px solid #eee; display:flex; align-items:center; gap:8px; min-height:40px;">
+                        <span style="font-size:18px;">${m.emoji}</span>
+                        <div style="overflow:hidden;">
+                            <small style="color:#9c27b0; font-size:8px; font-weight:700; display:block; text-transform:uppercase;">${label}</small>
+                            <strong style="font-size:11px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${m.mood}</strong>
+                        </div>
+                    </div>
+                `;
+            };
+
+            Object.entries(groups).forEach(([date, moods]) => {
                 list.innerHTML += `
-                    <div style="display:flex; align-items:center; gap:15px; padding:12px; border:1px solid #eee; border-radius:12px; background:#fff;">
-                        <span style="font-size:24px;">${d.emoji}</span>
-                        <div style="flex:1;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <strong style="font-size:14px; color:var(--text-main);">${d.mood}</strong>
-                                <span style="font-size:11px; color:#999;">${dateStr}</span>
-                            </div>
+                    <div style="margin-bottom:10px;">
+                        <span style="font-size:10px; color:#888; margin-left:5px; font-weight:600;">${date}</span>
+                        <div style="display:flex; gap:8px; margin-top:4px;">
+                            ${renderMood(moods.daily, 'Daily')}
+                            ${renderMood(moods.post, 'Pós Corrida')}
                         </div>
                     </div>
                 `;
@@ -1634,16 +1681,36 @@ export const admin = {
                     items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
                     list.innerHTML = '';
+
+                    const groups = {};
                     items.forEach(d => {
-                        const dateStr = d.timestamp ? new Date(d.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '--/--';
+                        if (!d.timestamp) return;
+                        const dateKey = new Date(d.timestamp).toLocaleDateString('pt-BR');
+                        if (!groups[dateKey]) groups[dateKey] = { daily: null, post: null };
+                        if (d.type === 'post-workout') groups[dateKey].post = d;
+                        else groups[dateKey].daily = d;
+                    });
+
+                    const renderMood = (m, label) => {
+                        if (!m) return `<div style="flex:1; background:#f9f9f9; padding:8px; border-radius:10px; border:1px dashed #ddd; text-align:center; min-height:40px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:9px;">${label}</small><div style="color:#ddd">-</div></div>`;
+                        return `
+                            <div style="flex:1; background:#fff; padding:8px; border-radius:10px; border:1px solid #eee; display:flex; align-items:center; gap:8px; min-height:40px;">
+                                <span style="font-size:18px;">${m.emoji || '❓'}</span>
+                                <div style="overflow:hidden;">
+                                    <small style="color:#9c27b0; font-size:8px; font-weight:700; display:block; text-transform:uppercase;">${label}</small>
+                                    <strong style="font-size:11px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${m.mood || 'Sem humor'}</strong>
+                                </div>
+                            </div>
+                        `;
+                    };
+
+                    Object.entries(groups).forEach(([date, moods]) => {
                         list.innerHTML += `
-                            <div style="display:flex; align-items:center; gap:15px; padding:12px; border:1px solid #eee; border-radius:12px; background:#fff; margin-bottom:10px;">
-                                <span style="font-size:24px;">${d.emoji || '❓'}</span>
-                                <div style="flex:1;">
-                                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <strong style="font-size:14px; color:var(--text-main);">${d.mood || 'Sem humor'}</strong>
-                                        <span style="font-size:11px; color:#999;">${dateStr}</span>
-                                    </div>
+                            <div style="margin-bottom:10px;">
+                                <span style="font-size:10px; color:#888; margin-left:5px; font-weight:600;">${date}</span>
+                                <div style="display:flex; gap:8px; margin-top:4px;">
+                                    ${renderMood(moods.daily, 'Daily')}
+                                    ${renderMood(moods.post, 'Pós Corrida')}
                                 </div>
                             </div>
                         `;

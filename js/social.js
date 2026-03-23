@@ -77,10 +77,11 @@ export const social = {
             commentsHtml += `<div style="font-size:13px; margin-bottom:4px;"><strong onclick="window.app.openPublicProfile('${c.email}')" style="cursor:pointer;">${c.userName}:</strong> ${c.text} ${delCommentBtn}</div>`;
         });
 
-        const safeAvatar = p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.userName)}&background=random`;
+        const safeAvatar = window.app.getSafeUrl(p.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.userName)}&background=random`;
 
         // Estilo padrão para posts (Feed e Detalhe)
-        const safeImg = p.img ? `<img src="${p.img}" onerror="this.style.display='none'" onclick="window.app.viewImage('${p.img}')" style="width: 100%; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; margin-bottom: 10px; cursor: pointer; border-radius: 4px;">` : '';
+        const safeImgUrl = window.app.getSafeUrl(p.img);
+        const safeImg = safeImgUrl ? `<img src="${safeImgUrl}" onerror="this.style.display='none'" onclick="window.app.viewImage('${safeImgUrl}')" style="width: 100%; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; margin-bottom: 10px; cursor: pointer; border-radius: 4px;">` : '';
 
         const safeUserEmail = window.app.escape(p.email);
 
@@ -96,7 +97,7 @@ export const social = {
             </div>
             ${p.text ? `<div style="padding:0 15px 15px; font-size:15px; line-height:1.5; white-space:pre-wrap;">${p.text}</div>` : ''}
             ${safeImg}
-            <div style="padding:10px 15px; display:flex; align-items:center; border-top:1px solid #f0f0f0;">
+            <div style="padding:10px 15px; display:none; align-items:center; border-top:1px solid #f0f0f0;">
                 <i class="fa-regular fa-comment" style="font-size:18px; color:var(--text-main); margin-right:5px;"></i>
                 <span style="font-size:14px; font-weight:600; color:var(--text-main);">${comments.length}</span>
             </div>
@@ -259,7 +260,8 @@ export const social = {
 
         container.style.cssText = 'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;';
 
-        container.innerHTML = `<img src="${url}" style="width: 100%; max-width: 600px; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">`;
+        const safeUrl = window.app.getSafeUrl(url);
+        container.innerHTML = `<img src="${safeUrl}" style="width: 100%; max-width: 600px; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">`;
 
         document.getElementById('modal-video').classList.add('active');
     },
@@ -279,7 +281,8 @@ export const social = {
             news.sort((a, b) => b.created - a.created);
 
             news.forEach(n => {
-                const imgHtml = n.img ? `<div style="height:180px; background:url('${n.img}') center/cover;"></div>` : '';
+                const safeImg = window.app.getSafeUrl(n.img);
+                const imgHtml = safeImg ? `<div style="height:180px; background:url('${safeImg}') center/cover;"></div>` : '';
                 container.innerHTML += `
                 <div class="card news-card" onclick="window.app.openNewsDetail('${n.id}')">
                     ${imgHtml}
@@ -297,7 +300,7 @@ export const social = {
         if (!n) return;
         const imgContainer = document.getElementById('news-det-img-container');
         if (n.img) {
-            imgContainer.style.backgroundImage = `url('${n.img}')`;
+            imgContainer.style.backgroundImage = `url('${window.app.getSafeUrl(n.img)}')`;
             imgContainer.style.display = 'block';
         } else {
             imgContainer.style.display = 'none';
@@ -341,7 +344,7 @@ export const social = {
             if (userSnap.exists()) {
                 const u = userSnap.data();
 
-                const avatarUrl = u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`;
+                const avatarUrl = window.app.getSafeUrl(u.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=random`;
                 document.getElementById('pp-avatar').src = avatarUrl;
                 document.getElementById('pp-name').innerText = u.name;
 
@@ -404,7 +407,7 @@ export const social = {
                     const div = document.createElement('div');
                     // Formato Retrato (4:5) para o grid
                     div.style.aspectRatio = '4/5';
-                    div.style.backgroundImage = `url('${p.img}')`;
+                    div.style.backgroundImage = `url('${window.app.getSafeUrl(p.img)}')`;
                     div.style.backgroundSize = 'cover';
                     div.style.backgroundPosition = 'center';
                     div.style.cursor = 'pointer';

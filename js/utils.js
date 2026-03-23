@@ -4,18 +4,26 @@ import { state } from "./state.js";
 
 // Funções de UI e Auxiliares
 export const utils = {
+    getSafeUrl: (url) => {
+        if (!url) return '';
+        if (url.includes('firebasestorage.googleapis.com')) {
+            return `https://nuts.lucasabreucotefis.workers.dev/?url=${encodeURIComponent(url)}`;
+        }
+        return url;
+    },
+
     haptic: () => {
-        if (navigator.vibrate) navigator.vibrate(50); 
+        if (navigator.vibrate) navigator.vibrate(50);
     },
 
     formatText: (text) => {
-        if(!text) return '';
+        if (!text) return '';
         if (text && text.toUpperCase() === text && /[a-zA-Z]/.test(text)) {
-             return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+            return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
         }
         return text;
     },
-    
+
     compressImage: (file) => {
         return new Promise((resolve) => {
             if (!file || !file.type.startsWith('image/')) {
@@ -23,8 +31,8 @@ export const utils = {
                 return;
             }
             try {
-                const maxWidth = 1080; 
-                const quality = 0.9;   
+                const maxWidth = 1080;
+                const quality = 0.9;
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 reader.onload = (event) => {
@@ -43,7 +51,7 @@ export const utils = {
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         canvas.toBlob((blob) => {
-                            if (!blob) { resolve(file); return; } 
+                            if (!blob) { resolve(file); return; }
                             const newFile = new File([blob], "image.jpg", {
                                 type: 'image/jpeg',
                                 lastModified: Date.now(),
@@ -51,12 +59,12 @@ export const utils = {
                             resolve(newFile);
                         }, 'image/jpeg', quality);
                     };
-                    img.onerror = () => resolve(file); 
+                    img.onerror = () => resolve(file);
                 };
-                reader.onerror = () => resolve(file); 
+                reader.onerror = () => resolve(file);
             } catch (e) {
                 console.warn("Erro na compressão:", e);
-                resolve(file); 
+                resolve(file);
             }
         });
     },
@@ -65,19 +73,19 @@ export const utils = {
         if (!file) return null;
         try {
             window.app.toast("Processando imagem...");
-            
+
             let fileToUpload = file;
             try {
                 fileToUpload = await window.app.compressImage(file);
             } catch (e) {
                 console.warn("Compressão falhou, usando original", e);
             }
-            
+
             window.app.toast("Enviando...");
-            
+
             const ext = 'jpg';
-            const safeName = `${Date.now()}_${Math.floor(Math.random()*1000)}.${ext}`;
-            
+            const safeName = `${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+
             let path = `${folderName}/${safeName}`;
             if (state.currentUser && state.currentUser.email) {
                 path = `${folderName}/${state.currentUser.email}/${safeName}`;
@@ -89,14 +97,14 @@ export const utils = {
             return downloadURL;
         } catch (error) {
             console.error("Erro no Upload:", error);
-            
-            let msg = "Erro ao enviar imagem.";
-            if(error.code === 'storage/unauthorized') msg = "Sem permissão para enviar.";
-            if(error.code === 'storage/quota-exceeded') msg = "Cota de armazenamento cheia (tente amanhã).";
-            if(error.code === 'storage/retry-limit-exceeded') msg = "Internet instável. Tente novamente.";
-            if(error.code === 'storage/invalid-argument') msg = "Arquivo inválido.";
 
-            window.app.toast(msg); 
+            let msg = "Erro ao enviar imagem.";
+            if (error.code === 'storage/unauthorized') msg = "Sem permissão para enviar.";
+            if (error.code === 'storage/quota-exceeded') msg = "Cota de armazenamento cheia (tente amanhã).";
+            if (error.code === 'storage/retry-limit-exceeded') msg = "Internet instável. Tente novamente.";
+            if (error.code === 'storage/invalid-argument') msg = "Arquivo inválido.";
+
+            window.app.toast(msg);
             return null;
         }
     },
@@ -116,33 +124,42 @@ export const utils = {
         return str.toString().replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
     },
 
-    screen: (id) => { 
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); 
-        const el = document.getElementById(id); 
-        if(el) el.classList.add('active'); 
+    screen: (id) => {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
     },
 
     nav: (tab) => {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-        document.getElementById('tab-'+tab).classList.remove('hidden');
+
+        const currentTab = document.getElementById('tab-' + tab);
+        currentTab.classList.remove('hidden');
+
+        // Sempre força o scroll pro topo (tanto da janela quanto do container principal)
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        const mainScroll = document.getElementById('main-scroll');
+        if (mainScroll) mainScroll.scrollTop = 0;
+        currentTab.scrollTop = 0;
+
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-        
-        if(tab === 'home') window.app.renderHome();
-        if(tab === 'workouts') window.app.renderWorkoutsList();
-        if(tab === 'social') window.app.loadFeed();
-        if(tab === 'news') window.app.loadNews();
-        if(tab === 'health') window.app.loadHealthTab(); 
-        
+
+        if (tab === 'home') window.app.renderHome();
+        if (tab === 'workouts') window.app.renderWorkoutsList();
+        if (tab === 'social') window.app.loadFeed();
+        if (tab === 'news') window.app.loadNews();
+        if (tab === 'health') window.app.loadHealthTab();
+
         window.app.haptic();
     },
 
-    toast: (msg) => { 
-        const t = document.getElementById('toast-container'); 
-        t.innerHTML = `<div class="toast show">${msg}</div>`; 
-        setTimeout(() => t.innerHTML='', 3000); 
+    toast: (msg) => {
+        const t = document.getElementById('toast-container');
+        t.innerHTML = `<div class="toast show">${msg}</div>`;
+        setTimeout(() => t.innerHTML = '', 3000);
     },
-    
+
     showPrompt: (title, callback) => {
         const el = document.getElementById('modal-prompt');
         document.getElementById('prompt-title').innerText = title;
@@ -154,10 +171,10 @@ export const utils = {
         const cancelBtn = document.getElementById('prompt-cancel');
         okBtn.replaceWith(okBtn.cloneNode(true));
         cancelBtn.replaceWith(cancelBtn.cloneNode(true));
-        document.getElementById('prompt-confirm').onclick = () => { const val = document.getElementById('prompt-input').value; if(val) callback(val); el.classList.remove('active'); };
+        document.getElementById('prompt-confirm').onclick = () => { const val = document.getElementById('prompt-input').value; if (val) callback(val); el.classList.remove('active'); };
         document.getElementById('prompt-cancel').onclick = () => el.classList.remove('active');
     },
-    
+
     showConfirm: (text, callback) => {
         const el = document.getElementById('modal-confirm');
         document.getElementById('confirm-text').innerText = text;
@@ -172,19 +189,33 @@ export const utils = {
 
     playVideo: (url) => {
         let embed = url;
+        const container = document.getElementById('video-container');
         if (url.includes('github.com') && url.includes('/blob/')) {
             embed = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
-            document.getElementById('video-container').innerHTML = `<video src="${embed}" controls autoplay style="width:100%; height:100%;"></video>`;
+            container.innerHTML = `<video src="${embed}" controls autoplay style="width:100%; height:100%; border-radius: 8px;"></video>`;
         }
-        else if(url.includes('youtu')) { 
-            const id = url.split('/').pop().split('?')[0]; 
-            embed = `https://www.youtube.com/embed/${id}?autoplay=1`; 
-            document.getElementById('video-container').innerHTML = `<iframe src="${embed}" style="width:100%; height:100%; border:0;" allow="autoplay; fullscreen"></iframe>`; 
-        } 
-        else { 
-            document.getElementById('video-container').innerHTML = `<video src="${url}" controls autoplay style="width:100%; height:100%;"></video>`; 
+        else if (url.includes('youtu')) {
+            const id = url.split('/').pop().split('?')[0];
+            embed = `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1&modestbranding=1&rel=0`;
+            container.innerHTML = `<iframe src="${embed}" style="width:100%; height:100%; border:0; border-radius: 8px;" allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+        }
+        else {
+            container.innerHTML = `<video src="${url}" controls autoplay style="width:100%; height:100%; border-radius: 8px;"></video>`;
         }
         document.getElementById('modal-video').classList.add('active');
+
+        // Adicionar listeners para fechar modal quando sair da tela cheia nativa ou terminar
+        setTimeout(() => {
+            const vid = container.querySelector('video');
+            if (vid) {
+                const closeModal = () => {
+                    document.getElementById('modal-video').classList.remove('active');
+                    container.innerHTML = '';
+                };
+                vid.addEventListener('webkitendfullscreen', closeModal);
+                vid.addEventListener('ended', closeModal);
+            }
+        }, 100);
     },
 
     goToLogin: () => window.app.screen('view-login'),

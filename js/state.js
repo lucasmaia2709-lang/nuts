@@ -7,6 +7,8 @@ export const state = {
 
     // CACHE OTIMIZADO (Solução 1)
     communityRacesCache: [],
+    nextLiveCache: null,
+    nextLiveFetched: false,
 
     // --- OTIMIZAÇÃO DE FEED ---
     feedLimit: 5,

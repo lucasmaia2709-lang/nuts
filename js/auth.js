@@ -304,7 +304,7 @@ export const authLogic = {
                     window.app.screen('view-pending');
                     return;
                 }
-                const av = state.currentUser.avatar;
+                const av = window.app.getSafeUrl(state.currentUser.avatar);
                 const himg = document.getElementById('header-avatar-img');
                 const htxt = document.getElementById('header-avatar-txt');
                 if (av) { himg.src = av; himg.style.display = 'block'; htxt.style.display = 'none'; }
@@ -338,16 +338,16 @@ export const authLogic = {
                         const quotes = [];
                         snap.forEach(d => {
                             const data = d.data();
-                            const authorStr = data.author && data.author !== 'Desconhecido' ? `\n- ${data.author}` : '';
+                            const authorStr = data.author && data.author !== 'Desconhecido' ? `<br><span style="font-size: 14px; opacity: 0.8; font-weight: 400; display: block; text-align: center; margin-top: 15px; width: 100%;">- ${data.author}</span>` : '';
                             quotes.push(`"${data.text}"${authorStr}`);
                         });
                         const textEl = document.getElementById('splash-quote-text');
 
                         if (quotes.length > 0) {
                             const dayIndex = Math.floor(new Date().setHours(0, 0, 0, 0) / 86400000);
-                            textEl.innerText = quotes[dayIndex % quotes.length];
+                            textEl.innerHTML = quotes[dayIndex % quotes.length];
                         } else {
-                            textEl.innerText = "\"O único treino ruim é aquele que não aconteceu.\"";
+                            textEl.innerHTML = "\"O único treino ruim é aquele que não aconteceu.\"";
                         }
 
                         // Fade in start (HTML opacity 0 default, adding class / style)

@@ -120,10 +120,15 @@ export const student = {
         let content = '';
 
         if (workoutData && (workoutData.title || workoutData.desc)) {
+            let statusBadge = '<span style="color:var(--orange); font-size:12px;">Pendente</span>';
+            if (workoutData.done) {
+                if (workoutData.status === 'not_finished') statusBadge = '<strong style="color:var(--red); font-size:12px;">Não Concluído</strong>';
+                else statusBadge = '<strong style="color:var(--success); font-size:12px;">Concluído</strong>';
+            }
             content += `<div style="background:#f5f5f5; padding:15px; border-radius:10px; margin-bottom:15px;">
                 <h4 style="margin:0 0 5px 0;">${workoutData.title}</h4>
                 <p style="margin:0; font-size:13px; color:#666;">${workoutData.desc}</p>
-                ${workoutData.done ? '<strong style="color:var(--success); font-size:12px;">Concluído</strong>' : '<span style="color:var(--orange); font-size:12px;">Pendente</span>'}
+                ${statusBadge}
             </div>`;
         } else if (!workoutData || (!workoutData.title && (!workoutData.studentRaces || workoutData.studentRaces.length === 0))) {
             content += `<p style="color:#999; text-align:center; margin-bottom:15px;">Sem treino registrado para este dia.</p>`;
@@ -286,7 +291,21 @@ export const student = {
         window.app.renderCalendar();
     },
 
-    renderHome: () => { window.app.renderCalendar(); window.app.renderTodayCard(); window.app.renderChallengeCard(); window.app.renderLiveCard(); window.app.loadQuote(); window.app.loadHomeNews(); },
+    renderHome: () => { window.app.renderCalendar(); window.app.renderTodayCard(); window.app.renderChallengeCard(); window.app.renderLiveCard(); window.app.loadQuote(); window.app.loadHomeNews(); window.app.renderMoodCard(); },
+
+    renderMoodCard: () => {
+        const card = document.getElementById('mood-checkin-card');
+        if (!card) return;
+        if (state.currentUser && state.currentUser.lastMental && state.currentUser.lastMental.timestamp) {
+            const lastDate = new Date(state.currentUser.lastMental.timestamp).toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
+            if (lastDate === today) {
+                card.style.display = 'none';
+                return;
+            }
+        }
+        card.style.display = 'flex';
+    },
 
     loadHomeNews: () => {
         const container = document.getElementById('home-latest-news');
@@ -298,7 +317,7 @@ export const student = {
                 container.innerHTML = `
                     <h3 style="font-size: 16px; margin: 0 0 15px;">Última Novidade</h3>
                     <div class="card news-card" style="margin-bottom:0;" onclick="window.app.openNewsDetail('${n.id}')">
-                        ${n.img ? `<img src="${n.img}" class="news-img" style="height:150px;">` : ''}
+                        ${n.img ? `<img src="${window.app.getSafeUrl(n.img)}" class="news-img" style="height:150px;">` : ''}
                         <div class="news-content" style="padding:15px;">
                             <div class="news-date" style="font-size:10px;">${new Date(n.created).toLocaleDateString()}</div>
                             <h3 class="news-title" style="font-size:16px;">${window.app.formatText(n.title)}</h3>
@@ -314,14 +333,14 @@ export const student = {
             const quotes = [];
             s.forEach(d => {
                 const data = d.data();
-                const authorStr = data.author && data.author !== 'Desconhecido' ? `\n- ${data.author}` : '';
+                const authorStr = data.author && data.author !== 'Desconhecido' ? `<br><span style="font-size: 14px; opacity: 0.8; font-weight: 400; display: block; text-align: center; margin-top: 15px; width: 100%;">- ${data.author}</span>` : '';
                 quotes.push(`"${data.text}"${authorStr}`);
             });
             if (quotes.length > 0) {
                 const dayIndex = Math.floor(new Date().setHours(0, 0, 0, 0) / 86400000);
-                document.getElementById('daily-quote').innerText = quotes[dayIndex % quotes.length];
+                document.getElementById('daily-quote').innerHTML = quotes[dayIndex % quotes.length];
             } else {
-                document.getElementById('daily-quote').innerText = "\"O único treino ruim é aquele que não aconteceu.\"";
+                document.getElementById('daily-quote').innerHTML = "\"O único treino ruim é aquele que não aconteceu.\"";
             }
         });
     },
@@ -354,7 +373,7 @@ export const student = {
 
                 videosHtml += `
                 <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')" style="margin: 0;">
-                    <img src="${coverImg}" class="video-thumb-img" alt="${v.title}">
+                    <img src="${window.app.getSafeUrl(coverImg)}" class="video-thumb-img" alt="${v.title}">
                     <div class="video-thumb-overlay">
                         <h4 class="video-thumb-title">${v.title}</h4>
                     </div>
@@ -401,7 +420,19 @@ export const student = {
         const safeVideo = target && target.video ? window.app.escape(target.video) : '';
 
         if (target) {
-            const doneBtn = target.done ? `<button class="btn" style="background:rgba(255,255,255,0.2); color:#FFF; flex:1; cursor:default;" disabled><i class="fa-solid fa-check"></i> Feito</button>` : `<button onclick="window.app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); flex:1;">Concluir</button>`;
+            let doneBtn = '';
+            if (target.done) {
+                const isNotFinished = target.status === 'not_finished';
+                const btnLabel = isNotFinished ? 'Não Concluído' : 'Feito';
+                const btnIcon = isNotFinished ? 'fa-xmark' : 'fa-check';
+                doneBtn = `<button class="btn" style="background:rgba(255,255,255,0.2); color:#FFF; flex:1; cursor:default;" disabled><i class="fa-solid ${btnIcon}"></i> ${btnLabel}</button>`;
+            } else {
+                doneBtn = `
+                    <div style="display:flex; gap:10px; flex:1;">
+                        <button onclick="window.app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); flex:1.2; font-size:14px; padding:0 5px;">Concluído</button>
+                        <button onclick="window.app.setWorkoutStatus('not_finished', '${safeTitle}')" class="btn" style="background:rgba(231, 76, 60, 0.2); color:#FFF; border:1px solid #e74c3c; flex:1; font-size:14px; padding:0 5px;">Não Concluído</button>
+                    </div>`;
+            }
             let dateDisplay = "";
             if (target.scheduledDate) {
                 const dParts = target.scheduledDate.split('-');
@@ -467,6 +498,11 @@ export const student = {
         }
     },
 
+    setWorkoutStatus: (status, wTitle) => {
+        if (wTitle) state.pendingFinishWorkoutTitle = wTitle;
+        window.app.completeWorkoutProcess(null, status);
+    },
+
     togglePostPainLocation: (loc) => {
         if (state.postPainSelected[loc] !== undefined) {
             delete state.postPainSelected[loc];
@@ -523,13 +559,14 @@ export const student = {
         await window.app.completeWorkoutProcess(painData);
     },
 
-    completeWorkoutProcess: async (painData) => {
+    completeWorkoutProcess: async (painData, status = 'completed') => {
         const races = [...state.currentUser.races];
         const rIdx = races.length - 1;
         const wIdx = races[rIdx].workouts.findIndex(w => w.title === state.pendingFinishWorkoutTitle && !w.done);
 
         if (wIdx > -1) {
             races[rIdx].workouts[wIdx].done = true;
+            races[rIdx].workouts[wIdx].status = status;
             races[rIdx].workouts[wIdx].completedAt = new Date().toISOString().split('T')[0];
 
             if (painData) {
@@ -559,13 +596,19 @@ export const student = {
                 window.app.renderWorkoutsList();
             }
 
-            window.app.toast("Treino concluído! Bom descanso.");
+            const toastMsg = status === 'not_finished' ? "Status atualizado." : "Treino concluído! Bom descanso.";
+            window.app.toast(toastMsg);
             window.app.haptic();
 
-            // Fecha pain modal e não abre mais mental health automaticamente
+            // Armazena a data do treino para o log de humor pós-corrida
+            state.pendingMoodDate = races[rIdx].workouts[wIdx].scheduledDate;
+
+            // Fecha pain modal e abre mental health pós-corrida
             document.getElementById('modal-finish-workout').classList.remove('active');
 
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), { races });
+
+            document.getElementById('modal-post-workout-mood').classList.add('active');
         }
     },
 
@@ -596,7 +639,6 @@ export const student = {
             // 2. Registra na nova coleção do log (igual fisio)
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_MENTAL), mentalData);
 
-            window.app.toast("Fico feliz em saber! Continue assim.");
             document.getElementById('modal-mental-health').classList.remove('active');
 
             // Atualiza o estado local e re-renderiza para mostrar no card se necessário
@@ -607,6 +649,59 @@ export const student = {
             console.error(err);
             window.app.toast("Erro ao salvar feedback mental.");
         }
+    },
+
+    savePostWorkoutMood: async (mood, emoji) => {
+        try {
+            // Se tiver date pendente (de um treino concluído), usa meio dia dessa data
+            // para garantir que caia no dia certo do histórico
+            const timestamp = state.pendingMoodDate
+                ? new Date(state.pendingMoodDate + "T12:00:00").getTime()
+                : Date.now();
+
+            const mentalData = {
+                mood,
+                emoji,
+                timestamp: timestamp,
+                email: state.currentUser.email,
+                userName: state.currentUser.name,
+                type: 'post-workout'
+            };
+
+            // Atualiza no perfil do aluno (o card pós treino) APENAS se fôr hoje
+            const todayStr = new Date().toISOString().split('T')[0];
+            const isToday = !state.pendingMoodDate || state.pendingMoodDate === todayStr;
+
+            if (isToday) {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, state.currentUser.email), {
+                    lastPostWorkoutMood: mentalData
+                });
+                state.currentUser.lastPostWorkoutMood = mentalData;
+            }
+
+            // Registra na nova coleção do log (sempre, para o histórico)
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_MENTAL), mentalData);
+
+            document.getElementById('modal-post-workout-mood').classList.remove('active');
+
+            // Limpa estado
+            delete state.pendingMoodDate;
+
+            // Atualiza o estado local
+            state.currentUser.lastPostWorkoutMood = mentalData;
+
+            // Mostra overlay de parabéns
+            document.getElementById('modal-workout-congrats').classList.add('active');
+
+        } catch (err) {
+            console.error(err);
+            window.app.toast("Erro ao salvar feedback pós-treino.");
+        }
+    },
+
+    closeCongratsModal: () => {
+        document.getElementById('modal-workout-congrats').classList.remove('active');
+        window.app.renderHome();
     },
 
     renderWorkoutsList: () => {
@@ -630,8 +725,17 @@ export const student = {
 
         activeRace.workouts.forEach((w, i) => {
             if (!w.done && firstPendingIdx === -1) firstPendingIdx = i;
-            const color = w.done ? 'var(--success)' : '#E0E0E0';
-            const icon = w.done ? 'fa-circle-check' : 'fa-circle';
+            let color = '#E0E0E0';
+            let icon = 'fa-circle';
+            if (w.done) {
+                if (w.status === 'not_finished') {
+                    color = 'var(--red)';
+                    icon = 'fa-circle-xmark';
+                } else {
+                    color = 'var(--success)';
+                    icon = 'fa-circle-check';
+                }
+            }
             const safeVideo = w.video ? window.app.escape(w.video) : '';
             const safeTitle = window.app.escape(w.title);
 
@@ -650,7 +754,11 @@ export const student = {
 
             let finishBtn = '';
             if (!w.done && (!w.scheduledDate || w.scheduledDate <= todayStr)) {
-                finishBtn = `<button onclick="event.stopPropagation(); window.app.finishWorkout('${safeTitle}')" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 12px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; margin-right: 8px;"><i class="fa-solid fa-check"></i> Concluir</button>`;
+                finishBtn = `
+                <div style="display:flex; gap:8px; margin-right:8px;">
+                    <button onclick="event.stopPropagation(); window.app.finishWorkout('${safeTitle}')" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-check"></i> Concluído</button>
+                    <button onclick="event.stopPropagation(); window.app.setWorkoutStatus('not_finished', '${safeTitle}')" style="border:1px solid #e74c3c; background:transparent; color:#e74c3c; padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-xmark"></i> Não Concluído</button>
+                </div>`;
             }
 
             list.innerHTML += `<div id="workout-item-${i}" class="card" style="display:flex; align-items:flex-start; gap: 15px; opacity: ${w.done ? 0.6 : 1}; padding:20px;">
@@ -682,7 +790,7 @@ export const student = {
         document.getElementById('profile-name-big').innerText = state.currentUser.name;
         document.getElementById('profile-email-big').innerText = state.currentUser.email.toLowerCase();
         const img = document.getElementById('profile-img-big');
-        if (state.currentUser.avatar) { img.src = state.currentUser.avatar; img.style.display = 'block'; }
+        if (state.currentUser.avatar) { img.src = window.app.getSafeUrl(state.currentUser.avatar); img.style.display = 'block'; }
         else { img.style.display = 'none'; }
 
         document.getElementById('prof-birth').value = state.currentUser.birthDate || '';
@@ -1085,11 +1193,37 @@ export const student = {
         const list = document.getElementById('mental-history-list');
         const latest = state.currentUser.lastMental;
 
-        // Update top card
-        if (latest) {
+        const latestPostWorkout = state.currentUser.lastPostWorkoutMood;
+
+        const todayStr = new Date().toLocaleDateString('pt-BR');
+
+        // Update top cards - APENAS se fôr de hoje
+        if (latest && new Date(latest.timestamp).toLocaleDateString('pt-BR') === todayStr) {
             document.getElementById('latest-mood-emoji').innerText = latest.emoji || '--';
             document.getElementById('latest-mood-label').innerText = latest.mood || '--';
             document.getElementById('latest-mood-date').innerText = new Date(latest.timestamp).toLocaleDateString();
+        } else {
+            document.getElementById('latest-mood-emoji').innerText = '--';
+            document.getElementById('latest-mood-label').innerText = '--';
+            document.getElementById('latest-mood-date').innerText = '--';
+        }
+
+        if (latestPostWorkout && new Date(latestPostWorkout.timestamp).toLocaleDateString('pt-BR') === todayStr) {
+            const elEmoji = document.getElementById('latest-post-workout-mood-emoji');
+            const elLabel = document.getElementById('latest-post-workout-mood-label');
+            const elDate = document.getElementById('latest-post-workout-mood-date');
+
+            if (elEmoji) elEmoji.innerText = latestPostWorkout.emoji || '--';
+            if (elLabel) elLabel.innerText = latestPostWorkout.mood || '--';
+            if (elDate) elDate.innerText = new Date(latestPostWorkout.timestamp).toLocaleDateString();
+        } else {
+            const elEmoji = document.getElementById('latest-post-workout-mood-emoji');
+            const elLabel = document.getElementById('latest-post-workout-mood-label');
+            const elDate = document.getElementById('latest-post-workout-mood-date');
+
+            if (elEmoji) elEmoji.innerText = '--';
+            if (elLabel) elLabel.innerText = '--';
+            if (elDate) elDate.innerText = '--';
         }
 
         // Load list
@@ -1105,15 +1239,37 @@ export const student = {
                 return;
             }
             list.innerHTML = '';
+
+            // Agrupar por data
+            const groups = {};
             snapshot.forEach(doc => {
                 const d = doc.data();
-                const dateStr = new Date(d.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                const dateKey = new Date(d.timestamp).toLocaleDateString('pt-BR');
+                if (!groups[dateKey]) groups[dateKey] = { daily: null, post: null };
+                if (d.type === 'post-workout') groups[dateKey].post = d;
+                else groups[dateKey].daily = d;
+            });
+
+            const renderMood = (m, label) => {
+                if (!m) return `<div style="flex:1; background:#f9f9f9; padding:10px; border-radius:8px; border:1px dashed #ddd; text-align:center; min-height:45px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:10px;">${label}</small><div style="color:#ddd">-</div></div>`;
+                return `
+                    <div style="flex:1; background:#fff; padding:10px; border-radius:8px; border:1px solid #eee; display:flex; align-items:center; gap:8px; min-height:45px;">
+                        <span style="font-size:20px;">${m.emoji}</span>
+                        <div style="overflow:hidden;">
+                            <small style="color:#9c27b0; font-size:9px; font-weight:700; display:block; text-transform:uppercase;">${label}</small>
+                            <strong style="font-size:12px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${m.mood}</strong>
+                        </div>
+                    </div>
+                `;
+            };
+
+            Object.entries(groups).forEach(([date, moods]) => {
                 list.innerHTML += `
-                    <div class="card" style="display:flex; align-items:center; gap:15px; padding:15px; margin-bottom:10px;">
-                        <span style="font-size:30px;">${d.emoji}</span>
-                        <div>
-                            <strong style="display:block; font-size:15px; color:var(--text-main);">${d.mood}</strong>
-                            <span style="font-size:12px; color:var(--text-sec);">${dateStr}</span>
+                    <div style="margin-bottom:12px;">
+                        <span style="font-size:11px; color:#888; margin-left:5px; font-weight:600;">${date}</span>
+                        <div style="display:flex; gap:10px; margin-top:5px;">
+                            ${renderMood(moods.daily, 'Mood Check-In')}
+                            ${renderMood(moods.post, 'Pós Corrida')}
                         </div>
                     </div>
                 `;
@@ -1131,14 +1287,35 @@ export const student = {
                     snap.forEach(d => items.push(d.data()));
                     items.sort((a, b) => b.timestamp - a.timestamp);
                     list.innerHTML = '';
+
+                    const groups = {};
                     items.forEach(d => {
-                        const dateStr = new Date(d.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        const dateKey = new Date(d.timestamp).toLocaleDateString('pt-BR');
+                        if (!groups[dateKey]) groups[dateKey] = { daily: null, post: null };
+                        if (d.type === 'post-workout') groups[dateKey].post = d;
+                        else groups[dateKey].daily = d;
+                    });
+
+                    const renderMood = (m, label) => {
+                        if (!m) return `<div style="flex:1; background:#f9f9f9; padding:10px; border-radius:8px; border:1px dashed #ddd; text-align:center; min-height:45px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:10px;">${label}</small><div style="color:#ddd">-</div></div>`;
+                        return `
+                            <div style="flex:1; background:#fff; padding:10px; border-radius:8px; border:1px solid #eee; display:flex; align-items:center; gap:8px; min-height:45px;">
+                                <span style="font-size:20px;">${m.emoji}</span>
+                                <div style="overflow:hidden;">
+                                    <small style="color:#9c27b0; font-size:9px; font-weight:700; display:block; text-transform:uppercase;">${label}</small>
+                                    <strong style="font-size:12px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${m.mood}</strong>
+                                </div>
+                            </div>
+                        `;
+                    };
+
+                    Object.entries(groups).forEach(([date, moods]) => {
                         list.innerHTML += `
-                            <div class="card" style="display:flex; align-items:center; gap:15px; padding:15px; margin-bottom:10px;">
-                                <span style="font-size:30px;">${d.emoji}</span>
-                                <div>
-                                    <strong style="display:block; font-size:15px; color:var(--text-main);">${d.mood}</strong>
-                                    <span style="font-size:12px; color:var(--text-sec);">${dateStr}</span>
+                            <div style="margin-bottom:12px;">
+                                <span style="font-size:11px; color:#888; margin-left:5px; font-weight:600;">${date}</span>
+                                <div style="display:flex; gap:10px; margin-top:5px;">
+                                    ${renderMood(moods.daily, 'Mood Check-In')}
+                                    ${renderMood(moods.post, 'Pós Corrida')}
                                 </div>
                             </div>
                         `;
@@ -1195,7 +1372,7 @@ export const student = {
                     const coverImg = tip.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
                     htmlCards += `
                     <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')">
-                        <img src="${coverImg}" class="video-thumb-img" alt="${tip.title}">
+                        <img src="${window.app.getSafeUrl(coverImg)}" class="video-thumb-img" alt="${tip.title}">
                         <div class="video-thumb-overlay">
                             <h4 class="video-thumb-title">${tip.title}</h4>
                         </div>
@@ -1400,13 +1577,16 @@ export const student = {
                     displayTask = formattedTime.join(' ');
                 }
 
-                // Verifica se já foi concluído hoje
                 const completedChallenges = state.currentUser.completedChallenges || [];
                 const isDone = completedChallenges.includes(todayStr);
 
                 const btnHtml = isDone
                     ? `<button disabled style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 15px; opacity: 0.7;"><i class="fa-solid fa-check"></i> Concluído</button>`
                     : `<button onclick="window.app.completeChallenge('${todayStr}')" style="background: white; color: #FF5E62; border: none; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-top: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">Feito <i class="fa-solid fa-check"></i></button>`;
+
+                const playBtnHtml = activeChallenge.videoLink
+                    ? `<button onclick="window.app.playVideo('${window.app.escape(activeChallenge.videoLink)}')" style="position: absolute; right: 15px; bottom: 15px; background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(5px); color: white; border: 1px solid rgba(255,255,255,0.3); width: 44px; height: 44px; border-radius: 50%; font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: background 0.2s;"><i class="fa-solid fa-play" style="margin-left: 3px;"></i></button>`
+                    : '';
 
                 container.innerHTML = `
     <h3 style="font-size: 18px; margin: 10px 0 15px; color:var(--text-main);">Desafio do mês</h3>
@@ -1416,9 +1596,12 @@ export const student = {
                             <i class="fa-solid fa-fire"></i> ${activeChallenge.name || 'Desafio do Dia'}
                         </h4>
                         <p style="margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4;">Hoje: ${displayTask}</p>
-                        ${btnHtml}
+                        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                            ${btnHtml}
+                        </div>
                     </div>
                     <i class="fa-solid fa-trophy" style="position: absolute; right: -10px; bottom: -20px; font-size: 80px; opacity: 0.2; transform: rotate(-15deg);"></i>
+                    ${playBtnHtml}
                 </div> `;
             }
         });
@@ -1447,50 +1630,31 @@ export const student = {
 
     renderLiveCard: async () => {
         const container = document.getElementById('next-live-card');
-        container.innerHTML = '';
 
-        try {
-            // Busca a próxima live (data >= agora - 2h)
-            const now = new Date();
-            const twoHoursAgo = new Date(now.getTime() - 7200000);
+        const drawLive = (nextLive) => {
+            if (!nextLive) {
+                container.innerHTML = '';
+                return;
+            }
+            const liveDate = new Date(nextLive.date);
+            const day = liveDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+            const time = liveDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_LIVES), orderBy('date', 'asc'));
-            const snap = await getDocs(q);
+            let icon = '<i class="fa-brands fa-youtube" style="font-size: 24px;"></i>';
+            let bg = '#FF0000';
+            let platformText = "WE'RE nuts";
 
-            if (snap.empty) return;
-
-            let nextLive = null;
-
-            // Encontra a primeira live que ainda não "passou muito"
-            for (const doc of snap.docs) {
-                const l = doc.data();
-                const lDate = new Date(l.date);
-                if (lDate > twoHoursAgo) {
-                    nextLive = l;
-                    break;
-                }
+            if (nextLive.platform === 'instagram') {
+                icon = '<i class="fa-brands fa-instagram" style="font-size: 24px;"></i>';
+                bg = '#E1306C';
+                platformText = 'Instagram';
+            } else if (nextLive.platform === 'zoom') {
+                icon = '<i class="fa-solid fa-video" style="font-size: 24px;"></i>';
+                bg = '#2D8CFF';
+                platformText = 'Zoom/Meet';
             }
 
-            if (nextLive) {
-                const liveDate = new Date(nextLive.date);
-                const day = liveDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
-                const time = liveDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-                let icon = '<i class="fa-brands fa-youtube" style="font-size: 24px;"></i>';
-                let bg = '#FF0000';
-                let platformText = "WE'RE nuts";
-
-                if (nextLive.platform === 'instagram') {
-                    icon = '<i class="fa-brands fa-instagram" style="font-size: 24px;"></i>';
-                    bg = '#E1306C';
-                    platformText = 'Instagram';
-                } else if (nextLive.platform === 'zoom') {
-                    icon = '<i class="fa-solid fa-video" style="font-size: 24px;"></i>';
-                    bg = '#2D8CFF';
-                    platformText = 'Zoom/Meet';
-                }
-
-                container.innerHTML = `
+            container.innerHTML = `
     <h3 style="font-size: 18px; margin: 10px 0 15px; color:var(--text-main);">Próxima aula de fortalecimento</h3>
     <div style="background: #fff; border-radius: 15px; padding: 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 20px;" >
                     <div style="background: ${bg}; color: white; width: 50px; height: 50px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
@@ -1503,7 +1667,45 @@ export const student = {
                         </div>
                     </div>
                 </div> `;
+        };
+
+        if (state.nextLiveFetched) {
+            drawLive(state.nextLiveCache);
+        } else {
+            container.innerHTML = '';
+        }
+
+        try {
+            // Busca a próxima live (data >= agora - 2h)
+            const now = new Date();
+            const twoHoursAgo = new Date(now.getTime() - 7200000);
+
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_LIVES), orderBy('date', 'asc'));
+            const snap = await getDocs(q);
+
+            let nextLive = null;
+
+            if (!snap.empty) {
+                // Encontra a primeira live que ainda não "passou muito"
+                for (const doc of snap.docs) {
+                    const l = doc.data();
+                    const lDate = new Date(l.date);
+                    if (lDate > twoHoursAgo) {
+                        nextLive = l;
+                        break;
+                    }
+                }
             }
+
+            const cacheKey = state.nextLiveCache ? state.nextLiveCache.date + state.nextLiveCache.platform : 'null';
+            const newKey = nextLive ? nextLive.date + nextLive.platform : 'null';
+
+            if (!state.nextLiveFetched || cacheKey !== newKey) {
+                state.nextLiveCache = nextLive;
+                state.nextLiveFetched = true;
+                drawLive(nextLive);
+            }
+
         } catch (e) {
             console.error("Erro live", e);
         }
