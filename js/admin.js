@@ -916,27 +916,44 @@ export const admin = {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
             const list = document.getElementById('adm-videos-list');
             list.innerHTML = '';
+
+            const videosByMuscle = {};
             snap.forEach(d => {
                 const v = d.data();
-                const safeLink = window.app.escape(v.link);
-                const coverHtml = v.coverImg ? `<img src="${window.app.getSafeUrl(v.coverImg)}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
-                const muscleText = v.muscle ? ` <span style="font-size:11px; color:#888; background:#eee; padding:2px 6px; border-radius:10px; margin-left:5px;">${v.muscle}</span>` : '';
+                v.id = d.id;
+                const muscle = v.muscle || "Geral";
+                if (!videosByMuscle[muscle]) videosByMuscle[muscle] = [];
+                videosByMuscle[muscle].push(v);
+            });
+
+            for (const [muscleName, muscleVideos] of Object.entries(videosByMuscle)) {
+                let htmlCards = '';
+                muscleVideos.forEach(v => {
+                    const safeLink = window.app.escape(v.link);
+                    const coverHtml = v.coverImg ? `<img src="${window.app.getSafeUrl(v.coverImg)}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
+
+                    htmlCards += `
+                    <div style="background:#fff; border-bottom:1px solid #eee; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:5px;">
+                        <div style="display:flex; align-items:center;">
+                            ${coverHtml}
+                            <div>
+                                <strong style="color:var(--text-main);">${v.title}</strong><br>
+                                <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
+                            </div>
+                        </div>
+                        <div>
+                            <button onclick="window.app.openEditVideo('${v.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-pencil"></i></button>
+                            <button onclick="window.app.admDeleteStrengthVideo('${v.id}')" style="color:var(--red); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>`;
+                });
 
                 list.innerHTML += `
-                <div style="background:#fff; border-bottom:1px solid #eee; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:5px;">
-                    <div style="display:flex; align-items:center;">
-                        ${coverHtml}
-                        <div>
-                            <strong style="color:var(--text-main);">${v.title}</strong>${muscleText}<br>
-                            <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
-                        </div>
-                    </div>
-                    <div>
-                        <button onclick="window.app.openEditVideo('${d.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-pencil"></i></button>
-                        <button onclick="window.app.admDeleteStrengthVideo('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-trash"></i></button>
-                    </div>
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: var(--text-sec); border-bottom: 2px solid #eee; padding-bottom: 5px;">${muscleName}</h4>
+                    ${htmlCards}
                 </div>`;
-            });
+            }
         });
     },
 
@@ -1061,26 +1078,44 @@ export const admin = {
         onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_PHYSIO_TIPS), (snap) => {
             const list = document.getElementById('adm-physiotips-list');
             list.innerHTML = '';
+
+            const tipsByCategory = {};
             snap.forEach(d => {
                 const v = d.data();
-                const safeLink = window.app.escape(v.link);
-                const coverHtml = v.coverImg ? `<img src="${window.app.getSafeUrl(v.coverImg)}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
+                v.id = d.id;
+                const category = v.category || "Geral";
+                if (!tipsByCategory[category]) tipsByCategory[category] = [];
+                tipsByCategory[category].push(v);
+            });
+
+            for (const [categoryName, categoryTips] of Object.entries(tipsByCategory)) {
+                let htmlCards = '';
+                categoryTips.forEach(v => {
+                    const safeLink = window.app.escape(v.link);
+                    const coverHtml = v.coverImg ? `<img src="${window.app.getSafeUrl(v.coverImg)}" style="width:50px; height:50px; border-radius:8px; object-fit:cover; margin-right:10px;">` : '';
+
+                    htmlCards += `
+                    <div style="background:#fff; border-bottom:1px solid #eee; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:5px;">
+                        <div style="display:flex; align-items:center;">
+                            ${coverHtml}
+                            <div>
+                                <strong style="color:var(--text-main);">${v.title}</strong><br>
+                                <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
+                            </div>
+                        </div>
+                        <div>
+                            <button onclick="window.app.openEditPhysioTip('${v.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-pencil"></i></button>
+                            <button onclick="window.app.admDeletePhysioTip('${v.id}')" style="color:var(--red); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>`;
+                });
 
                 list.innerHTML += `
-                <div style="background:#fff; border-bottom:1px solid #eee; padding:15px; display:flex; justify-content:space-between; align-items:center; border-radius:10px; margin-bottom:5px;">
-                    <div style="display:flex; align-items:center;">
-                        ${coverHtml}
-                        <div>
-                            <strong style="color:var(--text-main);">${v.category ? `[${v.category}] ` : ''}${v.title}</strong><br>
-                            <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
-                        </div>
-                    </div>
-                    <div>
-                        <button onclick="window.app.openEditPhysioTip('${d.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-pencil"></i></button>
-                        <button onclick="window.app.admDeletePhysioTip('${d.id}')" style="color:var(--red); border:none; background:none; cursor:pointer; width:30px; height:30px;"><i class="fa-solid fa-trash"></i></button>
-                    </div>
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: var(--text-sec); border-bottom: 2px solid #eee; padding-bottom: 5px;">${categoryName}</h4>
+                    ${htmlCards}
                 </div>`;
-            });
+            }
         });
     },
     openEditPhysioTip: async (id) => {

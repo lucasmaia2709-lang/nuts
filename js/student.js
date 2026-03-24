@@ -349,40 +349,67 @@ export const student = {
         window.app.screen('view-app');
     },
 
-    openStrengthVideosPage: () => {
+    openStrengthVideosPage: async () => {
+        window.app.screen('view-strength-videos');
         const list = document.getElementById('strength-video-list');
         list.className = ""; // clear previous classes if any
-        list.style.display = "grid";
-        list.style.gridTemplateColumns = "1fr 1fr";
-        list.style.gap = "15px";
-        list.innerHTML = '<p style="text-align:center; color:#666; grid-column: span 2;">Carregando...</p>';
-        window.app.screen('view-strength-videos');
+        list.style.display = "block"; // Remove grid
+        list.style.gridTemplateColumns = "";
+        list.style.gap = "";
+        list.innerHTML = '<p style="text-align:center; padding:20px; color:#666;">Carregando...</p>';
 
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), (snap) => {
-            list.innerHTML = '';
+        try {
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', C_VIDEOS), orderBy('created', 'desc'));
+            const snap = await getDocs(q);
+
             if (snap.empty) {
-                list.innerHTML = '<p style="text-align:center; color:#666; grid-column: span 2;">Nenhum vídeo cadastrado.</p>';
+                list.innerHTML = '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Nenhum vídeo cadastrado ainda.</p>';
                 return;
             }
 
-            let videosHtml = '';
+            const videos = [];
             snap.forEach(d => {
-                const v = d.data();
-                const safeLink = window.app.escape(v.link);
-                const coverImg = v.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
-
-                videosHtml += `
-                <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')" style="margin: 0;">
-                    <img src="${window.app.getSafeUrl(coverImg)}" class="video-thumb-img" alt="${v.title}">
-                    <div class="video-thumb-overlay">
-                        <h4 class="video-thumb-title">${v.title}</h4>
-                    </div>
-                    <div class="video-thumb-play"><i class="fa-solid fa-play"></i></div>
-                </div>`;
+                const data = d.data();
+                data.id = d.id;
+                videos.push(data);
             });
 
-            list.innerHTML = videosHtml;
-        });
+            const videosByMuscle = {};
+            videos.forEach(v => {
+                const muscle = v.muscle || "Geral";
+                if (!videosByMuscle[muscle]) videosByMuscle[muscle] = [];
+                videosByMuscle[muscle].push(v);
+            });
+
+            list.innerHTML = '';
+
+            for (const [muscleName, muscleVideos] of Object.entries(videosByMuscle)) {
+                let htmlCards = '';
+                muscleVideos.forEach(v => {
+                    const safeLink = window.app.escape(v.link);
+                    const coverImg = v.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
+                    htmlCards += `
+                    <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')">
+                        <img src="${window.app.getSafeUrl(coverImg)}" class="video-thumb-img" alt="${v.title}">
+                        <div class="video-thumb-overlay">
+                            <h4 class="video-thumb-title">${v.title}</h4>
+                        </div>
+                        <div class="video-thumb-play"><i class="fa-solid fa-play"></i></div>
+                    </div>`;
+                });
+
+                list.innerHTML += `
+                <div class="video-row-container">
+                    <h4 class="video-row-title">${muscleName}</h4>
+                    <div class="video-carousel">
+                        ${htmlCards}
+                    </div>
+                </div>`;
+            }
+        } catch (e) {
+            console.error(e);
+            list.innerHTML = '<p style="text-align:center; padding:20px; color:#999; font-size:14px;">Erro ao carregar vídeos.</p>';
+        }
     },
 
     // --- TREINOS ---
