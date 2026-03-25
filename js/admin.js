@@ -1329,6 +1329,13 @@ export const admin = {
                 const day = dateObj.toLocaleDateString('pt-BR');
                 const time = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+                let timeStr = `${day} às: 🇧🇷 ${time}`;
+                if (l.datePt) {
+                    const ptDateObj = new Date(l.datePt);
+                    const ptTime = ptDateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    timeStr = `${day} às: 🇧🇷 ${time} / 🇵🇹 ${ptTime}`;
+                }
+
                 let icon = '<i class="fa-solid fa-video"></i>';
                 let platformName = 'Live';
 
@@ -1341,8 +1348,8 @@ export const admin = {
                     <div style="display:flex; align-items:center; gap:10px;">
                         <div style="font-size:24px; width:30px; text-align:center;">${icon}</div>
                         <div>
-                            <strong style="color:var(--primary); font-size:16px;">${day} às ${time}</strong>
-                            <div style="font-size:12px; color:#666;">${platformName}</div>
+                            <strong style="color:var(--primary); font-size:16px; line-height:1.2; display:block;">${timeStr}</strong>
+                            <div style="font-size:12px; color:#666; margin-top:4px;">${platformName}</div>
                         </div>
                     </div>
                     <button onclick="window.app.deleteLive('${d.id}')" style="color:red; background:none; border:none; cursor:pointer;">
@@ -1355,17 +1362,20 @@ export const admin = {
 
     saveLive: async () => {
         const date = document.getElementById('adm-live-date').value;
+        const datePt = document.getElementById('adm-live-date-pt').value;
         const platform = document.getElementById('adm-live-platform').value;
 
-        if (!date) return window.app.toast("Selecione data e hora.");
+        if (!date || !datePt) return window.app.toast("Selecione data e hora para Brasil e Portugal.");
 
         await addDoc(collection(db, 'artifacts', appId, 'public', 'data', C_LIVES), {
             date,
+            datePt,
             platform,
             created: Date.now()
         });
 
         document.getElementById('adm-live-date').value = '';
+        document.getElementById('adm-live-date-pt').value = '';
         window.app.toast("Live agendada!");
     },
 

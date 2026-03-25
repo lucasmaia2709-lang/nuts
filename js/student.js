@@ -1667,6 +1667,13 @@ export const student = {
             const day = liveDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
             const time = liveDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+            let timeStr = `${day} às: 🇧🇷 ${time}`;
+            if (nextLive.datePt) {
+                const liveDatePt = new Date(nextLive.datePt);
+                const timePt = liveDatePt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                timeStr = `${day} às: 🇧🇷 ${time} / 🇵🇹 ${timePt}`;
+            }
+
             let icon = '<i class="fa-brands fa-youtube" style="font-size: 24px;"></i>';
             let bg = '#FF0000';
             let platformText = "WE'RE nuts";
@@ -1690,7 +1697,7 @@ export const student = {
                     <div>
                         <h4 style="margin: 0; font-size: 14px; color: var(--text-main);">Ao vivo no ${platformText}</h4>
                         <div style="color: var(--primary); font-weight: 700; font-size: 16px; margin-top: 2px;">
-                            ${day} às ${time}
+                            ${timeStr}
                         </div>
                     </div>
                 </div> `;
