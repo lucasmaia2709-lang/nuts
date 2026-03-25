@@ -7,8 +7,9 @@
     --text-sec: #e67e22;
     --radius: 20px;
     --font-main: 'Georgia', serif;
+    --font-ui: 'Montserrat', sans-serif;
     --font-logo: 'Playfair Display', serif;
-    --font-admin: 'Raleway', sans-serif;
+    --font-admin: 'Montserrat', sans-serif;
     --success: #2ecc71;
     --red: #e74c3c;
     --border: #edf2f7;
@@ -55,6 +56,8 @@ body {
     flex-direction: column;
     overscroll-behavior: none;
     position: relative;
+    font-size: 15px;
+    line-height: 1.6;
 }
 
 /* BACKGROUND DEKSTOP (Só aparece em telas grandes) */
@@ -84,6 +87,7 @@ h2,
 h3,
 h4,
 strong {
+    font-family: var(--font-ui);
     font-weight: 700;
     letter-spacing: -0.5px;
     color: var(--text-main);
@@ -227,6 +231,11 @@ strong {
     --font-main: var(--font-admin);
 }
 
+/* Fix para Android Safe Area em telas cheias */
+body.platform-android .screen.full-screen>div:first-child {
+    padding-top: 40px !important;
+}
+
 .screen.active.admin-layout {
     flex-direction: row !important;
     display: flex !important;
@@ -244,6 +253,10 @@ strong {
     top: 0;
     z-index: 50;
     flex-shrink: 0;
+}
+
+body.platform-android .app-header {
+    padding-top: 35px;
 }
 
 #main-scroll {
@@ -274,6 +287,7 @@ strong {
 
 .label {
     display: block;
+    font-family: var(--font-ui);
     font-size: 11px;
     font-weight: 700;
     color: #262262;
@@ -290,9 +304,10 @@ strong {
     font-size: 16px;
     color: var(--text-main);
     outline: none;
-    font-family: var(--font-main);
+    font-family: var(--font-ui);
     transition: 0.2s;
     -webkit-appearance: none;
+    appearance: none;
     box-shadow: var(--shadow);
 }
 
@@ -312,9 +327,10 @@ strong {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: var(--font-main);
+    font-family: var(--font-ui);
     transition: 0.2s;
     -webkit-user-select: none;
+    user-select: none;
     letter-spacing: 0.5px;
 }
 
@@ -516,7 +532,7 @@ strong {
     font-weight: 700;
     margin: 0;
     line-height: 1.2;
-    font-family: var(--font-logo);
+    font-family: var(--font-ui);
     color: var(--text-main);
 }
 
@@ -559,13 +575,16 @@ strong {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    gap: 2px;
     background: none;
     border: none;
     color: rgba(255, 255, 255, 0.5);
     cursor: pointer;
     padding: 0;
     transition: color 0.2s;
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 600;
 }
 
 .nav-item i {
@@ -701,7 +720,7 @@ strong {
     align-items: center;
     gap: 12px;
     transition: all 0.2s;
-    font-family: var(--font-main);
+    font-family: var(--font-ui);
 }
 
 .admin-nav-item:hover {
@@ -735,7 +754,7 @@ strong {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    font-family: var(--font-main);
+    font-family: var(--font-ui);
 }
 
 .admin-main {

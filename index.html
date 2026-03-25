@@ -4,6 +4,12 @@
 
 <head>
     <meta charset="UTF-8">
+    <script>
+        console.log("APP: index.html carregado");
+        window.addEventListener('error', function (e) {
+            console.error("APP ERROR:", e.message, "at", e.filename, ":", e.lineno);
+        });
+    </script>
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>WE'RE NUTS</title>
@@ -668,7 +674,7 @@
                             </div>
                             <div>
                                 <h3 style="margin:0; font-size: 18px; color: var(--text-main);">Fisio</h3>
-                                <p style="margin:0; font-size: 12px; color: var(--text-sec);">Relatos e tratamentos</p>
+                                <p style="margin:0; font-size: 12px; color: var(--text-sec);">Relatos e orientações</p>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -1952,8 +1958,12 @@
                             <option value="zoom">Zoom / Meet</option>
                         </select>
 
-                        <label class="label">Data e Hora</label>
+                        <label class="label">Data e Hora (Brasil) 🇧🇷</label>
                         <input type="datetime-local" id="adm-live-date" class="input" style="margin-bottom:15px;">
+
+                        <label class="label">Data e Hora (Portugal) 🇵🇹</label>
+                        <input type="datetime-local" id="adm-live-date-pt" class="input" style="margin-bottom:15px;">
+
                         <button onclick="window.app.saveLive()" class="btn btn-primary"
                             style="width:100%; margin:0;">Agendar Live</button>
                     </div>

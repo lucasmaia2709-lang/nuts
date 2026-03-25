@@ -23,8 +23,19 @@ const fixViewportHeight = () => {
     }
 };
 
+// --- DETECÇÃO DE PLATAFORMA ---
+const detectPlatform = () => {
+    const ua = navigator.userAgent.toLowerCase();
+    if (ua.includes("android")) {
+        document.body.classList.add("platform-android");
+    } else if (ua.includes("iphone") || ua.includes("ipad") || ua.includes("ipod")) {
+        document.body.classList.add("platform-ios");
+    }
+};
+
 // Executa o fix no carregamento
 window.addEventListener('load', () => {
+    detectPlatform();
     fixViewportHeight();
     notifications.init(); // Inicializa notificações
     // RequestAnimationFrame garante que rode após o layout inicial
