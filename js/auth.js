@@ -177,6 +177,7 @@ export const authLogic = {
                     name,
                     email,
                     active: false,
+                    wasApproved: false,
                     avatar: null,
                     races: [],
                     notes: {},
@@ -212,7 +213,7 @@ export const authLogic = {
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', C_USERS, user.email);
             const snap = await getDoc(docRef);
             if (!snap.exists()) {
-                const newUser = { name: "Aluno(a)", email: user.email, active: false, avatar: null, races: [], notes: {}, created: Date.now() };
+                const newUser = { name: "Aluno(a)", email: user.email, active: false, wasApproved: false, avatar: null, races: [], notes: {}, created: Date.now() };
                 await setDoc(docRef, newUser);
             }
         } catch (err) {

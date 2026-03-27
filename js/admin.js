@@ -164,8 +164,13 @@ export const admin = {
             let statusBadge = '';
 
             if (!isActiveDB) {
-                // Pendente (Cinza/Azulado para diferenciar de atrasado)
-                statusBadge = '<span class="status-dot status-grey"></span><span style="color:#7f8c8d; font-weight:600;">Pendente</span>';
+                if (u.wasApproved) {
+                    // Bloqueado (Vermelho/Cinza para diferenciar de pendente)
+                    statusBadge = '<span class="status-dot status-red"></span><span style="color:#e74c3c; font-weight:600;">Bloqueado</span>';
+                } else {
+                    // Pendente (Cinza/Azulado para diferenciar de atrasado)
+                    statusBadge = '<span class="status-dot status-grey"></span><span style="color:#7f8c8d; font-weight:600;">Pendente</span>';
+                }
             } else {
                 if (days <= 7) {
                     // EM DIA (Verde)
@@ -275,8 +280,21 @@ export const admin = {
         document.getElementById('ud-last-active').innerHTML = `<span style="color:${lastActiveColor}">${lastText}</span>`;
 
         const actionsDiv = document.getElementById('ud-actions-top');
-        const activeBtnText = u.active ? '<i class="fa-solid fa-ban"></i> Bloquear' : '<i class="fa-solid fa-check"></i> Aprovar';
-        const activeBtnColor = u.active ? '#e74c3c' : '#2ecc71';
+        let activeBtnText = '';
+        let activeBtnColor = '';
+
+        if (!u.active) {
+            if (u.wasApproved) {
+                activeBtnText = '<i class="fa-solid fa-unlock"></i> Desbloquear';
+                activeBtnColor = '#2ecc71';
+            } else {
+                activeBtnText = '<i class="fa-solid fa-check"></i> Aprovar';
+                activeBtnColor = '#2ecc71';
+            }
+        } else {
+            activeBtnText = '<i class="fa-solid fa-ban"></i> Bloquear';
+            activeBtnColor = '#e74c3c';
+        }
 
         actionsDiv.innerHTML = `
             <div style="display:flex; gap:8px; align-items:center;">
@@ -710,7 +728,16 @@ export const admin = {
         document.getElementById('modal-admin-pain-response').classList.remove('active');
     },
 
-    admToggleStatus: async (docId, status) => { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), { active: status }); window.app.toast(status ? "Aluno Aprovado" : "Aluno Bloqueado"); window.app.openUserDetail(docId); },
+    admToggleStatus: async (docId, status) => {
+        const updateData = { active: status };
+        if (status) updateData.wasApproved = true;
+
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId), updateData);
+
+        let msg = status ? "Aluno Ativo" : "Aluno Bloqueado";
+        window.app.toast(msg);
+        window.app.openUserDetail(docId);
+    },
     admDeleteUserQuick: async (docId) => { window.app.showConfirm(`Apagar permanentemente?`, async () => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, docId)); window.app.closeUserDetail(); window.app.admLoadUsers(); }); },
 
     admLoadTemplates: () => {
