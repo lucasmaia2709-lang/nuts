@@ -140,13 +140,18 @@ export const admin = {
             const isActiveDB = u.active; // True se aprovado no sistema
             const days = u.daysInactive;
 
-            // PENDENTE: Não aprovado no banco (independente de treino)
+            const isApproved = u.wasApproved || (u.races && u.races.length > 0);
+
+            // PENDENTE: Nunca foi aprovado e está inativo
             if (filterType === 'pending') {
-                if (isActiveDB) return;
+                if (isActiveDB || isApproved) return;
+            }
+            // BLOQUEADO: Já foi aprovado mas está inativo agora
+            else if (filterType === 'blocked') {
+                if (isActiveDB || !isApproved) return;
             }
             // FILTROS DE ATIVIDADE: Só aplicam para quem está aprovado no DB
             else if (!isActiveDB) {
-                // Se o filtro não for 'pending' nem 'all', e o user não for aprovado, esconde
                 if (filterType !== 'all') return;
             }
             else {
