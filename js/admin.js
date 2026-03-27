@@ -284,7 +284,7 @@ export const admin = {
         let activeBtnColor = '';
 
         if (!u.active) {
-            if (u.wasApproved) {
+            if (u.wasApproved || (u.races && u.races.length > 0)) {
                 activeBtnText = '<i class="fa-solid fa-unlock"></i> Desbloquear';
                 activeBtnColor = '#2ecc71';
             } else {
