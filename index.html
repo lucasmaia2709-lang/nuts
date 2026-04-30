@@ -1483,9 +1483,11 @@
                 </div>
 
                 <div class="onb-section">
-                    <h4
-                        style="color:var(--adm-primary); margin-bottom:10px; border-left:4px solid var(--adm-primary); padding-left:10px;">
-                        Disponibilidade</h4>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="color:var(--adm-primary); margin:0; border-left:4px solid var(--adm-primary); padding-left:10px;">
+                            Disponibilidade</h4>
+                        <button onclick="window.app.admOpenEditDays()" style="border:none; background:none; color:var(--primary); font-size:12px; cursor:pointer; font-weight:bold;"><i class="fa-solid fa-pencil"></i> Editar</button>
+                    </div>
                     <div class="onb-grid"
                         style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px;">
                         <div style="grid-column: span 2;"><strong>Dias de Treino:</strong> <span
@@ -1581,6 +1583,40 @@
             <div style="margin-top:20px; text-align:right;">
                 <button onclick="document.getElementById('modal-adm-mental-history').classList.remove('active')"
                     class="btn btn-outline" style="width:auto; margin:0;">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR DISPONIBILIDADE DO ALUNO -->
+    <div id="modal-adm-edit-days" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="color:var(--text-main);">Editar Disponibilidade</h3>
+            
+            <p style="font-size:13px; color:#666; margin-bottom:10px;">Dias de Treino:</p>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px; margin-bottom:15px;" id="adm-edit-days-grid">
+                <label class="box-selector light"><input type="checkbox" value="Segunda"><span class="box-label">Seg</span></label>
+                <label class="box-selector light"><input type="checkbox" value="Terça"><span class="box-label">Ter</span></label>
+                <label class="box-selector light"><input type="checkbox" value="Quarta"><span class="box-label">Qua</span></label>
+                <label class="box-selector light"><input type="checkbox" value="Quinta"><span class="box-label">Qui</span></label>
+                <label class="box-selector light"><input type="checkbox" value="Sexta"><span class="box-label">Sex</span></label>
+                <label class="box-selector light"><input type="checkbox" value="Sábado"><span class="box-label">Sáb</span></label>
+                <label class="box-selector light"><input type="checkbox" value="Domingo"><span class="box-label">Dom</span></label>
+            </div>
+
+            <p style="font-size:13px; color:#666; margin-bottom:10px;">Dia do Longão:</p>
+            <select id="adm-edit-longrun" class="input" style="margin-bottom:20px;">
+                <option value="Sábado">Sábado</option>
+                <option value="Domingo">Domingo</option>
+                <option value="Segunda">Segunda</option>
+                <option value="Terça">Terça</option>
+                <option value="Quarta">Quarta</option>
+                <option value="Quinta">Quinta</option>
+                <option value="Sexta">Sexta</option>
+            </select>
+
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.app.admSaveEditDays()" class="btn btn-primary">Salvar</button>
+                <button onclick="document.getElementById('modal-adm-edit-days').classList.remove('active')" class="btn btn-outline">Cancelar</button>
             </div>
         </div>
     </div>
