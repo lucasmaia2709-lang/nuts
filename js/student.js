@@ -431,6 +431,16 @@ export const student = {
         if (!target) target = activeRace.workouts.find(w => !w.done && (!w.scheduledDate || w.scheduledDate >= todayStr));
 
         const container = document.getElementById('today-workout-card');
+        const titleEl = document.getElementById('today-workout-title');
+
+        if (titleEl) {
+            if (target && target.scheduledDate && target.scheduledDate > todayStr) {
+                titleEl.innerText = "Próximo Treino";
+            } else {
+                titleEl.innerText = "Treino de Hoje";
+            }
+        }
+
         const totalW = activeRace.workouts.length;
         const doneW = activeRace.workouts.filter(w => w.done).length;
         const pct = totalW > 0 ? (doneW / totalW) * 100 : 0;
