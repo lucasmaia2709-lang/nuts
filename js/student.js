@@ -460,7 +460,30 @@ export const student = {
             let doneBtn = '';
             if (target.done) {
                 const isNotFinished = target.status === 'not_finished';
-                const btnLabel = isNotFinished ? 'Não Concluído' : 'Feito';
+                const isRested = target.status === 'rested';
+                
+                let btnLabel = isNotFinished ? 'Não Concluído' : 'Concluído';
+                let btnIcon = isNotFinished ? 'fa-xmark' : 'fa-check';
+
+                const isMixed = target.title.toLowerCase().includes('descanso') && target.title.toLowerCase().includes('fortalecimento');
+
+                if (isMixed) {
+                    if (isRested) {
+                        btnLabel = "Descanso";
+                        btnIcon = "fa-bed";
+                    } else if (!isNotFinished) {
+                        btnLabel = "Fortalecimento Concluído";
+                        btnIcon = "fa-dumbbell";
+                    }
+                } else if (target.type === 'rest' || (target.title.toLowerCase().includes('descanso') && !target.title.toLowerCase().includes('fortalecimento'))) {
+                     btnLabel = "Descanso";
+                     btnIcon = "fa-bed";
+                } else if (target.type === 'strength' || target.title.toLowerCase().includes('fortalecimento')) {
+                     btnLabel = isNotFinished ? "Não Concluído" : "Fortalecimento Concluído";
+                     btnIcon = isNotFinished ? "fa-xmark" : "fa-dumbbell";
+                }
+
+                doneBtn = `<button class="btn" style="background:rgba(255,255,255,0.2); color:#FFF; flex:1; cursor:default;" disabled><i class="fa-solid ${btnIcon}"></i> ${btnLabel}</button>`;
             } else {
                 let primaryBtnText = "Concluído";
                 let btnIcon = "fa-check";
@@ -472,7 +495,7 @@ export const student = {
                 if (isMixed) {
                     doneBtn = `
                         <div style="display:flex; flex-direction:column; gap:10px;">
-                            <button onclick="window.app.setWorkoutStatus('completed', '${safeTitle}')" class="btn" style="background:rgba(255,255,255,0.8); color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid fa-bed"></i> Descanso</button>
+                            <button onclick="window.app.setWorkoutStatus('rested', '${safeTitle}')" class="btn" style="background:rgba(255,255,255,0.8); color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid fa-bed"></i> Descanso</button>
                             <button onclick="window.app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid fa-dumbbell"></i> Fortalecimento</button>
                         </div>`;
                 } else if (target.type === 'strength' || target.title.toLowerCase().includes('fortalecimento')) {
@@ -486,7 +509,7 @@ export const student = {
                 } else if (target.type === 'rest' || target.title.toLowerCase().includes('descanso')) {
                     primaryBtnText = "Marcar Descanso";
                     btnIcon = "fa-bed";
-                    primaryAction = `window.app.setWorkoutStatus('completed', '${safeTitle}')`;
+                    primaryAction = `window.app.setWorkoutStatus('rested', '${safeTitle}')`;
                     doneBtn = `
                         <div style="display:flex; flex-direction:column; gap:10px;">
                             <button onclick="${primaryAction}" class="btn" style="background:#FFF; color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid ${btnIcon}"></i> ${primaryBtnText}</button>
@@ -797,6 +820,12 @@ export const student = {
                 if (w.status === 'not_finished') {
                     color = 'var(--red)';
                     icon = 'fa-circle-xmark';
+                } else if (w.status === 'rested' || (w.status === 'completed' && w.type === 'rest' && !w.title.toLowerCase().includes('fortalecimento'))) {
+                    color = '#888';
+                    icon = 'fa-bed';
+                } else if (w.status === 'completed' && (w.type === 'strength' || w.title.toLowerCase().includes('fortalecimento'))) {
+                    color = 'var(--success)';
+                    icon = 'fa-dumbbell';
                 } else {
                     color = 'var(--success)';
                     icon = 'fa-circle-check';
@@ -829,7 +858,7 @@ export const student = {
                 if (isMixed) {
                     finishBtn = `
                     <div style="display:flex; gap:8px; margin-right:8px; flex-wrap:wrap;">
-                        <button onclick="event.stopPropagation(); window.app.setWorkoutStatus('completed', '${safeTitle}')" style="border:1px solid #888; background:transparent; color:var(--text-main); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-bed"></i> Descanso</button>
+                        <button onclick="event.stopPropagation(); window.app.setWorkoutStatus('rested', '${safeTitle}')" style="border:1px solid #888; background:transparent; color:var(--text-main); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-bed"></i> Descanso</button>
                         <button onclick="event.stopPropagation(); window.app.finishWorkout('${safeTitle}')" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell"></i> Fortalecimento</button>
                     </div>`;
                 } else if (w.type === 'strength' || w.title.toLowerCase().includes('fortalecimento')) {
@@ -843,7 +872,7 @@ export const student = {
                 } else if (w.type === 'rest' || w.title.toLowerCase().includes('descanso')) {
                     primaryBtnText = "Descanso";
                     btnIcon = "fa-bed";
-                    primaryAction = `window.app.setWorkoutStatus('completed', '${safeTitle}')`;
+                    primaryAction = `window.app.setWorkoutStatus('rested', '${safeTitle}')`;
                     finishBtn = `
                     <div style="display:flex; gap:8px; margin-right:8px; flex-wrap:wrap;">
                         <button onclick="event.stopPropagation(); ${primaryAction}" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid ${btnIcon}"></i> ${primaryBtnText}</button>
