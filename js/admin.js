@@ -394,6 +394,57 @@ export const admin = {
         document.getElementById('modal-adm-student-info').classList.add('active');
     },
 
+    admOpenEditDays: () => {
+        const userId = state.currentAdmUser;
+        const u = state.allUsersCache.find(user => user.id === userId);
+        if (!u || !u.onboarding) return;
+
+        const onb = u.onboarding;
+        const days = onb.trainingDays || [];
+        
+        document.querySelectorAll('#adm-edit-days-grid input[type="checkbox"]').forEach(cb => {
+            cb.checked = days.includes(cb.value);
+        });
+
+        document.getElementById('adm-edit-longrun').value = onb.longRun || 'Domingo';
+        document.getElementById('modal-adm-edit-days').classList.add('active');
+    },
+
+    admSaveEditDays: async () => {
+        const userId = state.currentAdmUser;
+        const u = state.allUsersCache.find(user => user.id === userId);
+        if (!u || !u.onboarding) return;
+
+        const selectedDays = [];
+        document.querySelectorAll('#adm-edit-days-grid input[type="checkbox"]:checked').forEach(cb => {
+            selectedDays.push(cb.value);
+        });
+
+        const longRun = document.getElementById('adm-edit-longrun').value;
+
+        if (selectedDays.length === 0) return window.app.toast("Selecione pelo menos um dia.");
+
+        u.onboarding.trainingDays = selectedDays;
+        u.onboarding.longRun = longRun;
+
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', C_USERS, userId), { 
+            onboarding: u.onboarding 
+        });
+
+        document.getElementById('view-onb-days').innerText = selectedDays.join(', ');
+        document.getElementById('view-onb-longrun').innerText = longRun;
+
+        // Tentar atualizar também a visão de detalhe principal se existir (a onb-view injeta)
+        const udOnbDays = document.getElementById('ud-onb-days');
+        if (udOnbDays) udOnbDays.innerText = selectedDays.join(', ');
+        
+        const udOnbLongrun = document.getElementById('ud-onb-longrun');
+        if (udOnbLongrun) udOnbLongrun.innerText = longRun;
+
+        document.getElementById('modal-adm-edit-days').classList.remove('active');
+        window.app.toast("Disponibilidade atualizada!");
+    },
+
     admShowGoalWorkouts: (userId, raceIdx) => {
         const u = state.allUsersCache.find(user => user.id === userId);
         if (!u || !u.races || !u.races[raceIdx]) return;
