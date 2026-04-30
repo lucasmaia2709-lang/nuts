@@ -461,32 +461,31 @@ export const student = {
 
                 if (isMixed) {
                     doneBtn = `
-                        <div style="display:flex; gap:10px; flex:1; flex-wrap:wrap;">
-                            <button onclick="window.app.setWorkoutStatus('completed', '${safeTitle}')" class="btn" style="background:rgba(255,255,255,0.8); color:var(--text-main); flex:1; font-size:13px; padding:0 5px; min-width:100px;"><i class="fa-solid fa-bed"></i> Descansou</button>
-                            <button onclick="window.app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); flex:1.2; font-size:13px; padding:0 5px; min-width:120px;"><i class="fa-solid fa-dumbbell"></i> Fortaleceu</button>
-                            <button onclick="window.app.setWorkoutStatus('not_finished', '${safeTitle}')" class="btn" style="background:rgba(231, 76, 60, 0.2); color:#FFF; border:1px solid #e74c3c; flex:1; font-size:13px; padding:0 5px; min-width:100px;">Nenhum</button>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <button onclick="window.app.setWorkoutStatus('completed', '${safeTitle}')" class="btn" style="background:rgba(255,255,255,0.8); color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid fa-bed"></i> Descanso</button>
+                            <button onclick="window.app.finishWorkout('${safeTitle}')" class="btn" style="background:#FFF; color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid fa-dumbbell"></i> Fortalecimento</button>
                         </div>`;
                 } else if (target.type === 'strength' || target.title.toLowerCase().includes('fortalecimento')) {
                     primaryBtnText = "Concluir Fortalecimento";
                     btnIcon = "fa-dumbbell";
                     doneBtn = `
-                        <div style="display:flex; gap:10px; flex:1; flex-wrap:wrap;">
-                            <button onclick="${primaryAction}" class="btn" style="background:#FFF; color:var(--text-main); flex:1.2; font-size:14px; padding:0 5px; min-width:120px;"><i class="fa-solid ${btnIcon}"></i> ${primaryBtnText}</button>
-                            <button onclick="window.app.setWorkoutStatus('not_finished', '${safeTitle}')" class="btn" style="background:rgba(231, 76, 60, 0.2); color:#FFF; border:1px solid #e74c3c; flex:1; font-size:14px; padding:0 5px; min-width:100px;">Não Concluído</button>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <button onclick="${primaryAction}" class="btn" style="background:#FFF; color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid ${btnIcon}"></i> ${primaryBtnText}</button>
+                            <button onclick="window.app.setWorkoutStatus('not_finished', '${safeTitle}')" class="btn" style="background:rgba(231, 76, 60, 0.2); color:#FFF; border:1px solid #e74c3c; font-size:14px; padding:10px;">Não Concluído</button>
                         </div>`;
                 } else if (target.type === 'rest' || target.title.toLowerCase().includes('descanso')) {
                     primaryBtnText = "Marcar Descanso";
                     btnIcon = "fa-bed";
                     primaryAction = `window.app.setWorkoutStatus('completed', '${safeTitle}')`;
                     doneBtn = `
-                        <div style="display:flex; gap:10px; flex:1; flex-wrap:wrap;">
-                            <button onclick="${primaryAction}" class="btn" style="background:#FFF; color:var(--text-main); flex:1.2; font-size:14px; padding:0 5px; min-width:120px;"><i class="fa-solid ${btnIcon}"></i> ${primaryBtnText}</button>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <button onclick="${primaryAction}" class="btn" style="background:#FFF; color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid ${btnIcon}"></i> ${primaryBtnText}</button>
                         </div>`;
                 } else {
                     doneBtn = `
-                        <div style="display:flex; gap:10px; flex:1; flex-wrap:wrap;">
-                            <button onclick="${primaryAction}" class="btn" style="background:#FFF; color:var(--text-main); flex:1.2; font-size:14px; padding:0 5px; min-width:120px;"><i class="fa-solid ${btnIcon}"></i> ${primaryBtnText}</button>
-                            <button onclick="window.app.setWorkoutStatus('not_finished', '${safeTitle}')" class="btn" style="background:rgba(231, 76, 60, 0.2); color:#FFF; border:1px solid #e74c3c; flex:1; font-size:14px; padding:0 5px; min-width:100px;">Não Concluído</button>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <button onclick="${primaryAction}" class="btn" style="background:#FFF; color:var(--text-main); font-size:14px; padding:10px;"><i class="fa-solid ${btnIcon}"></i> ${primaryBtnText}</button>
+                            <button onclick="window.app.setWorkoutStatus('not_finished', '${safeTitle}')" class="btn" style="background:rgba(231, 76, 60, 0.2); color:#FFF; border:1px solid #e74c3c; font-size:14px; padding:10px;">Não Concluído</button>
                         </div>`;
                 }
             }
@@ -498,9 +497,9 @@ export const student = {
 
             let actionBtn = '';
             if (target.type === 'strength' || target.title.toLowerCase().includes('fortalecimento')) {
-                actionBtn = `<button onclick="window.app.openStrengthVideosPage()" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-dumbbell"></i> Ver Exercícios</button>`;
+                actionBtn = `<button onclick="window.app.openStrengthVideosPage()" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:10px; display:flex; justify-content:center; align-items:center; gap:8px;"><i class="fa-solid fa-dumbbell"></i> Ver Exercícios</button>`;
             } else if (safeVideo) {
-                actionBtn = `<button onclick="window.app.playVideo('${safeVideo}')" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:0 20px; width:auto; display:flex; gap:8px;"><i class="fa-solid fa-play"></i> Vídeo</button>`;
+                actionBtn = `<button onclick="window.app.playVideo('${safeVideo}')" class="btn" style="background:rgba(255,255,255,0.4); color:var(--text-main); padding:10px; display:flex; justify-content:center; align-items:center; gap:8px;"><i class="fa-solid fa-play"></i> Vídeo</button>`;
             }
 
             cardHtml = `<div class="card" style="background: #9cafcc; color: var(--text-main); border: none; padding:30px;">
@@ -509,11 +508,11 @@ export const student = {
                         <h2 style="margin:0; font-size:24px; line-height:1.2; color:var(--text-main);">${target.title} ${dateDisplay}</h2>
                         <p style="opacity:0.9; font-size:15px; margin-top:8px; font-weight:400; color:var(--text-main);">${target.desc}</p>
                     </div>
-                    <div style="background:rgba(255,255,255,0.4); width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                    <div style="background:rgba(255,255,255,0.4); min-width:50px; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
                         <i class="fa-solid fa-person-running" style="font-size:24px; color:var(--text-main);"></i>
                     </div>
                 </div>
-                <div style="display:flex; gap:15px;">
+                <div style="display:flex; flex-direction:column; gap:10px;">
                     ${doneBtn}
                     ${actionBtn}
                 </div>
@@ -820,9 +819,8 @@ export const student = {
                 if (isMixed) {
                     finishBtn = `
                     <div style="display:flex; gap:8px; margin-right:8px; flex-wrap:wrap;">
-                        <button onclick="event.stopPropagation(); window.app.setWorkoutStatus('completed', '${safeTitle}')" style="border:1px solid #888; background:transparent; color:var(--text-main); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-bed"></i> Descansou</button>
-                        <button onclick="event.stopPropagation(); window.app.finishWorkout('${safeTitle}')" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell"></i> Fortaleceu</button>
-                        <button onclick="event.stopPropagation(); window.app.setWorkoutStatus('not_finished', '${safeTitle}')" style="border:1px solid #e74c3c; background:transparent; color:#e74c3c; padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-xmark"></i> Nenhum</button>
+                        <button onclick="event.stopPropagation(); window.app.setWorkoutStatus('completed', '${safeTitle}')" style="border:1px solid #888; background:transparent; color:var(--text-main); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-bed"></i> Descanso</button>
+                        <button onclick="event.stopPropagation(); window.app.finishWorkout('${safeTitle}')" style="border:1px solid var(--success); background:transparent; color:var(--success); padding: 6px 10px; border-radius: 20px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;"><i class="fa-solid fa-dumbbell"></i> Fortalecimento</button>
                     </div>`;
                 } else if (w.type === 'strength' || w.title.toLowerCase().includes('fortalecimento')) {
                     primaryBtnText = "Fortalecimento";
