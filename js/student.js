@@ -40,17 +40,30 @@ export const student = {
             // Inicializa modalData sempre com array vazio para garantir estrutura
             let modalData = { studentRaces: [] };
 
-            if (scheduled) {
-                cellClass += ' has-workout';
-                dotHtml += `<div class="cal-dot"></div>`;
-                // Ao mesclar dados do treino, mantemos studentRaces limpo para popular abaixo
-                modalData = { ...scheduled, studentRaces: [] };
-                if (scheduled.done) cellClass += ' done';
-            }
-            else if (doneHere) {
-                cellClass += ' done';
-                dotHtml += `<div class="cal-dot"></div>`;
-                modalData = { ...doneHere, studentRaces: [] };
+            let workoutForDot = scheduled || doneHere;
+            if (workoutForDot) {
+                if (scheduled) {
+                    cellClass += ' has-workout';
+                    modalData = { ...scheduled, studentRaces: [] };
+                    if (scheduled.done) cellClass += ' done';
+                } else if (doneHere) {
+                    cellClass += ' done';
+                    modalData = { ...doneHere, studentRaces: [] };
+                }
+
+                if (workoutForDot.done) {
+                    if (workoutForDot.status === 'not_finished') {
+                        dotHtml += `<div style="font-size:10px; color:var(--red); margin-top:2px;"><i class="fa-solid fa-xmark"></i></div>`;
+                    } else if (workoutForDot.status === 'rested' || (workoutForDot.status === 'completed' && workoutForDot.type === 'rest' && !workoutForDot.title.toLowerCase().includes('fortalecimento'))) {
+                        dotHtml += `<div style="font-size:10px; color:#888; margin-top:2px;"><i class="fa-solid fa-bed"></i></div>`;
+                    } else if (workoutForDot.status === 'completed' && (workoutForDot.type === 'strength' || workoutForDot.title.toLowerCase().includes('fortalecimento'))) {
+                        dotHtml += `<div style="font-size:10px; color:var(--success); margin-top:2px;"><i class="fa-solid fa-dumbbell"></i></div>`;
+                    } else {
+                        dotHtml += `<div class="cal-dot"></div>`;
+                    }
+                } else {
+                    dotHtml += `<div class="cal-dot"></div>`;
+                }
             }
 
             if (notes[dateStr]) { dotHtml += `<div class="cal-note-indicator"></div>`; }
@@ -122,8 +135,15 @@ export const student = {
         if (workoutData && (workoutData.title || workoutData.desc)) {
             let statusBadge = '<span style="color:var(--orange); font-size:12px;">Pendente</span>';
             if (workoutData.done) {
-                if (workoutData.status === 'not_finished') statusBadge = '<strong style="color:var(--red); font-size:12px;">Não Concluído</strong>';
-                else statusBadge = '<strong style="color:var(--success); font-size:12px;">Concluído</strong>';
+                if (workoutData.status === 'not_finished') {
+                    statusBadge = '<strong style="color:var(--red); font-size:12px;">Não Concluído</strong>';
+                } else if (workoutData.status === 'rested' || (workoutData.status === 'completed' && workoutData.type === 'rest' && !workoutData.title.toLowerCase().includes('fortalecimento'))) {
+                    statusBadge = '<strong style="color:#888; font-size:12px;"><i class="fa-solid fa-bed"></i> Descanso</strong>';
+                } else if (workoutData.status === 'completed' && (workoutData.type === 'strength' || workoutData.title.toLowerCase().includes('fortalecimento'))) {
+                    statusBadge = '<strong style="color:var(--success); font-size:12px;"><i class="fa-solid fa-dumbbell"></i> Fortalecimento Concluído</strong>';
+                } else {
+                    statusBadge = '<strong style="color:var(--success); font-size:12px;"><i class="fa-solid fa-check"></i> Concluído</strong>';
+                }
             }
             content += `<div style="background:#f5f5f5; padding:15px; border-radius:10px; margin-bottom:15px;">
                 <h4 style="margin:0 0 5px 0;">${workoutData.title}</h4>
