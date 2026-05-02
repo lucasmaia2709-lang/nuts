@@ -357,9 +357,9 @@ export const admin = {
     openStudentInfoModal: () => {
         const userId = state.currentAdmUser;
         const u = state.allUsersCache.find(user => user.id === userId);
-        if (!u || !u.onboarding) return window.app.toast("Este aluno ainda não preencheu o questionário.");
+        if (!u) return window.app.toast("Aluno não encontrado.");
 
-        const onb = u.onboarding;
+        const onb = u.onboarding || {};
 
         // Perfil Esportivo
         document.getElementById('view-onb-level').innerText = onb.level || '--';
@@ -397,9 +397,9 @@ export const admin = {
     admOpenEditDays: () => {
         const userId = state.currentAdmUser;
         const u = state.allUsersCache.find(user => user.id === userId);
-        if (!u || !u.onboarding) return;
+        if (!u) return;
 
-        const onb = u.onboarding;
+        const onb = u.onboarding || {};
         const days = onb.trainingDays || [];
         
         document.querySelectorAll('#adm-edit-days-grid input[type="checkbox"]').forEach(cb => {
@@ -413,7 +413,7 @@ export const admin = {
     admSaveEditDays: async () => {
         const userId = state.currentAdmUser;
         const u = state.allUsersCache.find(user => user.id === userId);
-        if (!u || !u.onboarding) return;
+        if (!u) return;
 
         const selectedDays = [];
         document.querySelectorAll('#adm-edit-days-grid input[type="checkbox"]:checked').forEach(cb => {
@@ -424,6 +424,7 @@ export const admin = {
 
         if (selectedDays.length === 0) return window.app.toast("Selecione pelo menos um dia.");
 
+        if (!u.onboarding) u.onboarding = {};
         u.onboarding.trainingDays = selectedDays;
         u.onboarding.longRun = longRun;
 
