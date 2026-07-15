@@ -91,11 +91,14 @@ export const admin = {
                     u.races.forEach(r => {
                         if (r.workouts) {
                             r.workouts.forEach(w => {
-                                if (w.done && w.completedAt) {
-                                    const t = new Date(w.completedAt).getTime();
-                                    if (t > lastWorkoutTime) {
-                                        lastWorkoutTime = t;
-                                        lastWorkoutDate = w.completedAt;
+                                if (w.done) {
+                                    const dateToUse = w.completedAt || w.scheduledDate;
+                                    if (dateToUse) {
+                                        const t = new Date(dateToUse).getTime();
+                                        if (t > lastWorkoutTime) {
+                                            lastWorkoutTime = t;
+                                            lastWorkoutDate = dateToUse;
+                                        }
                                     }
                                 }
                             });
@@ -584,7 +587,13 @@ export const admin = {
 
         if (u.races && u.races[rIdx] && u.races[rIdx].workouts) {
             u.races[rIdx].workouts[wIdx].done = status;
-            if (!status) delete u.races[rIdx].workouts[wIdx].completedAt;
+            if (!status) {
+                delete u.races[rIdx].workouts[wIdx].completedAt;
+            } else {
+                if (!u.races[rIdx].workouts[wIdx].completedAt) {
+                    u.races[rIdx].workouts[wIdx].completedAt = u.races[rIdx].workouts[wIdx].scheduledDate || new Date().toISOString().split('T')[0];
+                }
+            }
 
             await updateDoc(uRef, { races: u.races });
 
@@ -1293,7 +1302,7 @@ export const admin = {
                     level: onb.level || 'Não informado',
                     trainingDays: onb.trainingDays || [],
                     longRunDay: onb.longRun || 'Domingo',
-                    injuries: onb.injuries || 'Nenhum'
+                    injuries: onb.injuriesHistory || 'Nenhum'
                 };
                 console.log("🚀 Payload enviado para a IA:", payload);
 
