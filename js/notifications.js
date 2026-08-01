@@ -159,19 +159,25 @@ export const notifications = {
                     const data = change.doc.data();
                     const liveDate = new Date(data.date);
                     const now = new Date();
-                    const createdDate = data.created ? new Date(data.created) : new Date(0); // Garante que lives antigas sem campo created não disparem
 
-                    // 1. Notificação Imediata de Agendamento (Apenas se foi criada nos últimos 15 min E for no futuro)
-                    if (now.getTime() - createdDate.getTime() < 900000 && liveDate > now) {
-                        notifications.trigger("Nova Live Agendada!", `Live marcada para ${liveDate.toLocaleDateString()} às ${liveDate.toLocaleTimeString()}`);
+                    // 1. Notificação Imediata ESPECÍFICA (Apenas 1x por aparelho via localStorage)
+                    const seenKey = `live_notified_${change.doc.id}`;
+                    if (!localStorage.getItem(seenKey)) {
+                        // Só notifica "Nova Live" se a live for no futuro
+                        if (liveDate > now) {
+                            notifications.trigger("Nova Live Agendada!", `A próxima live será ${liveDate.toLocaleDateString()} às ${liveDate.toLocaleTimeString()}`);
+                        }
+                        // Marca como vista neste aparelho para nunca mais incomodar no reload
+                        localStorage.setItem(seenKey, "true");
                     }
 
-                    // 2. Agendar lembrete exato 1h antes
-                    const remindDate = new Date(liveDate.getTime() - 3600000); // 1h antes
+                    // 2. Agendar lembrete exato 1 DIA ANTES (24 horas = 86400000 ms)
+                    const remindDate = new Date(liveDate.getTime() - 86400000);
                     if (remindDate > now) {
-                        // ID determinístico pro agendamento da Live para não gerar duplicadas
-                        const liveNotifId = Math.abs(parseInt(data.created || liveDate.getTime()) % 100000);
-                        notifications.schedule(liveNotifId, "Live em 1h!", `Sua live começa às ${liveDate.toLocaleTimeString()}`, remindDate);
+                        // ID determinístico pro agendamento da Live para não gerar duplicadas caso o DB recarregue
+                        // Usa os digitos finais do timestamp da live como ID unico seguro
+                        const liveNotifId = Math.abs(parseInt(liveDate.getTime() % 100000));
+                        notifications.schedule(liveNotifId, "Live Amanhã!", `Amanhã temos um encontro marcado às ${liveDate.toLocaleTimeString()}!`, remindDate);
                     }
                 }
             });

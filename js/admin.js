@@ -198,10 +198,10 @@ export const admin = {
             const tr = document.createElement('tr');
             tr.onclick = () => window.app.openUserDetail(u.id);
             tr.innerHTML = `
-                <td><img src="${window.app.getSafeUrl(avatar)}" class="table-avatar"></td>
+                <td><img src="${window.app.escUrl(window.app.getSafeUrl(avatar))}" class="table-avatar"></td>
                 <td>
-                    <div style="font-weight:600; color:var(--text-main);">${u.name}</div>
-                    <div style="font-size:11px; color:#999;">${u.email}</div>
+                    <div style="font-weight:600; color:var(--text-main);">${window.app.escHtml(u.name)}</div>
+                    <div style="font-size:11px; color:#999;">${window.app.escHtml(u.email)}</div>
                 </td>
                 <td>${statusBadge}</td>
                 <td>${lastDateDisplay}</td>
@@ -336,7 +336,7 @@ export const admin = {
                 raceList.innerHTML += `
                 <div style="border:1px solid #eee; border-radius:10px; margin-bottom:15px; padding:15px; background:#fbfbfb;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="color:var(--adm-primary); font-size:14px;">${r.name}</strong>
+                        <strong style="color:var(--adm-primary); font-size:14px;">${window.app.escHtml(r.name)}</strong>
                         <span style="font-size:11px; background:#e8e8e8; padding:3px 8px; border-radius:10px;">${doneCount}/${totalCount}</span>
                     </div>
                     <div style="margin-top:10px; display:flex; gap:10px;">
@@ -487,7 +487,7 @@ export const admin = {
                     <td style="text-align:center;">${toggleBtn}</td>
                     <td>${dateDisplay}</td>
                     <td>
-                        <span style="font-weight:600; font-size:12px;">${w.title}</span>
+                        <span style="font-weight:600; font-size:12px;">${window.app.escHtml(w.title)}</span>
                         ${w.desc ? `<br><span style="color:#888; font-size:10px;">${w.desc.substring(0, 30)}...</span>` : ''}
                     </td>
                     <td>
@@ -655,7 +655,7 @@ export const admin = {
                         <span style="font-weight:600;">${new Date(p.timestamp).toLocaleDateString()}</span>
                         <span style="color:${p.painLevel > 4 ? 'var(--red)' : 'orange'}; font-weight:700;">Nível ${p.painLevel}</span>
                     </div>
-                    <div style="color:#666; margin-top:3px;">${p.workoutTitle}</div>
+                    <div style="color:#666; margin-top:3px;">${window.app.escHtml(p.workoutTitle)}</div>
                 </div>`;
             });
         });
@@ -679,19 +679,20 @@ export const admin = {
                 const dateStr = new Date(item.timestamp).toLocaleDateString();
                 const modalData = encodeURIComponent(JSON.stringify(item));
 
+                const E = window.app.escHtml;
                 let painSummary = '';
                 if (item.painDetails) {
-                    painSummary = Object.entries(item.painDetails).map(([loc, score]) => `${loc} (${score})`).join(', ');
+                    painSummary = Object.entries(item.painDetails).map(([loc, score]) => `${E(loc)} (${E(score)})`).join(', ');
                 } else {
-                    painSummary = `Nível ${item.painLevel || 0}`;
+                    painSummary = `Nível ${Number(item.painLevel) || 0}`;
                 }
 
                 list.innerHTML += `
-                <div class="adm-pain-card ${unreadClass}" onclick="window.app.admOpenPainDetail('${modalData}')">
+                <div class="adm-pain-card ${unreadClass}" onclick="window.app.admOpenPainDetail('${window.app.escJs(modalData)}')">
                     <div class="adm-pain-info">
-                        <div class="adm-pain-user">${item.userName} <span style="font-weight:400; font-size:12px; color:#888;">- ${item.workoutTitle}</span></div>
-                        <div class="adm-pain-date">${dateStr}</div>
-                        <div class="adm-pain-msg"><strong>${painSummary}:</strong> ${item.notes}</div>
+                        <div class="adm-pain-user">${E(item.userName)} <span style="font-weight:400; font-size:12px; color:#888;">- ${E(item.workoutTitle)}</span></div>
+                        <div class="adm-pain-date">${E(dateStr)}</div>
+                        <div class="adm-pain-msg"><strong>${painSummary}:</strong> ${E(item.notes)}</div>
                     </div>
                     ${item.responded ? '<i class="fa-solid fa-check" style="color:var(--success);"></i>' : '<i class="fa-solid fa-envelope" style="color:#ddd;"></i>'}
                 </div>`;
@@ -715,13 +716,13 @@ export const admin = {
                 const dateStr = new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                 list.innerHTML += `
                 <div class="card" style="display:flex; align-items:center; gap:15px; padding:15px; margin-bottom:10px; border-left:4px solid #9c27b0;">
-                    <span style="font-size:30px;">${item.emoji}</span>
+                    <span style="font-size:30px;">${window.app.escHtml(item.emoji)}</span>
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong style="font-size:15px;">${item.userName || 'Aluno'}</strong>
-                            <span style="font-size:11px; color:#999;">${dateStr}</span>
+                            <strong style="font-size:15px;">${window.app.escHtml(item.userName || 'Aluno')}</strong>
+                            <span style="font-size:11px; color:#999;">${window.app.escHtml(dateStr)}</span>
                         </div>
-                        <div style="color:#6a1b9a; font-weight:600; font-size:14px;">${item.mood}</div>
+                        <div style="color:#6a1b9a; font-weight:600; font-size:14px;">${window.app.escHtml(item.mood)}</div>
                     </div>
                 </div>`;
             });
@@ -738,13 +739,13 @@ export const admin = {
                         const dateStr = new Date(item.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
                         list.innerHTML += `
                         <div class="card" style="display:flex; align-items:center; gap:15px; padding:15px; margin-bottom:10px; border-left:4px solid #9c27b0;">
-                            <span style="font-size:30px;">${item.emoji}</span>
+                            <span style="font-size:30px;">${window.app.escHtml(item.emoji)}</span>
                             <div style="flex:1;">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <strong style="font-size:15px;">${item.userName || 'Aluno'}</strong>
-                                    <span style="font-size:11px; color:#999;">${dateStr}</span>
+                                    <strong style="font-size:15px;">${window.app.escHtml(item.userName || 'Aluno')}</strong>
+                                    <span style="font-size:11px; color:#999;">${window.app.escHtml(dateStr)}</span>
                                 </div>
-                                <div style="color:#6a1b9a; font-weight:600; font-size:14px;">${item.mood}</div>
+                                <div style="color:#6a1b9a; font-weight:600; font-size:14px;">${window.app.escHtml(item.mood)}</div>
                             </div>
                         </div>`;
                     });
@@ -766,13 +767,13 @@ export const admin = {
         }
 
         view.innerHTML = `
-            <strong>Aluno:</strong> ${data.userName}<br>
-            <strong>Treino:</strong> ${data.workoutTitle}<br>
+            <strong>Aluno:</strong> ${window.app.escHtml(data.userName)}<br>
+            <strong>Treino:</strong> ${window.app.escHtml(data.workoutTitle)}<br>
             <strong>Data:</strong> ${new Date(data.timestamp).toLocaleDateString()}<br>
             <div style="margin-top:10px; padding:10px; background:#f9f9f9; border-radius:8px;">
                 ${painHtml}
             </div>
-            <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #ccc;">${data.notes}</div>
+            <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #ccc;">${window.app.escHtml(data.notes)}</div>
         `;
         document.getElementById('adm-pain-response-text').value = data.response || '';
         document.getElementById('modal-admin-pain-response').classList.add('active');
@@ -815,10 +816,10 @@ export const admin = {
                 let workoutsHtml = '';
                 if (t.workouts && t.workouts.length > 0) {
                     t.workouts.forEach((w, wIdx) => {
-                        workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;"><div style="flex:1;"><span style="font-size:13px; font-weight:600;">${w.title}</span><br><small>${w.desc}</small></div><div style="display:flex; gap:5px;"><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, -1)"><i class="fa-solid fa-arrow-up"></i></button><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, 1)"><i class="fa-solid fa-arrow-down"></i></button><button onclick="window.app.admEditWorkoutFromTemplate('${tId}', ${wIdx})"><i class="fa-solid fa-pencil"></i></button><button onclick="window.app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:red">X</button></div></div>`;
+                        workoutsHtml += `<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding:8px 0;"><div style="flex:1;"><span style="font-size:13px; font-weight:600;">${window.app.escHtml(w.title)}</span><br><small>${window.app.escHtml(w.desc)}</small></div><div style="display:flex; gap:5px;"><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, -1)"><i class="fa-solid fa-arrow-up"></i></button><button onclick="window.app.admMoveWorkout('${tId}', ${wIdx}, 1)"><i class="fa-solid fa-arrow-down"></i></button><button onclick="window.app.admEditWorkoutFromTemplate('${tId}', ${wIdx})"><i class="fa-solid fa-pencil"></i></button><button onclick="window.app.admDeleteWorkoutFromTemplate('${tId}', ${wIdx})" style="color:red">X</button></div></div>`;
                     });
                 } else { workoutsHtml = '<small>Sem treinos.</small>'; }
-                html += `<div class="card" style="padding:10px; margin-bottom:10px;"><div class="adm-row-header" onclick="window.app.admToggleTemplate('${tId}')"><span>${t.name}</span><i class="fa-solid fa-chevron-down"></i></div><div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">${workoutsHtml}<div style="display:flex; justify-content:space-between; margin-top:10px;"><button onclick="window.app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small">+ Treino</button><button onclick="window.app.admDelTemplate('${tId}')" style="color:red; font-size:11px; border:none; background:none;">Excluir Modelo</button></div></div></div>`;
+                html += `<div class="card" style="padding:10px; margin-bottom:10px;"><div class="adm-row-header" onclick="window.app.admToggleTemplate('${tId}')"><span>${window.app.escHtml(t.name)}</span><i class="fa-solid fa-chevron-down"></i></div><div id="tpl-content-${tId}" class="adm-nested ${isTplOpen}">${workoutsHtml}<div style="display:flex; justify-content:space-between; margin-top:10px;"><button onclick="window.app.admAddWorkoutToTemplateInline('${tId}')" class="adm-btn-small">+ Treino</button><button onclick="window.app.admDelTemplate('${tId}')" style="color:red; font-size:11px; border:none; background:none;">Excluir Modelo</button></div></div></div>`;
             });
             list.innerHTML = html;
         });
@@ -947,8 +948,8 @@ export const admin = {
             const l = document.getElementById('adm-quotes-list'); l.innerHTML = '';
             s.forEach(d => {
                 const data = d.data();
-                const authorDisplay = data.author ? ` - ${data.author}` : '';
-                l.innerHTML += `<div style="padding:15px; border-bottom:1px solid #eee; background:white; border-radius:10px; margin-bottom:5px; display:flex; justify-content:space-between;"><span>"${data.text}"<br><small style="color:#888;">${authorDisplay}</small></span><div><button onclick="window.app.openEditQuote('${d.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; margin-right:10px;"><i class="fa-solid fa-pencil"></i></button><button onclick="window.app.admDelQuote('${d.id}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div></div>`
+                const authorDisplay = data.author ? ` - ${window.app.escHtml(data.author)}` : '';
+                l.innerHTML += `<div style="padding:15px; border-bottom:1px solid #eee; background:white; border-radius:10px; margin-bottom:5px; display:flex; justify-content:space-between;"><span>"${window.app.escHtml(data.text)}"<br><small style="color:#888;">${authorDisplay}</small></span><div><button onclick="window.app.openEditQuote('${d.id}')" style="color:var(--primary); border:none; background:none; cursor:pointer; margin-right:10px;"><i class="fa-solid fa-pencil"></i></button><button onclick="window.app.admDelQuote('${d.id}')" style="color:red; border:none; background:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></div></div>`
             });
         });
     },
@@ -1030,7 +1031,7 @@ export const admin = {
                         <div style="display:flex; align-items:center;">
                             ${coverHtml}
                             <div>
-                                <strong style="color:var(--text-main);">${v.title}</strong><br>
+                                <strong style="color:var(--text-main);">${window.app.escHtml(v.title)}</strong><br>
                                 <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
                             </div>
                         </div>
@@ -1192,7 +1193,7 @@ export const admin = {
                         <div style="display:flex; align-items:center;">
                             ${coverHtml}
                             <div>
-                                <strong style="color:var(--text-main);">${v.title}</strong><br>
+                                <strong style="color:var(--text-main);">${window.app.escHtml(v.title)}</strong><br>
                                 <a href="#" onclick="window.app.playVideo('${safeLink}')" style="font-size:12px; color:var(--primary); font-weight:600; text-decoration:none;"><i class="fa-solid fa-play"></i> Ver Vídeo</a>
                             </div>
                         </div>
@@ -1390,7 +1391,7 @@ export const admin = {
         tplSelect.innerHTML = '<option value="">Selecione...</option>';
         querySnapshot.forEach((doc) => {
             const t = doc.data();
-            tplSelect.innerHTML += `<option value="${doc.id}">${t.name} (${t.workouts.length} treinos)</option>`;
+            tplSelect.innerHTML += `<option value="${doc.id}">${window.app.escHtml(t.name)} (${t.workouts.length} treinos)</option>`;
         });
     },
     admToggleRaceMode: () => {
@@ -1536,7 +1537,7 @@ export const admin = {
                 list.innerHTML += `
                 <div class="card" style="margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <strong style="font-size:15px;">${name}</strong>
+                        <strong style="font-size:15px;">${window.app.escHtml(name)}</strong>
                         <button onclick="window.app.deleteChallenge('${d.id}')" style="color:red; background:none; border:none; cursor:pointer;">
                             <i class="fa-solid fa-trash"></i>
                         </button>
@@ -1674,7 +1675,7 @@ export const admin = {
             const list = document.getElementById('template-select-list'); list.innerHTML = '';
             s.forEach(d => {
                 const t = d.data();
-                list.innerHTML += `<label style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;"><input type="radio" name="selected_template" value="${d.id}" style="margin-right:15px; width:18px; height:18px;"><div><strong style="font-size:16px;">${t.name}</strong><br><span style="font-size:12px; color:#888;">${t.workouts.length} Treinos</span></div></label>`;
+                list.innerHTML += `<label style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #eee; cursor:pointer;"><input type="radio" name="selected_template" value="${d.id}" style="margin-right:15px; width:18px; height:18px;"><div><strong style="font-size:16px;">${window.app.escHtml(t.name)}</strong><br><span style="font-size:12px; color:#888;">${t.workouts.length} Treinos</span></div></label>`;
             });
             document.getElementById('modal-select-template').classList.add('active');
         });
@@ -1761,13 +1762,13 @@ export const admin = {
             });
 
             const renderMood = (m, label) => {
-                if (!m) return `<div style="flex:1; background:#f9f9f9; padding:8px; border-radius:10px; border:1px dashed #ddd; text-align:center; min-height:40px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:9px;">${label}</small><div style="color:#ddd">-</div></div>`;
+                if (!m) return `<div style="flex:1; background:#f9f9f9; padding:8px; border-radius:10px; border:1px dashed #ddd; text-align:center; min-height:40px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:9px;">${window.app.escHtml(label)}</small><div style="color:#ddd">-</div></div>`;
                 return `
                     <div style="flex:1; background:#fff; padding:8px; border-radius:10px; border:1px solid #eee; display:flex; align-items:center; gap:8px; min-height:40px;">
-                        <span style="font-size:18px;">${m.emoji}</span>
+                        <span style="font-size:18px;">${window.app.escHtml(m.emoji)}</span>
                         <div style="overflow:hidden;">
-                            <small style="color:#9c27b0; font-size:8px; font-weight:700; display:block; text-transform:uppercase;">${label}</small>
-                            <strong style="font-size:11px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${m.mood}</strong>
+                            <small style="color:#9c27b0; font-size:8px; font-weight:700; display:block; text-transform:uppercase;">${window.app.escHtml(label)}</small>
+                            <strong style="font-size:11px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${window.app.escHtml(m.mood)}</strong>
                         </div>
                     </div>
                 `;
@@ -1830,12 +1831,12 @@ export const admin = {
                     });
 
                     const renderMood = (m, label) => {
-                        if (!m) return `<div style="flex:1; background:#f9f9f9; padding:8px; border-radius:10px; border:1px dashed #ddd; text-align:center; min-height:40px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:9px;">${label}</small><div style="color:#ddd">-</div></div>`;
+                        if (!m) return `<div style="flex:1; background:#f9f9f9; padding:8px; border-radius:10px; border:1px dashed #ddd; text-align:center; min-height:40px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:9px;">${window.app.escHtml(label)}</small><div style="color:#ddd">-</div></div>`;
                         return `
                             <div style="flex:1; background:#fff; padding:8px; border-radius:10px; border:1px solid #eee; display:flex; align-items:center; gap:8px; min-height:40px;">
                                 <span style="font-size:18px;">${m.emoji || '❓'}</span>
                                 <div style="overflow:hidden;">
-                                    <small style="color:#9c27b0; font-size:8px; font-weight:700; display:block; text-transform:uppercase;">${label}</small>
+                                    <small style="color:#9c27b0; font-size:8px; font-weight:700; display:block; text-transform:uppercase;">${window.app.escHtml(label)}</small>
                                     <strong style="font-size:11px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${m.mood || 'Sem humor'}</strong>
                                 </div>
                             </div>

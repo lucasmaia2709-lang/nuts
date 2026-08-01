@@ -146,8 +146,8 @@ export const student = {
                 }
             }
             content += `<div style="background:#f5f5f5; padding:15px; border-radius:10px; margin-bottom:15px;">
-                <h4 style="margin:0 0 5px 0;">${workoutData.title}</h4>
-                <p style="margin:0; font-size:13px; color:#666;">${workoutData.desc}</p>
+                <h4 style="margin:0 0 5px 0;">${window.app.escHtml(workoutData.title)}</h4>
+                <p style="margin:0; font-size:13px; color:#666;">${window.app.escHtml(workoutData.desc)}</p>
                 ${statusBadge}
             </div>`;
         } else if (!workoutData || (!workoutData.title && (!workoutData.studentRaces || workoutData.studentRaces.length === 0))) {
@@ -217,8 +217,8 @@ export const student = {
 
                 content += `<div style="background:${bg}; border:1px solid ${border}; padding:10px; border-radius:8px; margin-bottom:5px; font-size:13px;">
                     ${deleteBtn}
-                    <strong>${race.studentName}</strong><br>
-                    <span style="color:#666;">${race.raceName}</span>
+                    <strong>${window.app.escHtml(race.studentName)}</strong><br>
+                    <span style="color:#666;">${window.app.escHtml(race.raceName)}</span>
                 </div>`;
             });
             content += `</div>`;
@@ -353,8 +353,8 @@ export const student = {
             const quotes = [];
             s.forEach(d => {
                 const data = d.data();
-                const authorStr = data.author && data.author !== 'Desconhecido' ? `<br><span style="font-size: 14px; opacity: 0.8; font-weight: 400; display: block; text-align: center; margin-top: 15px; width: 100%;">- ${data.author}</span>` : '';
-                quotes.push(`"${data.text}"${authorStr}`);
+                const authorStr = data.author && data.author !== 'Desconhecido' ? `<br><span style="font-size: 14px; opacity: 0.8; font-weight: 400; display: block; text-align: center; margin-top: 15px; width: 100%;">- ${window.app.escHtml(data.author)}</span>` : '';
+                quotes.push(`"${window.app.escHtml(data.text)}"${authorStr}`);
             });
             if (quotes.length > 0) {
                 const dayIndex = Math.floor(new Date().setHours(0, 0, 0, 0) / 86400000);
@@ -410,9 +410,9 @@ export const student = {
                     const coverImg = v.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
                     htmlCards += `
                     <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')">
-                        <img src="${window.app.getSafeUrl(coverImg)}" class="video-thumb-img" alt="${v.title}">
+                        <img src="${window.app.getSafeUrl(coverImg)}" class="video-thumb-img" alt="${window.app.escHtml(v.title)}">
                         <div class="video-thumb-overlay">
-                            <h4 class="video-thumb-title">${v.title}</h4>
+                            <h4 class="video-thumb-title">${window.app.escHtml(v.title)}</h4>
                         </div>
                         <div class="video-thumb-play"><i class="fa-solid fa-play"></i></div>
                     </div>`;
@@ -558,8 +558,8 @@ export const student = {
             cardHtml = `<div class="card" style="background: #9cafcc; color: var(--text-main); border: none; padding:30px;">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:25px;">
                     <div>
-                        <h2 style="margin:0; font-size:24px; line-height:1.2; color:var(--text-main);">${target.title} ${dateDisplay}</h2>
-                        <p style="opacity:0.9; font-size:15px; margin-top:8px; font-weight:400; color:var(--text-main);">${target.desc}</p>
+                        <h2 style="margin:0; font-size:24px; line-height:1.2; color:var(--text-main);">${window.app.escHtml(target.title)} ${dateDisplay}</h2>
+                        <p style="opacity:0.9; font-size:15px; margin-top:8px; font-weight:400; color:var(--text-main);">${window.app.escHtml(target.desc)}</p>
                     </div>
                     <div style="background:rgba(255,255,255,0.4); min-width:50px; width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
                         <i class="fa-solid fa-person-running" style="font-size:24px; color:var(--text-main);"></i>
@@ -909,8 +909,8 @@ export const student = {
             list.innerHTML += `<div id="workout-item-${i}" class="card" style="display:flex; align-items:flex-start; gap: 15px; opacity: ${w.done ? 0.6 : 1}; padding:20px;">
                 <div style="color:${color}; font-size:24px; margin-top:2px;"><i class="fa-solid ${icon}"></i></div>
                 <div style="flex:1;">
-                    <h4 style="margin:0; font-size:16px;">${w.title} ${dateBadge}</h4>
-                    <p style="margin:0; font-size:13px; color:var(--text-sec); margin-top:4px;">${w.desc}</p>
+                    <h4 style="margin:0; font-size:16px;">${window.app.escHtml(w.title)} ${dateBadge}</h4>
+                    <p style="margin:0; font-size:13px; color:var(--text-sec); margin-top:4px;">${window.app.escHtml(w.desc)}</p>
                     <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
                         ${finishBtn}
                         ${videoBtn}
@@ -975,7 +975,7 @@ export const student = {
                 <div style="margin-bottom:15px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px; align-items:center;">
                         <div>
-                            <strong style="font-size:14px;">${r.name}</strong>
+                            <strong style="font-size:14px;">${window.app.escHtml(r.name)}</strong>
                             <button onclick="window.app.openEditRaceDate(${i})" style="border:none; background:none; color:var(--text-sec); cursor:pointer; font-size:12px; margin-left:5px;"><i class="fa-solid fa-pencil"></i></button>
                             <div style="font-size:11px; color:#888;">${dateStr}</div>
                         </div>
@@ -1396,13 +1396,13 @@ export const student = {
             });
 
             const renderMood = (m, label) => {
-                if (!m) return `<div style="flex:1; background:#f9f9f9; padding:10px; border-radius:8px; border:1px dashed #ddd; text-align:center; min-height:45px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:10px;">${label}</small><div style="color:#ddd">-</div></div>`;
+                if (!m) return `<div style="flex:1; background:#f9f9f9; padding:10px; border-radius:8px; border:1px dashed #ddd; text-align:center; min-height:45px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:10px;">${window.app.escHtml(label)}</small><div style="color:#ddd">-</div></div>`;
                 return `
                     <div style="flex:1; background:#fff; padding:10px; border-radius:8px; border:1px solid #eee; display:flex; align-items:center; gap:8px; min-height:45px;">
-                        <span style="font-size:20px;">${m.emoji}</span>
+                        <span style="font-size:20px;">${window.app.escHtml(m.emoji)}</span>
                         <div style="overflow:hidden;">
-                            <small style="color:#9c27b0; font-size:9px; font-weight:700; display:block; text-transform:uppercase;">${label}</small>
-                            <strong style="font-size:12px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${m.mood}</strong>
+                            <small style="color:#9c27b0; font-size:9px; font-weight:700; display:block; text-transform:uppercase;">${window.app.escHtml(label)}</small>
+                            <strong style="font-size:12px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${window.app.escHtml(m.mood)}</strong>
                         </div>
                     </div>
                 `;
@@ -1442,13 +1442,13 @@ export const student = {
                     });
 
                     const renderMood = (m, label) => {
-                        if (!m) return `<div style="flex:1; background:#f9f9f9; padding:10px; border-radius:8px; border:1px dashed #ddd; text-align:center; min-height:45px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:10px;">${label}</small><div style="color:#ddd">-</div></div>`;
+                        if (!m) return `<div style="flex:1; background:#f9f9f9; padding:10px; border-radius:8px; border:1px dashed #ddd; text-align:center; min-height:45px; display:flex; flex-direction:column; justify-content:center;"><small style="color:#ccc; font-size:10px;">${window.app.escHtml(label)}</small><div style="color:#ddd">-</div></div>`;
                         return `
                             <div style="flex:1; background:#fff; padding:10px; border-radius:8px; border:1px solid #eee; display:flex; align-items:center; gap:8px; min-height:45px;">
-                                <span style="font-size:20px;">${m.emoji}</span>
+                                <span style="font-size:20px;">${window.app.escHtml(m.emoji)}</span>
                                 <div style="overflow:hidden;">
-                                    <small style="color:#9c27b0; font-size:9px; font-weight:700; display:block; text-transform:uppercase;">${label}</small>
-                                    <strong style="font-size:12px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${m.mood}</strong>
+                                    <small style="color:#9c27b0; font-size:9px; font-weight:700; display:block; text-transform:uppercase;">${window.app.escHtml(label)}</small>
+                                    <strong style="font-size:12px; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden; display:block;">${window.app.escHtml(m.mood)}</strong>
                                 </div>
                             </div>
                         `;
@@ -1517,9 +1517,9 @@ export const student = {
                     const coverImg = tip.coverImg || 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&q=80&w=400';
                     htmlCards += `
                     <div class="video-thumb-card" onclick="window.app.playVideo('${safeLink}')">
-                        <img src="${window.app.getSafeUrl(coverImg)}" class="video-thumb-img" alt="${tip.title}">
+                        <img src="${window.app.getSafeUrl(coverImg)}" class="video-thumb-img" alt="${window.app.escHtml(tip.title)}">
                         <div class="video-thumb-overlay">
-                            <h4 class="video-thumb-title">${tip.title}</h4>
+                            <h4 class="video-thumb-title">${window.app.escHtml(tip.title)}</h4>
                         </div>
                         <div class="video-thumb-play"><i class="fa-solid fa-play"></i></div>
                     </div>`;
@@ -1594,7 +1594,7 @@ export const student = {
                 list.innerHTML += `
                 <div class="pain-item ${statusClass}" onclick="window.app.openStudentPainDetail(${index})" style="cursor:pointer;">
                     <div class="pain-header">
-                        <span>${dateStr} - ${item.workoutTitle}</span>
+                        <span>${dateStr} - ${window.app.escHtml(item.workoutTitle)}</span>
                         <span class="status-badge ${statusClass}">${statusText}</span>
                     </div>
                     <p class="pain-desc">
@@ -1617,7 +1617,7 @@ export const student = {
         let detailHtml = `
             <div style="margin-bottom:15px; padding-bottom:15px; border-bottom: 1px dashed #eee;">
                 <p><strong>Data:</strong> ${dateStr}</p>
-                <p><strong>Treino:</strong> ${item.workoutTitle}</p>
+                <p><strong>Treino:</strong> ${window.app.escHtml(item.workoutTitle)}</p>
             </div>
             <div style="margin-bottom:15px;">
                 <p><strong>Relato de Dor:</strong></p>
@@ -1642,7 +1642,7 @@ export const student = {
                     <p style="color:#2e7d32; font-weight:700; font-size:12px; text-transform:uppercase; margin-bottom:5px;">
                         <i class="fa-solid fa-user-doctor"></i> Resposta da Fisio:
                     </p>
-                    <p style="color:var(--text-main);">${item.response}</p>
+                    <p style="color:var(--text-main);">${window.app.escHtml(item.response)}</p>
                 </div>
             `;
         } else {

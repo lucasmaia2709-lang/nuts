@@ -6,7 +6,7 @@ import { state } from "./state.js";
 export const utils = {
     getSafeUrl: (url) => {
         if (!url) return '';
-        if (url.includes('firebasestorage.googleapis.com')) {
+        if (url.includes('firebasestorage.googleapis.com') || url.includes('firebasestorage.app')) {
             return `https://nuts.lucasabreucotefis.workers.dev/?url=${encodeURIComponent(url)}`;
         }
         return url;
@@ -119,10 +119,49 @@ export const utils = {
         }
     },
 
-    escape: (str) => {
-        if (!str) return '';
-        return str.toString().replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+    // --- ESCAPE / SANITIZAÇÃO ---
+    // Regra geral: TODO dado vindo do Firestore é conteúdo de usuário e precisa passar
+    // por uma destas funções antes de entrar num template que vira innerHTML.
+
+    // Texto dentro de HTML, e também valores de atributos entre aspas.
+    escHtml: (v) => {
+        if (v === null || v === undefined) return '';
+        return String(v)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     },
+
+    // Valores interpolados dentro de handler inline: onclick="fn('${escJs(v)}')".
+    // Escapa primeiro para string JS, depois para atributo HTML — nessa ordem, porque
+    // o parser de HTML decodifica as entidades antes do JS ser compilado.
+    escJs: (v) => {
+        if (v === null || v === undefined) return '';
+        const js = String(v)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\"')
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+        return utils.escHtml(js);
+    },
+
+    // URLs que vão para href/src. Bloqueia javascript:, data: e vbscript:.
+    escUrl: (v) => {
+        if (!v) return '';
+        const raw = String(v).trim();
+        // Remove caracteres de controle que podem ser usados para mascarar o esquema
+        const probe = raw.replace(/[\x00-\x20\x7f]/g, '').toLowerCase();
+        if (/^(javascript|data|vbscript):/.test(probe)) return '';
+        return utils.escHtml(raw);
+    },
+
+    // Mantido para compatibilidade com chamadas antigas; delega para escJs.
+    escape: (str) => utils.escJs(str),
 
     screen: (id) => {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -192,15 +231,16 @@ export const utils = {
         const container = document.getElementById('video-container');
         if (url.includes('github.com') && url.includes('/blob/')) {
             embed = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
-            container.innerHTML = `<video src="${embed}" controls autoplay style="width:100%; height:100%; border-radius: 8px;"></video>`;
+            container.innerHTML = `<video src="${utils.escUrl(embed)}" controls autoplay style="width:100%; height:100%; border-radius: 8px;"></video>`;
         }
         else if (url.includes('youtu')) {
-            const id = url.split('/').pop().split('?')[0];
+            // Só o ID entra na URL de embed; qualquer outro caractere é descartado
+            const id = encodeURIComponent(url.split('/').pop().split('?')[0]);
             embed = `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1&modestbranding=1&rel=0`;
-            container.innerHTML = `<iframe src="${embed}" style="width:100%; height:100%; border:0; border-radius: 8px;" allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+            container.innerHTML = `<iframe src="${utils.escUrl(embed)}" style="width:100%; height:100%; border:0; border-radius: 8px;" allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
         }
         else {
-            container.innerHTML = `<video src="${url}" controls autoplay style="width:100%; height:100%; border-radius: 8px;"></video>`;
+            container.innerHTML = `<video src="${utils.escUrl(url)}" controls autoplay style="width:100%; height:100%; border-radius: 8px;"></video>`;
         }
         document.getElementById('modal-video').classList.add('active');
 

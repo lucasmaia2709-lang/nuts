@@ -63,49 +63,55 @@ export const social = {
 
     // Funções auxiliares para gerar IDs únicos (evita conflito entre feed principal e detalhe)
     createPostCardHTML: (p, suffix = '') => {
+        // E = texto/atributo HTML, J = dentro de handler inline, U = href/src
+        const E = window.app.escHtml, J = window.app.escJs, U = window.app.escUrl;
+
         const isLiked = p.likes && p.likes.includes(state.currentUser.email);
         const likeIcon = isLiked ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
         const likeColor = isLiked ? 'var(--red)' : 'var(--text-main)';
+        const postId = J(p.id);
         const deleteBtn = (p.email === state.currentUser.email || ADMIN_EMAILS.includes(state.currentUser.email))
-            ? `<button onclick="window.app.deletePost('${p.id}')" style="border:none; background:none; color:#999; margin-left:10px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : '';
+            ? `<button onclick="window.app.deletePost('${postId}')" style="border:none; background:none; color:#999; margin-left:10px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>` : '';
 
         const comments = p.comments || [];
         let commentsHtml = '';
         comments.forEach(c => {
             const isMyComment = c.email === state.currentUser.email || ADMIN_EMAILS.includes(state.currentUser.email);
-            const delCommentBtn = isMyComment ? `<button onclick="window.app.deleteComment('${p.id}', ${c.timestamp})" style="border:none; background:none; color:#ccc; font-size:10px; margin-left:5px; cursor:pointer;">x</button>` : '';
-            commentsHtml += `<div style="font-size:13px; margin-bottom:4px;"><strong onclick="window.app.openPublicProfile('${c.email}')" style="cursor:pointer;">${c.userName}:</strong> ${c.text} ${delCommentBtn}</div>`;
+            const ts = Number(c.timestamp) || 0;
+            const delCommentBtn = isMyComment ? `<button onclick="window.app.deleteComment('${postId}', ${ts})" style="border:none; background:none; color:#ccc; font-size:10px; margin-left:5px; cursor:pointer;">x</button>` : '';
+            commentsHtml += `<div style="font-size:13px; margin-bottom:4px;"><strong onclick="window.app.openPublicProfile('${J(c.email)}')" style="cursor:pointer;">${E(c.userName)}:</strong> ${E(c.text)} ${delCommentBtn}</div>`;
         });
 
-        const safeAvatar = window.app.getSafeUrl(p.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.userName)}&background=random`;
+        const safeAvatar = window.app.getSafeUrl(p.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.userName || '')}&background=random`;
 
         // Estilo padrão para posts (Feed e Detalhe)
         const safeImgUrl = window.app.getSafeUrl(p.img);
-        const safeImg = safeImgUrl ? `<img src="${safeImgUrl}" onerror="this.style.display='none'" onclick="window.app.viewImage('${safeImgUrl}')" style="width: 100%; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; margin-bottom: 10px; cursor: pointer; border-radius: 4px;">` : '';
+        const safeImg = safeImgUrl ? `<img src="${U(safeImgUrl)}" onerror="this.style.display='none'" onclick="window.app.viewImage('${J(safeImgUrl)}')" style="width: 100%; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; margin-bottom: 10px; cursor: pointer; border-radius: 4px;">` : '';
 
-        const safeUserEmail = window.app.escape(p.email);
+        const safeUserEmail = J(p.email);
+        const domId = E(p.id) + E(suffix);
 
         return `
         <div class="card post-card" style="padding:0; overflow:hidden;">
             <div style="padding:15px; display:flex; align-items:center;">
-                <img src="${safeAvatar}" style="width:40px; height:40px; border-radius:50%; margin-right:10px; object-fit:cover; cursor:pointer;" onclick="window.app.openPublicProfile('${safeUserEmail}')">
+                <img src="${U(safeAvatar)}" style="width:40px; height:40px; border-radius:50%; margin-right:10px; object-fit:cover; cursor:pointer;" onclick="window.app.openPublicProfile('${safeUserEmail}')">
                 <div style="flex:1;">
-                    <div style="font-weight:700; font-size:14px; color:var(--text-main); cursor:pointer;" onclick="window.app.openPublicProfile('${safeUserEmail}')">${p.userName}</div>
-                    <div style="font-size:11px; color:#999;">${new Date(p.created).toLocaleString()}</div>
+                    <div style="font-weight:700; font-size:14px; color:var(--text-main); cursor:pointer;" onclick="window.app.openPublicProfile('${safeUserEmail}')">${E(p.userName)}</div>
+                    <div style="font-size:11px; color:#999;">${E(new Date(p.created).toLocaleString())}</div>
                 </div>
                 ${deleteBtn}
             </div>
-            ${p.text ? `<div style="padding:0 15px 15px; font-size:15px; line-height:1.5; white-space:pre-wrap;">${p.text}</div>` : ''}
+            ${p.text ? `<div style="padding:0 15px 15px; font-size:15px; line-height:1.5; white-space:pre-wrap;">${E(p.text)}</div>` : ''}
             ${safeImg}
             <div style="padding:10px 15px; display:none; align-items:center; border-top:1px solid #f0f0f0;">
                 <i class="fa-regular fa-comment" style="font-size:18px; color:var(--text-main); margin-right:5px;"></i>
                 <span style="font-size:14px; font-weight:600; color:var(--text-main);">${comments.length}</span>
             </div>
             <div style="background:#f9f9f9; padding:10px 15px;">
-                <div id="comments-${p.id}${suffix}" style="max-height:100px; overflow-y:auto; margin-bottom:10px;">${commentsHtml}</div>
+                <div id="comments-${domId}" style="max-height:100px; overflow-y:auto; margin-bottom:10px;">${commentsHtml}</div>
                 <div style="display:flex;">
-                    <input id="input-comment-${p.id}${suffix}" type="text" placeholder="Comentar..." style="flex:1; border:1px solid #ddd; padding:8px 12px; border-radius:20px; outline:none; font-size:13px;">
-                    <button onclick="window.app.submitComment('${p.id}', '${suffix}')" style="border:none; background:none; color:var(--primary); font-weight:600; margin-left:10px; cursor:pointer;">Enviar</button>
+                    <input id="input-comment-${domId}" type="text" placeholder="Comentar..." style="flex:1; border:1px solid #ddd; padding:8px 12px; border-radius:20px; outline:none; font-size:13px;">
+                    <button onclick="window.app.submitComment('${postId}', '${J(suffix)}')" style="border:none; background:none; color:var(--primary); font-weight:600; margin-left:10px; cursor:pointer;">Enviar</button>
                 </div>
             </div>
         </div>`;
@@ -260,7 +266,7 @@ export const social = {
 
         container.style.cssText = 'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;';
 
-        const safeUrl = window.app.getSafeUrl(url);
+        const safeUrl = window.app.escUrl(window.app.getSafeUrl(url));
         container.innerHTML = `<img src="${safeUrl}" style="width: 100%; max-width: 600px; max-height: 450px; object-fit: cover; display: block; background-color: #f0f2f5; min-height: 200px; content-visibility: auto; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">`;
 
         document.getElementById('modal-video').classList.add('active');
@@ -280,15 +286,19 @@ export const social = {
             snap.forEach(d => news.push({ id: d.id, ...d.data() }));
             news.sort((a, b) => b.created - a.created);
 
+            // openNewsDetail() lê daqui; sem isso a aba depende de student.js ter rodado antes
+            state.allNews = news;
+
+            const E = window.app.escHtml;
             news.forEach(n => {
-                const safeImg = window.app.getSafeUrl(n.img);
+                const safeImg = window.app.escUrl(window.app.getSafeUrl(n.img));
                 const imgHtml = safeImg ? `<div style="height:180px; background:url('${safeImg}') center/cover;"></div>` : '';
                 container.innerHTML += `
-                <div class="card news-card" onclick="window.app.openNewsDetail('${n.id}')">
+                <div class="card news-card" onclick="window.app.openNewsDetail('${window.app.escJs(n.id)}')">
                     ${imgHtml}
                     <div class="news-content">
-                        <div class="news-date">${new Date(n.created).toLocaleDateString()}</div>
-                        <h3 class="news-title">${window.app.formatText(n.title)}</h3>
+                        <div class="news-date">${E(new Date(n.created).toLocaleDateString())}</div>
+                        <h3 class="news-title">${E(window.app.formatText(n.title))}</h3>
                     </div>
                 </div>`;
             });
@@ -350,19 +360,24 @@ export const social = {
 
                 const city = u.city || 'Cidade não informada';
                 const country = u.country ? `, ${u.country}` : '';
-                document.getElementById('pp-location').innerHTML = `<i class="fa-solid fa-location-dot"></i> <span>${city}${country}</span>`;
+                document.getElementById('pp-location').innerHTML = `<i class="fa-solid fa-location-dot"></i> <span>${window.app.escHtml(city + country)}</span>`;
 
                 const sl = u.socialLinks || {};
                 let socialHtml = '';
 
                 const makeLink = (url, icon, color) => {
-                    let finalUrl = url;
-                    if (!url.startsWith('http')) {
-                        if (icon.includes('instagram')) finalUrl = `https://instagram.com/${url.replace('@', '')}`;
-                        else if (icon.includes('tiktok')) finalUrl = `https://tiktok.com/@${url.replace('@', '')}`;
-                        else finalUrl = `https://${url}`;
+                    let finalUrl = String(url || '');
+                    if (!/^https?:\/\//i.test(finalUrl)) {
+                        // Sem esquema: tratamos como handle, nunca como URL completa
+                        const handle = encodeURIComponent(finalUrl.replace('@', '').trim());
+                        if (!handle) return '';
+                        if (icon.includes('instagram')) finalUrl = `https://instagram.com/${handle}`;
+                        else if (icon.includes('tiktok')) finalUrl = `https://tiktok.com/@${handle}`;
+                        else finalUrl = `https://${handle}`;
                     }
-                    return `<a href="${finalUrl}" target="_blank" style="font-size: 24px; color: ${color}; text-decoration: none;"><i class="${icon}"></i></a>`;
+                    const href = window.app.escUrl(finalUrl);
+                    if (!href) return '';
+                    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="font-size: 24px; color: ${color}; text-decoration: none;"><i class="${icon}"></i></a>`;
                 };
 
                 if (sl.instagram) socialHtml += makeLink(sl.instagram, 'fa-brands fa-instagram', '#E1306C');

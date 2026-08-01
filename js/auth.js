@@ -339,8 +339,8 @@ export const authLogic = {
                         const quotes = [];
                         snap.forEach(d => {
                             const data = d.data();
-                            const authorStr = data.author && data.author !== 'Desconhecido' ? `<br><span style="font-size: 14px; opacity: 0.8; font-weight: 400; display: block; text-align: center; margin-top: 15px; width: 100%;">- ${data.author}</span>` : '';
-                            quotes.push(`"${data.text}"${authorStr}`);
+                            const authorStr = data.author && data.author !== 'Desconhecido' ? `<br><span style="font-size: 14px; opacity: 0.8; font-weight: 400; display: block; text-align: center; margin-top: 15px; width: 100%;">- ${window.app.escHtml(data.author)}</span>` : '';
+                            quotes.push(`"${window.app.escHtml(data.text)}"${authorStr}`);
                         });
                         const textEl = document.getElementById('splash-quote-text');
 
