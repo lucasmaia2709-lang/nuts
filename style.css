@@ -1697,3 +1697,31 @@ body.platform-android .app-header {
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+/* --- ABA ESPECIALISTAS --- */
+/* Os 3 cards dividem toda a altura útil, para a tela não terminar com um
+   vazio embaixo que dá impressão de faltar um quarto botão.
+   O min-height: 100% resolve contra a área de conteúdo do #main-scroll,
+   que já desconta a nav bar através do padding-bottom dele.
+   Não precisa de :not(.hidden) aqui porque .hidden usa !important. */
+#tab-health {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#tab-health>h2 {
+    flex: 0 0 auto;
+}
+
+#tab-health>.card {
+    flex: 1 1 0;
+    /* Piso para telas muito baixas: abaixo disso a aba volta a rolar
+       em vez de espremer os cards até ficarem ilegíveis. */
+    min-height: 96px;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
