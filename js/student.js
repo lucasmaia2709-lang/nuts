@@ -216,6 +216,66 @@ export const student = {
         const notes = state.currentUser.notes || {};
         document.getElementById('day-det-note').value = notes[dateStr] || '';
         modal.classList.add('active');
+
+        // Aluno vê só a própria conclusão (acima); admin vê a de todos.
+        window.app.renderAdminChallengeCompletions(dateStr);
+    },
+
+    // Só para admin: lista todos os alunos que concluíram o desafio nesta data.
+    // Usa array-contains para trazer apenas quem concluiu, em vez de varrer a
+    // coleção inteira de usuários.
+    renderAdminChallengeCompletions: async (dateStr) => {
+        if (!state.currentUser || !ADMIN_EMAILS.includes(state.currentUser.email)) return;
+
+        const container = document.getElementById('day-det-content');
+        if (!container) return;
+
+        // Dia sem desafio não mostra nada.
+        const desafio = await new Promise(resolve => window.app.getChallengeForDate(dateStr, resolve));
+        if (!desafio) return;
+
+        // O admin pode ter trocado de dia enquanto a busca acontecia.
+        if (state.selectedDayDate !== dateStr) return;
+
+        const boxId = `adm-ch-${dateStr}`;
+        const titulo = window.app.escHtml(desafio.name || 'Desafio');
+        container.insertAdjacentHTML('beforeend', `
+            <div id="${window.app.escHtml(boxId)}" style="background:#fff8e1; border:1px solid #ffca28; padding:12px; border-radius:8px; margin-bottom:15px;">
+                <h4 style="margin:0 0 8px; font-size:13px; color:#f57c00;"><i class="fa-solid fa-user-shield"></i> ${titulo}</h4>
+                <div style="font-size:12px; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> Buscando quem concluiu...</div>
+            </div>`);
+
+        try {
+            const snap = await getDocs(query(
+                collection(db, 'artifacts', appId, 'public', 'data', C_USERS),
+                where('completedChallenges', 'array-contains', dateStr)
+            ));
+
+            const alunos = [];
+            snap.forEach(d => {
+                const u = d.data();
+                alunos.push(u.name || u.email || 'Aluno');
+            });
+            alunos.sort((a, b) => String(a).localeCompare(String(b), 'pt-BR'));
+
+            // Se o modal foi fechado ou trocou de dia, o box não existe mais.
+            const box = document.getElementById(boxId);
+            if (!box || state.selectedDayDate !== dateStr) return;
+
+            const lista = alunos.length
+                ? alunos.map(n => `<div style="font-size:13px; padding:3px 0; color:var(--text-main);"><i class="fa-solid fa-check" style="color:#2ecc71; margin-right:6px;"></i>${window.app.escHtml(n)}</div>`).join('')
+                : '<div style="font-size:13px; color:#999;">Ninguém concluiu neste dia.</div>';
+
+            const contagem = alunos.length === 1 ? '1 aluno concluiu' : `${alunos.length} alunos concluíram`;
+
+            box.innerHTML = `
+                <h4 style="margin:0 0 8px; font-size:13px; color:#f57c00;"><i class="fa-solid fa-user-shield"></i> ${titulo} — ${contagem}</h4>
+                <div style="max-height:160px; overflow-y:auto;">${lista}</div>`;
+        } catch (e) {
+            console.error('Erro ao buscar conclusões do desafio', e);
+            const box = document.getElementById(boxId);
+            if (box) box.innerHTML = '<div style="font-size:12px; color:var(--red);">Erro ao carregar a lista de conclusões.</div>';
+        }
     },
 
     deletePublicRaceEntry: async (studentEmail, raceName, raceDate, force = false) => {
