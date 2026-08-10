@@ -24,6 +24,37 @@ export const utils = {
         return text;
     },
 
+    // Formata o valor de um dia de desafio para exibição.
+    // - "01:30"    -> "1m 30s"
+    // - "01:00:00" -> "1h"
+    // - "50 flexões" (texto livre) -> devolve igual
+    // - "00:00" / "00:00:00" -> devolve '' (string vazia)
+    //
+    // O tempo zerado é como o admin marca um desafio que não depende de tempo:
+    // quem chama deve tratar o '' escondendo o rótulo "Hoje:" por completo,
+    // em vez de mostrar "Hoje: 0s".
+    formatChallengeTask: (raw) => {
+        if (raw === null || raw === undefined) return '';
+        const txt = String(raw).trim();
+        if (!txt) return '';
+
+        // Só trata como tempo se casar HH:MM:SS ou MM:SS; o resto é texto livre.
+        if (!/^\d{1,2}:\d{2}(:\d{2})?$/.test(txt)) return txt;
+
+        const parts = txt.split(':').map(Number);
+        let h = 0, m = 0, s = 0;
+        if (parts.length === 3) { h = parts[0]; m = parts[1]; s = parts[2]; }
+        else { m = parts[0]; s = parts[1]; }
+
+        if (h * 3600 + m * 60 + s === 0) return '';
+
+        const out = [];
+        if (h > 0) out.push(`${h}h`);
+        if (m > 0) out.push(`${m}m`);
+        if (s > 0) out.push(`${s}s`);
+        return out.join(' ');
+    },
+
     compressImage: (file) => {
         return new Promise((resolve) => {
             if (!file || !file.type.startsWith('image/')) {

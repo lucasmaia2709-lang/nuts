@@ -160,23 +160,11 @@ export const student = {
             window.app.getChallengeForDate(dateStr, (activeChallenge) => {
                 let challengeDesc = "Desafio do Dia";
                 if (activeChallenge) {
-                    let taskTime = '';
                     const task = activeChallenge.tasks.find(t => t.date === dateStr);
-                    if (task && task.task) {
-                        let displayTask = task.task;
-                        if (/^(\d{2}):(\d{2})$/.test(displayTask) || /^(\d{2}):(\d{2}):(\d{2})$/.test(displayTask)) {
-                            let parts = displayTask.split(':').map(Number);
-                            let m = 0, s = 0;
-                            if (parts.length === 3) { m = parts[1]; s = parts[2]; } else { m = parts[0]; s = parts[1]; }
-                            let formattedTime = [];
-                            if (m > 0) formattedTime.push(`${m}m`);
-                            if (s > 0 || m === 0) formattedTime.push(`${s}s`);
-                            taskTime = formattedTime.join(' ');
-                        } else {
-                            taskTime = displayTask;
-                        }
-                    }
-                    challengeDesc = `${activeChallenge.name || 'Desafio do Dia'}, concluído` + (taskTime ? ` com o tempo de ${taskTime}` : '');
+                    // Vazio se o desafio não tiver tempo: aí sai só "concluído".
+                    const taskTime = task ? window.app.formatChallengeTask(task.task) : '';
+                    const nome = window.app.escHtml(activeChallenge.name || 'Desafio do Dia');
+                    challengeDesc = `${nome}, concluído` + (taskTime ? ` com o tempo de ${window.app.escHtml(taskTime)}` : '');
                 }
                 const chCardHtml = `<div style="background:#e8f8f5; border:1px solid #2ecc71; padding:10px; border-radius:8px; margin-bottom:15px; display:flex; align-items:center; gap:10px;">
                     <div style="background:#fff; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
@@ -1708,19 +1696,8 @@ export const student = {
             const todayTask = activeChallenge.tasks.find(t => t.date === todayStr);
 
             if (todayTask) {
-                // Formatação do tempo: "00:00:32" -> "32s", "00:01:00" -> "1m", "00:01:30" -> "1m 30s"
-                let displayTask = todayTask.task;
-                if (/^(\d{2}):(\d{2})$/.test(displayTask) || /^(\d{2}):(\d{2}):(\d{2})$/.test(displayTask)) {
-                    let parts = displayTask.split(':').map(Number);
-                    let m = 0, s = 0;
-                    if (parts.length === 3) { m = parts[1]; s = parts[2]; } // HH:MM:SS (ignorando HH por enquanto)
-                    else { m = parts[0]; s = parts[1]; } // MM:SS
-
-                    let formattedTime = [];
-                    if (m > 0) formattedTime.push(`${m}m`);
-                    if (s > 0 || m === 0) formattedTime.push(`${s}s`);
-                    displayTask = formattedTime.join(' ');
-                }
+                // Vazio quando o desafio não depende de tempo (admin deixou tudo zero).
+                const displayTask = window.app.formatChallengeTask(todayTask.task);
 
                 const completedChallenges = state.currentUser.completedChallenges || [];
                 const isDone = completedChallenges.includes(todayStr);
@@ -1740,7 +1717,7 @@ export const student = {
                         <h4 style="margin: 0 0 10px 0; font-size: 14px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px;">
                             <i class="fa-solid fa-fire"></i> ${activeChallenge.name || 'Desafio do Dia'}
                         </h4>
-                        <p style="margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4;">Hoje: ${displayTask}</p>
+                        ${displayTask ? `<p style="margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4;">Hoje: ${window.app.escHtml(displayTask)}</p>` : ''}
                         <div style="display:flex; justify-content:space-between; align-items:flex-end;">
                             ${btnHtml}
                         </div>
