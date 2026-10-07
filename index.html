@@ -18,6 +18,23 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="WE'RE NUTS">
 
+    <!-- PWA: é o manifest que faz o Chrome no Android oferecer "Instalar app" -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#9cafcc">
+    <script>
+        // Só registra o service worker no SITE. Dentro do app nativo o
+        // Capacitor serve de localhost, e lá o SW só atrapalharia, servindo
+        // arquivos em cache por cima dos que vêm empacotados no app.
+        if ('serviceWorker' in navigator
+            && location.protocol === 'https:'
+            && location.hostname !== 'localhost') {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js')
+                    .catch(function (e) { console.warn('SW não registrado:', e); });
+            });
+        }
+    </script>
+
     <link rel="apple-touch-icon"
         href="https://raw.githubusercontent.com/lucasmaia2709-lang/nuts/refs/heads/main/nuts.png">
     <link rel="icon" type="image/png"
